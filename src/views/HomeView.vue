@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Progress } from '@/components/ui/progress'
-import { AlertCircle, Activity, Server, Zap, Database, HardDrive, Network, Cpu, Clock } from 'lucide-vue-next'
+import { AlertCircle, Activity, Server, Database, HardDrive, Network, Cpu, Clock } from 'lucide-vue-next'
+import HeaderView from '@/components/HeaderView.vue'
+import FooterView from '@/components/FooterView.vue'
 
 const status = ref<'disconnected' | 'connecting' | 'connected'>('disconnected')
 const error = ref('')
@@ -196,7 +197,6 @@ const getDiskUsage = (server: any) => {
     return 'N/A'
 }
 
-
 onMounted(() => {
   connect()
 })
@@ -210,19 +210,10 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="container mx-auto p-6 space-y-6">
+  <div class="flex flex-col min-h-screen">
+    <div class="container mx-auto p-6 space-y-6 flex-1">
     
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <h1 class="text-3xl font-bold tracking-tight">NodeGet</h1>
-        
-      </div>
-      <div class="text-sm text-muted-foreground">
-        <Badge :variant="status === 'connected' ? 'default' : (status === 'connecting' ? 'secondary' : 'destructive')">
-          {{ status === 'connected' ? 'Online' : (status === 'connecting' ? 'Connecting...' : 'Offline') }}
-        </Badge>
-      </div>
-    </div>
+    <HeaderView :status="status" />
 
     <Alert v-if="error" variant="destructive">
       <AlertCircle class="h-4 w-4" />
@@ -293,6 +284,8 @@ onUnmounted(() => {
         </CardFooter>
       </Card>
     </div>
+    <FooterView />
+  </div>
   </div>
 </template>
 
