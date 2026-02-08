@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, computed } from 'vue'
 import { useDynamicData } from '@/composables/useDynamicData'
+import { useStaticData } from '@/composables/useStaticData'
 import { formatLoad, formatBytes, formatUptime } from '@/utils/format'
 import { showHostname, showOS, showCpuPercent, showRamPercent, showRamText, showNetworkSpeed, showDiskUsage, showDiskPercent, showDiskDisplay } from '@/utils/show'
 
@@ -19,9 +20,30 @@ const {
   connect: connectDynamic 
 } = useDynamicData()
 
+const {
+  status: staticStatus,
+  servers: staticServers,
+  connect: connectStatic
+} = useStaticData()
+
+const mergedServers = computed(() => {
+  return dynamicServers.value.map(dServer => {
+    const sServer = staticServers.value.find(s => s.uuid === dServer.uuid)
+    if (!sServer) return dServer
+    
+    return {
+      ...dServer,
+      cpu: { ...sServer.cpu, ...dServer.cpu },
+      system: { ...sServer.system, ...dServer.system },
+      gpu: sServer.gpu || []
+    }
+  })
+})
 
 onMounted(() => {
   connectDynamic()
+  connectStatic()
+  console.log(mergedServers.value)
 })
 
 </script>
@@ -38,13 +60,13 @@ onMounted(() => {
       <AlertDescription>{{ dynamicError }}</AlertDescription>
     </Alert>
 
-    <div v-if="dynamicServers.length === 0 && dynamicStatus === 'connected'" class="text-center py-10 text-muted-foreground">
+    <div v-if="mergedServers.length === 0 && dynamicStatus === 'connected'" class="text-center py-10 text-muted-foreground">
       Waiting for server data...
     </div>
 
     <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       <router-link 
-        v-for="server in dynamicServers" 
+        v-for="server in mergedServers" 
         :key="server.uuid" 
         :to="{ name: 'server-detail', params: { uuid: server.uuid } }"
         class="block h-full"

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, computed, ref } from 'vue'
+import { onMounted, computed, ref, watch } from 'vue'
 import { useDynamicData } from '@/composables/useDynamicData'
 import { useStaticData } from '@/composables/useStaticData'
 import { formatLoad, formatBytes, formatUptime } from '@/utils/format'
@@ -36,11 +36,19 @@ const {
 const activeTab = ref('cpu')
 
 const server = computed(() => {
-  return dynamicServers.value.find(s => s.uuid === uuid)
-})
-
-const staticData = computed(() => {
-  return staticServers.value.find(s => s.uuid === uuid)
+  const dServer = dynamicServers.value.find(s => s.uuid === uuid)
+  const sServer = staticServers.value.find(s => s.uuid === uuid)
+  
+  if (dServer && sServer) {
+    return {
+      ...dServer,
+      cpu: { ...dServer.cpu },
+      cpu_static: { ...sServer.cpu },
+      system: { ...sServer.system, ...dServer.system },
+      gpu: sServer.gpu || []
+    }
+  }
+  return dServer
 })
 
 const tabs = [
@@ -50,10 +58,47 @@ const tabs = [
     { id: 'network', label: 'Network', icon: Network },
 ]
 
-onMounted(() => {
+onMounted(() =>  {
   connectDynamic()
   connectStatic()
 })
+
+const cpuHistory = ref<number[]>([])
+
+watch(server, (newServer: any) => {
+    if (newServer) {
+        const cpuPercent = showCpuPercent(newServer)
+        cpuHistory.value.push(cpuPercent)
+        if (cpuHistory.value.length > 30) {
+            cpuHistory.value.shift()
+        }
+    }
+})
+
+const historyPath = computed(() => {
+    if (cpuHistory.value.length < 2) return ''
+    
+    const width = 100
+    const height = 40
+    const maxVal = Math.max(...cpuHistory.value, 1) // Dynamic max, min 1%
+    
+    return 'M ' + cpuHistory.value.map((val, i) => {
+        const x = (i / 29) * width
+        const y = height - (val / maxVal) * height
+        return `${x.toFixed(1)},${y.toFixed(1)}`
+    }).join(' L ')
+})
+
+const historyAreaPath = computed(() => {
+    if (cpuHistory.value.length < 2) return ''
+    const path = historyPath.value
+    
+    // Connect to bottom right then bottom left then close
+    const lastX = ((cpuHistory.value.length - 1) / 29) * 100
+    
+    return `${path} L ${lastX.toFixed(1)},40 L 0,40 Z`
+})
+
 </script>
 
 <template>
@@ -110,7 +155,7 @@ onMounted(() => {
                                 <span v-if="tab.id === 'cpu'">{{ showCpuPercent(server).toFixed(1) }}%</span>
                                 <span v-else-if="tab.id === 'memory'">{{ showRamPercent(server).toFixed(1) }}%</span>
                                 <span v-else-if="tab.id === 'disk'">{{ showDiskDisplay(server) }}</span>
-                                <span v-else-if="tab.id === 'network'">{{ showNetworkSpeed(server, 'rx') }}</span>
+                                <span v-else-if="tab.id === 'network'">{{ showNetworkSpeed(server, 'total') }}</span>
                             </div>
                         </div>
                         <div class="w-1 h-8 rounded-full bg-primary/20 overflow-hidden" v-if="['cpu', 'memory', 'disk'].includes(tab.id)">
@@ -161,12 +206,33 @@ onMounted(() => {
                                 <div class="text-4xl font-bold tracking-tighter">{{ showCpuPercent(server).toFixed(1) }}%</div>
                             </CardHeader>
                             <CardContent>
-                                <div class="h-[200px] w-full bg-muted/10 rounded-md border flex items-end p-1 relative overflow-hidden group">
-                                     <div 
-                                        class="w-full bg-primary/20 backdrop-blur-sm transition-all duration-500 ease-in-out border-t-2 border-primary"
-                                        :style="{ height: showCpuPercent(server) + '%' }"
-                                     ></div>
-                                     <div class="absolute inset-0 flex items-center justify-center text-muted-foreground/20 font-bold text-6xl select-none group-hover:opacity-0 transition-opacity">
+                                <div class="h-[200px] w-full bg-muted/10 rounded-md border flex items-end p-0 relative overflow-hidden group">
+                                     <svg 
+                                        viewBox="0 0 100 40" 
+                                        preserveAspectRatio="none"
+                                        class="w-full h-full text-primary"
+                                     >
+                                        <defs>
+                                            <linearGradient id="cpuGradient" x1="0" x2="0" y1="0" y2="1">
+                                                <stop offset="0%" stop-color="currentColor" stop-opacity="0.5" />
+                                                <stop offset="100%" stop-color="currentColor" stop-opacity="0" />
+                                            </linearGradient>
+                                        </defs>
+                                        
+                                        <path 
+                                            :d="historyAreaPath" 
+                                            fill="url(#cpuGradient)" 
+                                            stroke="none"
+                                        />
+                                        <path 
+                                            :d="historyPath" 
+                                            fill="none" 
+                                            stroke="currentColor" 
+                                            stroke-width="0.5" 
+                                            vector-effect="non-scaling-stroke"
+                                        />
+                                     </svg>
+                                     <div class="absolute inset-0 flex items-center justify-center text-muted-foreground/20 font-bold text-6xl select-none pointer-events-none group-hover:opacity-0 transition-opacity">
                                          CPU
                                      </div>
                                 </div>
@@ -182,9 +248,9 @@ onMounted(() => {
                                 <div class="text-xs text-muted-foreground mb-1">Cores</div>
                                 <div class="text-lg font-mono">{{ server.cpu.per_core.length }}</div>
                             </div>
-                             <div class="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
+                            <div class="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
                                 <div class="text-xs text-muted-foreground mb-1">Model</div>
-                                <div class="text-sm font-medium truncate" :title="'unknown'">{{ staticData.cpu.model }}</div>
+                                <div class="text-sm font-medium truncate" :title="server?.cpu_static?.per_core?.[0]?.brand || 'Unknown'">{{ server?.cpu_static?.per_core?.[0]?.brand || 'Unknown' }}</div>
                             </div>
                         </div>
                     </div>

@@ -5,7 +5,6 @@ const staticStatus = ref<'disconnected' | 'connecting' | 'connected'>('disconnec
 const staticError = ref('')
 const staticServers = ref<any[]>([])
 const staticWs = ref<WebSocket | null>(null)
-let staticPollInterval: any = null
 let staticReconnectTimeout: any = null
 let staticNextId = 1000 // Different starting ID to avoid conflicts
 
@@ -25,7 +24,7 @@ const sendQuery = () => {
 
     const queryObj = {
         fields: queryFields,
-        condition: [{"limit": 10}]
+        condition: [{"last": null}]
     }
 
     const payload = {
@@ -40,17 +39,6 @@ const sendQuery = () => {
     } catch (e) {
         console.error("[Static] Send failed", e)
     }
-}
-
-const startPolling = () => {
-    if (staticPollInterval) clearInterval(staticPollInterval)
-    sendQuery()
-    staticPollInterval = setInterval(sendQuery, 1000)
-}
-
-const stopPolling = () => {
-    if (staticPollInterval) clearInterval(staticPollInterval)
-    staticPollInterval = null
 }
 
 const connect = () => {
@@ -71,7 +59,7 @@ const connect = () => {
         socket.onopen = () => {
             staticStatus.value = 'connected'
             staticError.value = ''
-            startPolling()
+            sendQuery() // Fetch once
         }
 
         socket.onmessage = (event) => {
@@ -82,11 +70,9 @@ const connect = () => {
                     if (staticError.value) staticError.value = ''
                 } else if (msg.result && msg.result.error_message) {
                     staticError.value = msg.result.error_message
-                    stopPolling()
                 } else if (msg.error) {
                     console.error('[Static] RPC Error:', msg.error)
                     staticError.value = typeof msg.error === 'string' ? msg.error : (msg.error.message || JSON.stringify(msg.error))
-                    stopPolling()
                 }
             } catch (e) {
                 console.error('[Static] Failed to parse message:', event.data)
@@ -96,7 +82,6 @@ const connect = () => {
         socket.onclose = () => {
             staticStatus.value = 'disconnected'
             staticWs.value = null
-            stopPolling()
             scheduleReconnect()
         }
 
@@ -116,6 +101,7 @@ export function useStaticData() {
         status: staticStatus,
         error: staticError,
         servers: staticServers,
-        connect
+        connect,
+        refresh: sendQuery // Expose refresh if needed
     }
 }
