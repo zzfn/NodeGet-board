@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, computed, ref } from 'vue'
-import { useServerData } from '@/composables/useServerData'
+import { useDynamicData } from '@/composables/useDynamicData'
+import { useStaticData } from '@/composables/useStaticData'
 import { formatLoad, formatBytes, formatUptime } from '@/utils/format'
 import { showHostname, showOS, showCpuPercent, showRamPercent, showRamText, showNetworkSpeed, showDiskUsage, showDiskPercent, showDiskDisplay } from '@/utils/show'
 
@@ -16,12 +17,30 @@ import HeaderView from '@/components/HeaderView.vue'
 const route = useRoute()
 const uuid = route.params.uuid as string
 
-const { status, error, servers, connect } = useServerData()
+const { 
+  status: dynamicStatus, 
+  error: dynamicError, 
+  servers: dynamicServers, 
+  connect: connectDynamic 
+} = useDynamicData()
+
+const { 
+  status: staticStatus, 
+  error: staticError, 
+  servers: staticServers, 
+  connect: connectStatic 
+} = useStaticData()
+
+
 
 const activeTab = ref('cpu')
 
 const server = computed(() => {
-  return servers.value.find(s => s.uuid === uuid)
+  return dynamicServers.value.find(s => s.uuid === uuid)
+})
+
+const staticData = computed(() => {
+  return staticServers.value.find(s => s.uuid === uuid)
 })
 
 const tabs = [
@@ -32,7 +51,8 @@ const tabs = [
 ]
 
 onMounted(() => {
-  connect()
+  connectDynamic()
+  connectStatic()
 })
 </script>
 
@@ -41,7 +61,7 @@ onMounted(() => {
     <!-- Header -->
     <div class="border-b">
         <div class="container mx-auto py-3 px-4">
-            <HeaderView :status="status" />
+            <HeaderView :status="dynamicStatus" />
         </div>
     </div>
 
@@ -116,8 +136,8 @@ onMounted(() => {
         <main class="flex-1 flex flex-col min-w-0 bg-background">
              <div v-if="!server" class="flex-1 flex items-center justify-center text-muted-foreground">
                 <div class="flex flex-col items-center gap-2">
-                    <div v-if="error" class="text-destructive flex items-center gap-2">
-                         <AlertCircle class="h-5 w-5" /> {{ error }}
+                    <div v-if="dynamicError" class="text-destructive flex items-center gap-2">
+                         <AlertCircle class="h-5 w-5" /> {{ dynamicError }}
                     </div>
                     <span v-else>Connecting to server...</span>
                 </div>
@@ -164,7 +184,7 @@ onMounted(() => {
                             </div>
                              <div class="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
                                 <div class="text-xs text-muted-foreground mb-1">Model</div>
-                                <div class="text-sm font-medium truncate" :title="'unknown'">unknown</div>
+                                <div class="text-sm font-medium truncate" :title="'unknown'">{{ staticData.cpu.model }}</div>
                             </div>
                         </div>
                     </div>
