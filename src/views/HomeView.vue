@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
-import { useServerData } from '@/composables/useServerData'
+import { onMounted, onUnmounted, computed } from 'vue'
+import { useDynamicData } from '@/composables/useDynamicData'
+import { useStaticData } from '@/composables/useStaticData'
 import { formatLoad, formatBytes, formatUptime } from '@/utils/format'
 import { showHostname, showOS, showCpuPercent, showRamPercent, showRamText, showNetworkSpeed, showDiskUsage, showDiskPercent, showDiskDisplay } from '@/utils/show'
 
@@ -12,11 +13,37 @@ import { AlertCircle, Activity, Server, Database, HardDrive, Network, Cpu, Clock
 import HeaderView from '@/components/HeaderView.vue'
 import FooterView from '@/components/FooterView.vue'
 
-const { status, error, servers, connect } = useServerData()
+const { 
+  status: dynamicStatus, 
+  error: dynamicError, 
+  servers: dynamicServers, 
+  connect: connectDynamic 
+} = useDynamicData()
 
+const {
+  status: staticStatus,
+  servers: staticServers,
+  connect: connectStatic
+} = useStaticData()
+
+const mergedServers = computed(() => {
+  return dynamicServers.value.map(dServer => {
+    const sServer = staticServers.value.find(s => s.uuid === dServer.uuid)
+    if (!sServer) return dServer
+    
+    return {
+      ...dServer,
+      cpu: { ...sServer.cpu, ...dServer.cpu },
+      system: { ...sServer.system, ...dServer.system },
+      gpu: sServer.gpu || []
+    }
+  })
+})
 
 onMounted(() => {
-  connect()
+  connectDynamic()
+  connectStatic()
+  console.log(mergedServers.value)
 })
 
 </script>
@@ -25,21 +52,21 @@ onMounted(() => {
   <div class="flex flex-col min-h-screen">
     <div class="container mx-auto p-6 space-y-6 flex-1">
     
-    <HeaderView :status="status" />
+    <HeaderView :status="dynamicStatus" />
 
-    <Alert v-if="error" variant="destructive">
+    <Alert v-if="dynamicError" variant="destructive">
       <AlertCircle class="h-4 w-4" />
       <AlertTitle>Error</AlertTitle>
-      <AlertDescription>{{ error }}</AlertDescription>
+      <AlertDescription>{{ dynamicError }}</AlertDescription>
     </Alert>
 
-    <div v-if="servers.length === 0 && status === 'connected'" class="text-center py-10 text-muted-foreground">
+    <div v-if="mergedServers.length === 0 && dynamicStatus === 'connected'" class="text-center py-10 text-muted-foreground">
       Waiting for server data...
     </div>
 
     <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       <router-link 
-        v-for="server in servers" 
+        v-for="server in mergedServers" 
         :key="server.uuid" 
         :to="{ name: 'server-detail', params: { uuid: server.uuid } }"
         class="block h-full"

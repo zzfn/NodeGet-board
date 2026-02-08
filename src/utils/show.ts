@@ -8,7 +8,7 @@ export const showHostname = (server: any) => {
 }
 
 export const showOS = (server: any) => {
-    if (server.system && server.system.system_name) return server.system.system_name + ' ' + (server.system.system_os_version || '')
+    if (server.system && server.system.system_name) return server.system.system_name
     return 'Unknown OS' 
 }
 
@@ -38,7 +38,7 @@ export const showRamText = (server: any) => {
 }
 
 
-export const showNetworkSpeed = (server: any, type: 'rx' | 'tx') => {
+export const showNetworkSpeed = (server: any, type: 'rx' | 'tx' | 'total') => {
     if (!server.network) return '0 B/s'
     let totalSpeed = 0
     
@@ -47,6 +47,7 @@ export const showNetworkSpeed = (server: any, type: 'rx' | 'tx') => {
         
         if (type === 'rx') totalSpeed += (iface.receive_speed || 0)
         if (type === 'tx') totalSpeed += (iface.transmit_speed || 0)
+        if (type === 'total') totalSpeed += (iface.receive_speed || 0) + (iface.transmit_speed || 0)
     }
     
     return formatBytes(totalSpeed) + '/s'
