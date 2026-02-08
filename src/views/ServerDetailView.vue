@@ -9,13 +9,14 @@ import { useRoute } from 'vue-router'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { AlertCircle, Container, Fish, Database, HardDrive, Network, Cpu, Clock, ArrowLeft } from 'lucide-vue-next'
-import { Button } from '@/components/ui/button'
-
 import HeaderView from '@/components/HeaderView.vue'
+import { Button } from '@/components/ui/button'
+import { ArrowLeft, Cpu, Database, HardDrive, Network, AlertCircle, Menu, X, Clock, Container, Fish } from 'lucide-vue-next'
 
 const route = useRoute()
 const uuid = route.params.uuid as string
+
+const isSidebarOpen = ref(false)
 
 const { 
   status: dynamicStatus, 
@@ -103,45 +104,79 @@ const historyAreaPath = computed(() => {
 
 <template>
   <div class="flex flex-col h-screen bg-background text-foreground">
-    <!-- Header -->
     <div class="border-b">
-        <div class="container mx-auto py-3 px-4">
-            <HeaderView :status="dynamicStatus" />
+        <div class="container mx-auto py-3 px-4 flex items-center gap-4">
+            <Button variant="ghost" size="icon" class="md:hidden" @click="isSidebarOpen = true">
+                <Menu class="h-5 w-5" />
+            </Button>
+
+            <div class="flex-1">
+                <HeaderView :status="dynamicStatus" />
+            </div>
         </div>
     </div>
 
     <!-- Main Layout -->
-    <div class="flex flex-1 overflow-hidden">
+    <div class="flex flex-1 overflow-hidden relative">
+        <!-- Mobile Sidebar Overlay -->
+        <div 
+            v-if="isSidebarOpen" 
+            class="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 md:hidden"
+            @click="isSidebarOpen = false"
+        ></div>
+
         <!-- Sidebar -->
-        <aside class="w-72 border-r bg-muted/20 flex flex-col">
-            <div class="p-4 border-b flex items-center gap-2">
-                <Button variant="ghost" size="icon" as-child class="h-8 w-8 -ml-1">
+        <aside 
+            :class="[
+                'border-r bg-muted/20 flex flex-col transition-all duration-300 ease-in-out z-50',
+                'fixed inset-y-0 left-0 h-full bg-background md:bg-muted/20 md:relative',
+                isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+                'md:w-72',
+                'w-72'
+            ]"
+        >
+            <div class="p-4 border-b flex items-center gap-2 h-16 box-border overflow-hidden">
+                <Button variant="ghost" size="icon" as-child class="h-8 w-8 shrink-0">
                     <router-link to="/">
                         <ArrowLeft class="h-4 w-4" />
                     </router-link>
                 </Button>
-                <div class="overflow-hidden" v-if="server">
-                     <h2 class="font-semibold truncate">{{ showHostname(server) }}</h2>
-                     <p class="text-xs text-muted-foreground truncate">{{ showOS(server) }}</p>
+                <div class="overflow-hidden flex-1 transition-opacity duration-300">
+                     <div v-if="server">
+                        <h2 class="font-semibold truncate">{{ showHostname(server) }}</h2>
+                        <p class="text-xs text-muted-foreground truncate">{{ showOS(server) }}</p>
+                     </div>
+                     <div v-else class="text-sm font-medium">Loading...</div>
                 </div>
-                <div v-else class="text-sm font-medium">Loading...</div>
+                
+
+                <!-- Mobile Close Button -->
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    class="h-8 w-8 md:hidden ml-auto"
+                    @click="isSidebarOpen = false"
+                >
+                    <X class="h-4 w-4" />
+                </Button>
             </div>
             
-            <div class="flex-1 overflow-y-auto">
+            <div class="flex-1 overflow-y-auto overflow-x-hidden">
                 <div class="p-2 space-y-1" v-if="server">
                     <button 
                         v-for="tab in tabs" 
                         :key="tab.id"
-                        @click="activeTab = tab.id"
+                        @click="() => { activeTab = tab.id; isSidebarOpen = false; }"
+                        :title="tab.label"
                         :class="[
-                            'w-full flex items-center gap-3 p-3 text-left rounded-lg transition-colors border border-transparent',
+                            'w-full flex items-center gap-3 p-3 text-left rounded-lg transition-all border border-transparent',
                             activeTab === tab.id 
                                 ? 'bg-primary/20 border-border shadow-sm text-foreground' 
-                                : 'hover:bg-muted/50 text-muted-foreground hover:text-foreground'
+                                : 'hover:bg-muted/50 text-muted-foreground hover:text-foreground',
                         ]"
                     >
                         <div :class="[
-                            'p-2 rounded-md',
+                            'p-2 rounded-md shrink-0 transition-all',
                             activeTab === tab.id ? 'bg-primary/10' : 'bg-muted'
                         ]">
                             <component :is="tab.icon" :class="[
@@ -149,16 +184,19 @@ const historyAreaPath = computed(() => {
                                 activeTab === tab.id ? 'text-primary' : 'text-muted-foreground'
                             ]" />
                         </div>
-                        <div class="flex-1 min-w-0">
-                            <div class="font-medium text-sm">{{ tab.label }}</div>
-                            <div class="text-xs text-muted-foreground mt-0.5 font-mono">
+                        <div class="flex-1 min-w-0 transition-all duration-300">
+                            <div class="font-medium text-sm truncate">{{ tab.label }}</div>
+                            <div class="text-xs text-muted-foreground mt-0.5 font-mono truncate">
                                 <span v-if="tab.id === 'cpu'">{{ showCpuPercent(server).toFixed(1) }}%</span>
                                 <span v-else-if="tab.id === 'memory'">{{ showRamPercent(server).toFixed(1) }}%</span>
                                 <span v-else-if="tab.id === 'disk'">{{ showDiskDisplay(server) }}</span>
                                 <span v-else-if="tab.id === 'network'">{{ showNetworkSpeed(server, 'total') }}</span>
                             </div>
                         </div>
-                        <div class="w-1 h-8 rounded-full bg-primary/20 overflow-hidden" v-if="['cpu', 'memory', 'disk'].includes(tab.id)">
+                        <div 
+                            class="w-1 h-8 rounded-full bg-primary/20 overflow-hidden shrink-0 transition-all duration-300" 
+                            v-if="['cpu', 'memory', 'disk'].includes(tab.id)"
+                        >
                             <div 
                                 class="w-full bg-primary transition-all duration-500 rounded-full"
                                 :style="{ 
@@ -305,7 +343,8 @@ const historyAreaPath = computed(() => {
                                          <CardTitle class="text-base font-medium flex items-center gap-2">
                                              <HardDrive class="h-4 w-4" /> 
                                              <span>{{ disk.device_name || 'Disk ' + index }}</span>
-                                             <Badge variant="secondary" class="ml-2 font-mono">{{ disk.mount_point }}</Badge>
+                                             <Badge variant="secondary" class="ml-2 font-mono" v-if="disk.mount_point.length<16">{{ disk.mount_point }}</Badge>
+                                             <Badge variant="secondary" class="ml-2 font-mono" v-else>{{ disk.mount_point.substring(0, 16)+"..." }}</Badge>
                                          </CardTitle>
                                          <span class="text-sm text-muted-foreground font-mono">{{ disk.kind }}</span>
                                      </div>
