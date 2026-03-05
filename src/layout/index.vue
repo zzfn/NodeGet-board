@@ -12,7 +12,6 @@ const isMobileSidebarOpen = ref(false);
 <template>
   <div class="flex h-screen overflow-hidden bg-background relative">
     <TooltipProvider>
-      <!-- Mobile Sidebar Overlay -->
       <div
         v-if="isMobileSidebarOpen"
         class="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 md:hidden"

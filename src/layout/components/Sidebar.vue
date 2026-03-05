@@ -70,7 +70,6 @@ const groupedRoutes = computed<[string, SidebarRoute[]][]>(() => {
       props.collapsed ? 'md:w-16 w-60' : 'w-60',
     ]"
   >
-    <!-- Logo & toggle -->
     <div
       class="flex h-14 shrink-0 items-center border-b px-3"
       :class="
@@ -108,10 +107,8 @@ const groupedRoutes = computed<[string, SidebarRoute[]][]>(() => {
       </Button>
     </div>
 
-    <!-- Menu -->
     <nav class="flex-1 flex flex-col overflow-y-auto p-2 gap-y-3">
       <div v-for="([group, routes], index) in groupedRoutes" :key="group">
-        <!-- 分组标签 -->
         <div
           v-if="group"
           class="px-2 pt-1 text-sm font-semibold text-muted-foreground/60 uppercase tracking-wider select-none"
@@ -119,7 +116,6 @@ const groupedRoutes = computed<[string, SidebarRoute[]][]>(() => {
         >
           {{ group }}
         </div>
-        <!-- 折叠时用分隔线代替标签，第一个分组不显示 -->
         <div
           v-if="group && index > 0"
           class="mx-2 border-t hidden"

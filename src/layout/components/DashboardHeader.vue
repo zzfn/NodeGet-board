@@ -14,10 +14,10 @@ const toggleTheme = () => {
   isDark.value = !isDark.value;
   if (isDark.value) {
     document.documentElement.classList.add("dark");
-    document.cookie = "theme=dark; path=/; max-age=31536000"; // 1 year
+    document.cookie = "theme=dark; path=/; max-age=31536000";
   } else {
     document.documentElement.classList.remove("dark");
-    document.cookie = "theme=light; path=/; max-age=31536000"; // 1 year
+    document.cookie = "theme=light; path=/; max-age=31536000";
   }
 };
 

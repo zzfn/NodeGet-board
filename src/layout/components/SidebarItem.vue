@@ -49,7 +49,6 @@ const visibleChildren = computed(() =>
 </script>
 
 <template>
-  <!-- Group route with children -->
   <template v-if="hasVisibleChildren">
     <Collapsible v-if="!collapsed || level > 0" v-model:open="isOpen">
       <CollapsibleTrigger as-child>
@@ -85,7 +84,6 @@ const visibleChildren = computed(() =>
         </div>
       </CollapsibleContent>
     </Collapsible>
-    <!-- Collapsed icon-only for top level group -->
     <div v-else class="px-2 py-1">
       <button
         class="flex w-full items-center justify-center rounded-md p-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
@@ -100,7 +98,6 @@ const visibleChildren = computed(() =>
     </div>
   </template>
 
-  <!-- Leaf route -->
   <template v-else>
     <Tooltip v-if="collapsed && level === 0" :delay-duration="0">
       <TooltipTrigger as-child>
