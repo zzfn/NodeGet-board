@@ -1,9 +1,10 @@
 <!-- TODO: 未实现将 customHeader / customBody 注入到页面 <head> / <body> 的逻辑 -->
 <script setup lang="ts">
-import { ref } from "vue";
-import { storeToRefs } from "pinia";
+import { ref, computed, watch } from "vue";
 import { toast } from "vue-sonner";
-import { useSiteStore } from "@/stores/settings/site";
+import { usePermissionStore } from "@/stores/permission";
+import { useBackendStore } from "@/composables/useBackendStore";
+import { wsRpcCall } from "@/composables/useWsRpc";
 import {
   Card,
   CardContent,
@@ -14,20 +15,98 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-const store = useSiteStore();
-const { customHeader, customBody } = storeToRefs(store);
+const KV_KEY_HEADER = "site_custom_header";
+const KV_KEY_BODY = "site_custom_body";
 
-const localHeader = ref(customHeader.value);
-const localBody = ref(customBody.value);
+const permissionStore = usePermissionStore();
+const { currentBackend } = useBackendStore();
 
-function saveHeader() {
-  store.customHeader = localHeader.value;
-  toast.success("保存成功");
+const tokenKey = computed(() => permissionStore.tokenInfo?.token_key);
+
+const status = ref<"idle" | "loading" | "ready" | "error">("idle");
+const localHeader = ref("");
+const localBody = ref("");
+const savingHeader = ref(false);
+const savingBody = ref(false);
+
+const load = async () => {
+  const url = currentBackend.value?.url;
+  const token = currentBackend.value?.token;
+  const ns = tokenKey.value;
+  if (!url || !token || !ns) return;
+
+  status.value = "loading";
+  try {
+    const [header, body] = await Promise.all([
+      wsRpcCall<string>(url, "kv_get_value", {
+        token,
+        namespace: ns,
+        key: KV_KEY_HEADER,
+      }).catch(() => null),
+      wsRpcCall<string>(url, "kv_get_value", {
+        token,
+        namespace: ns,
+        key: KV_KEY_BODY,
+      }).catch(() => null),
+    ]);
+    localHeader.value = header ?? "";
+    localBody.value = body ?? "";
+    status.value = "ready";
+  } catch {
+    status.value = "error";
+  }
+};
+
+watch(
+  () => permissionStore.status,
+  (s) => {
+    if (s === "ready") load();
+  },
+  { immediate: true },
+);
+
+async function saveHeader() {
+  const url = currentBackend.value?.url;
+  const token = currentBackend.value?.token;
+  const ns = tokenKey.value;
+  if (!url || !token || !ns) return;
+
+  savingHeader.value = true;
+  try {
+    await wsRpcCall(url, "kv_set_value", {
+      token,
+      namespace: ns,
+      key: KV_KEY_HEADER,
+      value: localHeader.value,
+    });
+    toast.success("保存成功");
+  } catch {
+    toast.error("保存失败");
+  } finally {
+    savingHeader.value = false;
+  }
 }
 
-function saveBody() {
-  store.customBody = localBody.value;
-  toast.success("保存成功");
+async function saveBody() {
+  const url = currentBackend.value?.url;
+  const token = currentBackend.value?.token;
+  const ns = tokenKey.value;
+  if (!url || !token || !ns) return;
+
+  savingBody.value = true;
+  try {
+    await wsRpcCall(url, "kv_set_value", {
+      token,
+      namespace: ns,
+      key: KV_KEY_BODY,
+      value: localBody.value,
+    });
+    toast.success("保存成功");
+  } catch {
+    toast.error("保存失败");
+  } finally {
+    savingBody.value = false;
+  }
 }
 </script>
 
@@ -48,12 +127,19 @@ function saveBody() {
       <CardContent class="px-4">
         <textarea
           v-model="localHeader"
-          class="flex min-h-[96px] w-full rounded-md border bg-transparent px-3 py-2 text-sm font-mono shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+          :disabled="status === 'loading'"
+          class="flex min-h-[96px] w-full rounded-md border bg-transparent px-3 py-2 text-sm font-mono shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:opacity-50"
           placeholder="<script>...</script>"
         />
       </CardContent>
       <CardFooter class="justify-end px-4">
-        <Button size="sm" @click="saveHeader">保存</Button>
+        <Button
+          size="sm"
+          :disabled="savingHeader || status === 'loading'"
+          @click="saveHeader"
+        >
+          {{ savingHeader ? "保存中..." : "保存" }}
+        </Button>
       </CardFooter>
     </Card>
 
@@ -65,12 +151,19 @@ function saveBody() {
       <CardContent class="px-4">
         <textarea
           v-model="localBody"
-          class="flex min-h-[96px] w-full rounded-md border bg-transparent px-3 py-2 text-sm font-mono shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+          :disabled="status === 'loading'"
+          class="flex min-h-[96px] w-full rounded-md border bg-transparent px-3 py-2 text-sm font-mono shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:opacity-50"
           placeholder="<script>...</script>"
         />
       </CardContent>
       <CardFooter class="justify-end px-4">
-        <Button size="sm" @click="saveBody">保存</Button>
+        <Button
+          size="sm"
+          :disabled="savingBody || status === 'loading'"
+          @click="saveBody"
+        >
+          {{ savingBody ? "保存中..." : "保存" }}
+        </Button>
       </CardFooter>
     </Card>
   </div>
