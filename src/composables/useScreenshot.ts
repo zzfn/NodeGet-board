@@ -42,8 +42,8 @@ export async function captureModules(
 
   let y = padding;
   for (let i = 0; i < canvases.length; i++) {
-    ctx.drawImage(canvases[i], padding, y, contentWidth, scaledHeights[i]);
-    y += scaledHeights[i] + gap;
+    ctx.drawImage(canvases[i]!, padding, y, contentWidth, scaledHeights[i]!);
+    y += scaledHeights[i]! + gap;
   }
 
   out.toBlob((blob) => {
