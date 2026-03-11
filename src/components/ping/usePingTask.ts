@@ -23,6 +23,7 @@ const WORKER_START_INTERVAL_MS = 150;
 export function usePingTask(uuid: string, url: string, token: string) {
   const results = ref<PingResult[]>([]);
   const pingStatus = ref<PingStatus>("idle");
+  const probesDone = ref(0);
 
   let ws: WebSocket | null = null;
   let nextId = 1;
@@ -208,6 +209,7 @@ export function usePingTask(uuid: string, url: string, token: string) {
     if (stopped) return;
     const data = await queryTask(taskId);
     updateResult(index, data, true);
+    probesDone.value++;
   }
 
   /**
@@ -239,7 +241,10 @@ export function usePingTask(uuid: string, url: string, token: string) {
       updateResult(index, data);
 
       const status = results.value[index]?.status;
-      if (status === "success" || status === "failed") break;
+      if (status === "success" || status === "failed") {
+        probesDone.value++;
+        break;
+      }
 
       await new Promise((r) => setTimeout(r, delayBeforeQueryMs));
     }
@@ -279,6 +284,7 @@ export function usePingTask(uuid: string, url: string, token: string) {
         ? PING_NODES
         : PING_NODES.filter((n) => n.isp === ispFilter);
     initResults(nodes);
+    probesDone.value = 0;
     pingStatus.value = "running";
 
     try {
@@ -352,5 +358,5 @@ export function usePingTask(uuid: string, url: string, token: string) {
 
   onUnmounted(stop);
 
-  return { results, pingStatus, start, stop };
+  return { results, pingStatus, probesDone, start, stop };
 }
