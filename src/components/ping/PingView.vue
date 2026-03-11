@@ -17,7 +17,13 @@ const token = computed(() => currentBackend.value?.token ?? "");
 
 const testType = ref<"ping" | "tcp_ping">("tcp_ping");
 const ispFilter = ref<ISP | "all">("all");
-const concurrency = ref(5);
+const selectedProvince = ref<string | null>(null);
+
+function onProvinceClick(province: string) {
+  selectedProvince.value =
+    selectedProvince.value === province ? null : province;
+}
+const concurrency = ref(10);
 const delayBeforeQueryMs = ref(400);
 const loopCount = ref(20);
 
@@ -110,7 +116,7 @@ const completedCount = computed(
         </button>
       </div>
 
-      <div class="flex items-center gap-2 text-sm">
+      <div class="flex items-center gap-2 ml-auto text-sm">
         <label class="text-muted-foreground">并发</label>
         <input
           v-model.number="concurrency"
@@ -137,9 +143,6 @@ const completedCount = computed(
           class="w-16 rounded-md border px-2 py-1.5 text-sm text-center bg-background focus:outline-none focus:ring-1 focus:ring-ring"
         />
         <span class="text-muted-foreground">次</span>
-      </div>
-
-      <div class="flex items-center gap-2 ml-auto">
         <Button
           size="sm"
           variant="outline"
@@ -162,7 +165,12 @@ const completedCount = computed(
     <!-- 地图 + 直方图 -->
     <div class="flex gap-4">
       <div class="shrink-0 border rounded-lg bg-card p-2" style="width: 450px">
-        <PingChinaMapNative :results="results" :isp-filter="ispFilter" />
+        <PingChinaMapNative
+          :results="results"
+          :isp-filter="ispFilter"
+          :selected-province="selectedProvince"
+          @province-click="onProvinceClick"
+        />
       </div>
 
       <!-- 直方图 -->
@@ -176,7 +184,12 @@ const completedCount = computed(
 
     <!-- 结果表格 -->
     <div>
-      <PingResultTable :results="results" :loop-count="loopCount" />
+      <PingResultTable
+        :results="results"
+        :loop-count="loopCount"
+        :province-filter="selectedProvince"
+        @clear-province="selectedProvince = null"
+      />
     </div>
   </div>
 </template>

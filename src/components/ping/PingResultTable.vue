@@ -15,7 +15,15 @@ import { ISP_LABELS } from "@/data/pingNodes";
 import PingQualityCanvas from "./PingQualityCanvas.vue";
 import { getLatencyColor } from "./pingLatencyConfig";
 
-const props = defineProps<{ results: PingResult[]; loopCount: number }>();
+const props = defineProps<{
+  results: PingResult[];
+  loopCount: number;
+  provinceFilter?: string | null;
+}>();
+
+const emit = defineEmits<{
+  (e: "clear-province"): void;
+}>();
 
 function fmt(v: number | null): string {
   return v === null ? "—" : `${Math.round(v)}`;
@@ -26,26 +34,44 @@ function fmtLoss(v: number): string {
 }
 
 function ispColor(
-  isp: string,
+  _isp: string,
 ): "default" | "secondary" | "destructive" | "outline" {
-  if (isp === "telecom") return "default";
-  if (isp === "unicom") return "secondary";
-  return "outline";
+  return "secondary";
 }
 
 const ISP_ORDER: ISP[] = ["telecom", "unicom", "mobile", "international"];
+
+const filteredResults = computed(() =>
+  props.provinceFilter
+    ? props.results.filter((r) => r.node.province === props.provinceFilter)
+    : props.results,
+);
 
 const groups = computed(() =>
   ISP_ORDER.map((isp) => ({
     isp,
     label: ISP_LABELS[isp],
-    rows: props.results.filter((r) => r.node.isp === isp),
+    rows: filteredResults.value.filter((r) => r.node.isp === isp),
   })).filter((g) => g.rows.length > 0),
 );
 </script>
 
 <template>
   <div>
+    <div
+      v-if="provinceFilter"
+      class="mb-2 flex items-center gap-2 rounded-md border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40 px-3 py-2 text-sm text-blue-700 dark:text-blue-300"
+    >
+      <span
+        >仅显示：<strong>{{ provinceFilter }}</strong></span
+      >
+      <button
+        class="ml-auto flex items-center gap-1 rounded-md border border-blue-300 dark:border-blue-700 px-2 py-0.5 text-xs font-medium hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+        @click="emit('clear-province')"
+      >
+        ✕ 清除筛选
+      </button>
+    </div>
     <Table>
       <TableHeader>
         <TableRow>

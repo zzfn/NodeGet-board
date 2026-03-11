@@ -4,7 +4,15 @@ import * as echarts from "echarts";
 import type { PingResult } from "./usePingTask";
 import type { ISP } from "@/data/pingNodes";
 
-const props = defineProps<{ results: PingResult[]; ispFilter: ISP | "all" }>();
+const props = defineProps<{
+  results: PingResult[];
+  ispFilter: ISP | "all";
+  selectedProvince?: string | null;
+}>();
+
+const emit = defineEmits<{
+  (e: "province-click", province: string): void;
+}>();
 
 const chartEl = ref<HTMLDivElement | null>(null);
 let chart: echarts.ECharts | null = null;
@@ -192,10 +200,34 @@ function initOption(): echarts.EChartsOption {
   };
 }
 
+function buildHighlightData(
+  results: PingResult[],
+  ispFilter: ISP | "all",
+  selectedProvince: string | null | undefined,
+) {
+  const base = buildProvinceData(results, ispFilter);
+  if (!selectedProvince) return base;
+  const fullName = PROVINCE_FULL_NAME[selectedProvince] ?? selectedProvince;
+  return base.map((item) =>
+    item.name === fullName
+      ? {
+          ...item,
+          itemStyle: { borderWidth: 2.5, borderColor: "#3b82f6" },
+          label: {
+            show: true,
+            fontSize: 10,
+            color: "#1d4ed8",
+            fontWeight: "bold" as const,
+          },
+        }
+      : item,
+  );
+}
+
 onMounted(async () => {
   try {
     const geoJson = await fetch(
-      "https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json",
+      `${import.meta.env.BASE_URL}geo/100000_full.json`,
     ).then((r) => r.json());
     echarts.registerMap("china", geoJson);
 
@@ -203,9 +235,26 @@ onMounted(async () => {
     chart = echarts.init(chartEl.value);
     chart.setOption(initOption());
 
+    chart.on("click", (params: any) => {
+      if (params.componentType !== "series") return;
+      const shortName =
+        Object.keys(PROVINCE_FULL_NAME).find(
+          (k) => PROVINCE_FULL_NAME[k] === params.name,
+        ) ?? params.name;
+      emit("province-click", shortName);
+    });
+
     if (props.results.length > 0) {
       chart.setOption({
-        series: [{ data: buildProvinceData(props.results, props.ispFilter) }],
+        series: [
+          {
+            data: buildHighlightData(
+              props.results,
+              props.ispFilter,
+              props.selectedProvince,
+            ),
+          },
+        ],
       });
     }
   } catch (e) {
@@ -219,11 +268,13 @@ onUnmounted(() => {
 });
 
 watch(
-  () => [props.results, props.ispFilter] as const,
-  ([results, ispFilter]) => {
+  () => [props.results, props.ispFilter, props.selectedProvince] as const,
+  ([results, ispFilter, selectedProvince]) => {
     if (!chart) return;
     chart.setOption({
-      series: [{ data: buildProvinceData(results, ispFilter) }],
+      series: [
+        { data: buildHighlightData(results, ispFilter, selectedProvince) },
+      ],
     });
   },
   { deep: true },
