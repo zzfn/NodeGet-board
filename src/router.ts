@@ -9,6 +9,7 @@ import {
   FileText,
   Info,
   Key,
+  Database,
 } from "lucide-vue-next";
 import Layout from "@/layout/index.vue";
 import RouterViewLayout from "@/layout/components/RouterViewLayout.vue";
@@ -45,6 +46,11 @@ const router = createRouter({
           path: "sessions",
           component: () => import("@/views/dashboard/SessionsView.vue"),
           meta: { title: "会话管理", icon: Users, order: 2, group: "工具" },
+        },
+        {
+          path: "kv",
+          component: () => import("@/views/dashboard/KvView.vue"),
+          meta: { title: "KV 管理", icon: Database, order: 3, group: "工具" },
         },
         {
           path: "settings",
@@ -116,6 +122,12 @@ const router = createRouter({
               component: () =>
                 import("@/views/dashboard/node/WebShellView.vue"),
               meta: { title: "WebShell 终端" },
+            },
+            {
+              path: "setting",
+              name: "dashboard-node-setting",
+              component: () => import("@/views/dashboard/node/SettingView.vue"),
+              meta: { title: "节点设置" },
             },
           ],
         },

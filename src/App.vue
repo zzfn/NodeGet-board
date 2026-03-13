@@ -7,7 +7,7 @@ import { ref, provide, onMounted, watch } from "vue";
 import BackendSwitcher from "@/components/BackendSwitcher.vue";
 import { useBackendStore } from "@/composables/useBackendStore";
 import { usePermissionStore } from "@/stores/permission";
-import { wsRpcCall } from "@/composables/useWsRpc";
+import { getWsConnection } from "@/composables/useWsConnection";
 
 const background = ref<"default" | "flickering">("default");
 
@@ -50,10 +50,12 @@ watch(
     await permissionStore.refreshByBackend(backend);
     const tokenKey = permissionStore.tokenInfo?.token_key;
     if (backend?.url && backend?.token && tokenKey) {
-      wsRpcCall(backend.url, "kv_create", {
-        token: backend.token,
-        namespace: tokenKey,
-      }).catch(() => {});
+      getWsConnection(backend.url)
+        .call("kv_create", {
+          token: backend.token,
+          namespace: tokenKey,
+        })
+        .catch(() => {});
     }
   },
   { deep: true, immediate: true },

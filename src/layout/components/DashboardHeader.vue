@@ -1,39 +1,17 @@
 <script setup lang="ts">
 import { RouterLink } from "vue-router";
-import { ref, onMounted } from "vue";
+import { onMounted } from "vue";
 import { ArrowLeft, Menu, Moon, Sun } from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
+import { useThemeStore } from "@/stores/theme";
 
 const emit = defineEmits<{
   openMobileSidebar: [];
 }>();
 
-const isDark = ref(false);
+const themeStore = useThemeStore();
 
-const toggleTheme = () => {
-  isDark.value = !isDark.value;
-  if (isDark.value) {
-    document.documentElement.classList.add("dark");
-    document.cookie = "theme=dark; path=/; max-age=31536000";
-  } else {
-    document.documentElement.classList.remove("dark");
-    document.cookie = "theme=light; path=/; max-age=31536000";
-  }
-};
-
-onMounted(() => {
-  const themeCookie = document.cookie
-    .split("; ")
-    .find((row) => row.startsWith("theme="))
-    ?.split("=")[1];
-  if (themeCookie === "dark") {
-    isDark.value = true;
-    document.documentElement.classList.add("dark");
-  } else {
-    isDark.value = false;
-    document.documentElement.classList.remove("dark");
-  }
-});
+onMounted(() => themeStore.init());
 </script>
 
 <template>
@@ -47,9 +25,9 @@ onMounted(() => {
       <Menu class="h-5 w-5" />
     </Button>
     <div class="ml-auto">
-      <Button variant="ghost" size="icon" @click="toggleTheme">
+      <Button variant="ghost" size="icon" @click="themeStore.toggle()">
         <Moon
-          v-if="!isDark"
+          v-if="!themeStore.isDark"
           class="h-[1.2rem] w-[1rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0"
         />
         <Sun

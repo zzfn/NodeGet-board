@@ -3,8 +3,7 @@
 import { ref, computed, watch } from "vue";
 import { toast } from "vue-sonner";
 import { usePermissionStore } from "@/stores/permission";
-import { useBackendStore } from "@/composables/useBackendStore";
-import { wsRpcCall } from "@/composables/useWsRpc";
+import { useKv } from "@/composables/useKv";
 import {
   Card,
   CardContent,
@@ -19,7 +18,7 @@ const KV_KEY_HEADER = "site_custom_header";
 const KV_KEY_BODY = "site_custom_body";
 
 const permissionStore = usePermissionStore();
-const { currentBackend } = useBackendStore();
+const kv = useKv();
 
 const tokenKey = computed(() => permissionStore.tokenInfo?.token_key);
 
@@ -30,27 +29,22 @@ const savingHeader = ref(false);
 const savingBody = ref(false);
 
 const load = async () => {
-  const url = currentBackend.value?.url;
-  const token = currentBackend.value?.token;
   const ns = tokenKey.value;
-  if (!url || !token || !ns) return;
+  if (!ns) return;
 
+  kv.namespace.value = ns;
   status.value = "loading";
   try {
     const [header, body] = await Promise.all([
-      wsRpcCall<string>(url, "kv_get_value", {
-        token,
-        namespace: ns,
-        key: KV_KEY_HEADER,
-      }).catch(() => null),
-      wsRpcCall<string>(url, "kv_get_value", {
-        token,
-        namespace: ns,
-        key: KV_KEY_BODY,
-      }).catch(() => null),
+      kv.getValue(KV_KEY_HEADER).catch(() => null),
+      kv.getValue(KV_KEY_BODY).catch(() => null),
     ]);
-    localHeader.value = header ?? "";
-    localBody.value = body ?? "";
+    const extract = (v: unknown) =>
+      v && typeof v === "object" && "value" in v
+        ? String((v as { value: unknown }).value ?? "")
+        : "";
+    localHeader.value = extract(header);
+    localBody.value = extract(body);
     status.value = "ready";
   } catch {
     status.value = "error";
@@ -66,19 +60,13 @@ watch(
 );
 
 async function saveHeader() {
-  const url = currentBackend.value?.url;
-  const token = currentBackend.value?.token;
   const ns = tokenKey.value;
-  if (!url || !token || !ns) return;
+  if (!ns) return;
 
   savingHeader.value = true;
   try {
-    await wsRpcCall(url, "kv_set_value", {
-      token,
-      namespace: ns,
-      key: KV_KEY_HEADER,
-      value: localHeader.value,
-    });
+    kv.namespace.value = ns;
+    await kv.setValue(KV_KEY_HEADER, { value: localHeader.value });
     toast.success("保存成功");
   } catch {
     toast.error("保存失败");
@@ -88,19 +76,13 @@ async function saveHeader() {
 }
 
 async function saveBody() {
-  const url = currentBackend.value?.url;
-  const token = currentBackend.value?.token;
   const ns = tokenKey.value;
-  if (!url || !token || !ns) return;
+  if (!ns) return;
 
   savingBody.value = true;
   try {
-    await wsRpcCall(url, "kv_set_value", {
-      token,
-      namespace: ns,
-      key: KV_KEY_BODY,
-      value: localBody.value,
-    });
+    kv.namespace.value = ns;
+    await kv.setValue(KV_KEY_BODY, { value: localBody.value });
     toast.success("保存成功");
   } catch {
     toast.error("保存失败");

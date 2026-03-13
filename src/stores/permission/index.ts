@@ -1,15 +1,15 @@
-import { computed, ref } from 'vue'
-import { defineStore } from 'pinia'
-import type { Backend } from '@/composables/useBackendStore'
-import { wsRpcCall } from '@/composables/useWsRpc'
-import type { PermissionRule, TokenInfo } from '@/stores/permission/types'
+import { computed, ref } from "vue";
+import { defineStore } from "pinia";
+import type { Backend } from "@/composables/useBackendStore";
+import { getWsConnection } from "@/composables/useWsConnection";
+import type { PermissionRule, TokenInfo } from "@/stores/permission/types";
 import {
   flattenTokenRules,
   hasAnyScopePermissionBySpec,
   hasPermissionBySpec,
   normalizeText,
   scopeKey,
-} from './utils'
+} from "./utils";
 
 /**
  * 权限设计
@@ -34,23 +34,27 @@ import {
  * - 普通权限：hasPermission('task:create:web_shell', 'agent_uuid:agent-a')
  * - KV 权限：hasPermission('kv:read:metadata_cpu', 'kv_namespace:ns1')
  */
-export type { PermissionRule, TokenInfo } from '@/stores/permission/types'
+export type { PermissionRule, TokenInfo } from "@/stores/permission/types";
 
-export const usePermissionStore = defineStore('permission', () => {
-  const status = ref<'idle' | 'loading' | 'ready' | 'error'>('idle')
-  const error = ref('')
-  const tokenInfo = ref<TokenInfo | null>(null)
-  const currentBackendKey = ref('')
-  const rules = ref<PermissionRule[]>([])
+export const usePermissionStore = defineStore("permission", () => {
+  const status = ref<"idle" | "loading" | "ready" | "error">("idle");
+  const error = ref("");
+  const tokenInfo = ref<TokenInfo | null>(null);
+  const currentBackendKey = ref("");
+  const rules = ref<PermissionRule[]>([]);
 
-  const isSuperToken = computed(() => normalizeText(tokenInfo.value?.username) === 'root')
+  const isSuperToken = computed(
+    () => normalizeText(tokenInfo.value?.username) === "root",
+  );
 
   const tokenLimits = computed(() => ({
-    general: rules.value.filter((rule) => rule.resource !== 'kv'),
-    kv: rules.value.filter((rule) => rule.resource === 'kv'),
-  }))
+    general: rules.value.filter((rule) => rule.resource !== "kv"),
+    kv: rules.value.filter((rule) => rule.resource === "kv"),
+  }));
 
-  const availableScopes = computed(() => [...new Set(rules.value.map(scopeKey))])
+  const availableScopes = computed(() => [
+    ...new Set(rules.value.map(scopeKey)),
+  ]);
 
   /**
    * 清空权限上下文（常用于登出、切换后端、token 失效）。
@@ -60,12 +64,12 @@ export const usePermissionStore = defineStore('permission', () => {
    * permissionStore.clear()
    */
   const clear = () => {
-    status.value = 'idle'
-    error.value = ''
-    tokenInfo.value = null
-    currentBackendKey.value = ''
-    rules.value = []
-  }
+    status.value = "idle";
+    error.value = "";
+    tokenInfo.value = null;
+    currentBackendKey.value = "";
+    rules.value = [];
+  };
 
   /**
    * 按当前后端配置拉取 token 信息并刷新权限规则。
@@ -84,33 +88,38 @@ export const usePermissionStore = defineStore('permission', () => {
    */
   const refreshByBackend = async (backend: Backend | null) => {
     if (!backend?.url || !backend?.token) {
-      clear()
-      return
+      clear();
+      return;
     }
 
-    const backendKey = `${backend.url}::${backend.token}`
-    if (backendKey === currentBackendKey.value && status.value === 'ready') return
+    const backendKey = `${backend.url}::${backend.token}`;
+    if (backendKey === currentBackendKey.value && status.value === "ready")
+      return;
 
-    status.value = 'loading'
-    error.value = ''
-    currentBackendKey.value = backendKey
+    status.value = "loading";
+    error.value = "";
+    currentBackendKey.value = backendKey;
 
     try {
-      const result = await wsRpcCall<TokenInfo>(backend.url, 'token_get', { token: backend.token })
-      if (!result || typeof result !== 'object') {
-        throw new Error('token_get empty result')
+      const result = await getWsConnection(backend.url).call<TokenInfo>(
+        "token_get",
+        { token: backend.token },
+      );
+      if (!result || typeof result !== "object") {
+        throw new Error("token_get empty result");
       }
 
-      tokenInfo.value = result
-      rules.value = flattenTokenRules(result)
-      status.value = 'ready'
+      tokenInfo.value = result;
+      rules.value = flattenTokenRules(result);
+      status.value = "ready";
     } catch (e: unknown) {
-      tokenInfo.value = null
-      rules.value = []
-      status.value = 'error'
-      error.value = e instanceof Error ? e.message : 'Failed to fetch token permissions'
+      tokenInfo.value = null;
+      rules.value = [];
+      status.value = "error";
+      error.value =
+        e instanceof Error ? e.message : "Failed to fetch token permissions";
     }
-  }
+  };
 
   /**
    * 判断某个 scope 下是否拥有指定权限。
@@ -129,9 +138,9 @@ export const usePermissionStore = defineStore('permission', () => {
    * permissionStore.hasPermission('kv:read:metadata_cpu', 'kv_namespace:ns1')
    */
   const hasPermission = (permissionSpec: string, scope?: string) => {
-    if (isSuperToken.value) return true
-    return hasPermissionBySpec(rules.value, permissionSpec, scope)
-  }
+    if (isSuperToken.value) return true;
+    return hasPermissionBySpec(rules.value, permissionSpec, scope);
+  };
 
   /**
    * 判断在任意 scope 下是否有指定权限。
@@ -146,9 +155,9 @@ export const usePermissionStore = defineStore('permission', () => {
    * }
    */
   const hasAnyScopePermission = (permissionSpec: string) => {
-    if (isSuperToken.value) return true
-    return hasAnyScopePermissionBySpec(rules.value, permissionSpec)
-  }
+    if (isSuperToken.value) return true;
+    return hasAnyScopePermissionBySpec(rules.value, permissionSpec);
+  };
 
   return {
     status,
@@ -162,5 +171,5 @@ export const usePermissionStore = defineStore('permission', () => {
     clear,
     hasPermission,
     hasAnyScopePermission,
-  }
-})
+  };
+});

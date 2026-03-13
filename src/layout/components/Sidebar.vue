@@ -8,6 +8,7 @@ import {
   ArrowLeft,
   Radar,
   Terminal,
+  Settings,
 } from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
 import SidebarItem, { type SidebarRoute } from "./SidebarItem.vue";
@@ -63,6 +64,13 @@ const nodeRoutes = computed<SidebarRoute[]>(() => {
       meta: {
         title: "WebShell",
         icon: Terminal,
+      },
+    },
+    {
+      path: `/dashboard/node/${nodeUuid.value}/setting`,
+      meta: {
+        title: "设置",
+        icon: Settings,
       },
     },
   ];
