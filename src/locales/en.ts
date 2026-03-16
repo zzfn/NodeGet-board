@@ -8,6 +8,8 @@ export default {
     load: "Load",
     error: "Error",
     loading: "Loading...",
+    expandSidebar: "Expand Sidebar",
+    collapseSidebar: "Collapse Sidebar",
   },
   home: {
     waitingData: "Waiting for server data...",
@@ -126,6 +128,7 @@ export default {
     updateAgent: "Update Agent",
     backToServers: "Back to Servers",
     node: {
+      detail: "Node Detail",
       backToServers: "Back to Servers",
       status: "Status",
       latency: "Latency",

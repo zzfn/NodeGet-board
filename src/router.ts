@@ -278,82 +278,83 @@ const router = createRouter({
         {
           path: "node/:uuid",
           component: () => import("@/views/dashboard/node/NodeLayout.vue"),
-          meta: { title: "router.nodeDetail", hidden: true },
-          redirect: (to) => `/dashboard/node/${to.params.uuid}/status`,
+          meta: { title: "router.node.detail", hidden: true },
+          redirect: (to) => `/dashboard/node/${to.params.uuid}/ping`,
           children: [
             {
               path: "status",
               name: "status",
-              component: () => import("@/views/dashboard/node/StatusView.vue"),
-              meta: { title: "router.status" },
+              component: () =>
+                import("@/views/dashboard/WorkInProcessView.vue"),
+              meta: { title: "router.node.status" },
             },
             {
               path: "ping",
               name: "dashboard-node-ping",
               component: () => import("@/views/dashboard/node/PingView.vue"),
-              meta: { title: "router.ping" },
+              meta: { title: "router.node.ping" },
             },
             {
               path: "webshell",
               name: "dashboard-node-webshell",
               component: () =>
                 import("@/views/dashboard/node/WebShellView.vue"),
-              meta: { title: "router.webshell" },
+              meta: { title: "router.node.webshell" },
             },
             {
               path: "setting",
               name: "dashboard-node-setting",
               component: () => import("@/views/dashboard/node/SettingView.vue"),
-              meta: { title: "router.nodeSetting" },
+              meta: { title: "router.node.setting" },
             },
             {
               path: "latency",
               name: "latency",
               component: () =>
                 import("@/views/dashboard/WorkInProcessView.vue"),
-              meta: { title: "router.latency" },
+              meta: { title: "router.node.latency" },
             },
             {
               path: "traffic",
               name: "traffic",
               component: () =>
                 import("@/views/dashboard/WorkInProcessView.vue"),
-              meta: { title: "router.traffic" },
+              meta: { title: "router.node.traffic" },
             },
             {
               path: "update",
               name: "update",
               component: () =>
                 import("@/views/dashboard/WorkInProcessView.vue"),
-              meta: { title: "router.updateAgent" },
+              meta: { title: "router.node.update" },
             },
             {
               path: "files",
               name: "files",
               component: () =>
                 import("@/views/dashboard/WorkInProcessView.vue"),
-              meta: { title: "router.files", icon: HardDrive },
+              meta: { title: "router.node.files", icon: HardDrive },
             },
             {
               path: "docker",
               name: "docker",
               component: () =>
                 import("@/views/dashboard/WorkInProcessView.vue"),
-              meta: { title: "router.docker", icon: Package },
+              meta: { title: "router.node.docker", icon: Package },
             },
             {
               path: "firewall",
               name: "firewall",
               component: () =>
                 import("@/views/dashboard/WorkInProcessView.vue"),
-              meta: { title: "router.firewall", icon: BrickWallFire },
+              meta: { title: "router.node.firewall", icon: BrickWallFire },
             },
             {
               path: "process",
               name: "process",
               component: () =>
                 import("@/views/dashboard/WorkInProcessView.vue"),
-              meta: { title: "router.process", icon: ChartNoAxesGantt },
+              meta: { title: "router.node.process", icon: ChartNoAxesGantt },
             },
           ],
         },

@@ -207,7 +207,9 @@ const groupedRoutes = computed<[string, SidebarRoute[]][]>(() => {
         <PanelLeftClose v-if="!props.collapsed" class="h-4 w-4" />
         <PanelLeftOpen v-else class="h-4 w-4" />
         <span class="sr-only">{{
-          props.collapsed ? "展开侧边栏" : "收起侧边栏"
+          props.collapsed
+            ? $t("common.expandSidebar")
+            : $t("common.collapseSidebar")
         }}</span>
       </Button>
       <!-- Mobile Close Button -->

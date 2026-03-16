@@ -9,6 +9,8 @@ export default {
     error: "错误",
     loading: "加载中...",
     uptime: "运行时间",
+    expandSidebar: "展开侧边栏",
+    collapseSidebar: "收起侧边栏",
   },
   home: {
     waitingData: "等待服务器数据...",
@@ -128,6 +130,7 @@ export default {
     updateAgent: "更新agent",
     backToServers: "返回首页",
     node: {
+      detail: "节点详情",
       backToServers: "返回首页",
       status: "运行状态",
       latency: "延迟曲线",
