@@ -17,7 +17,17 @@ const kv = useKv();
 const { t } = useI18n();
 
 const activeTab = ref<"list" | "flat" | "node">("list");
+const deletingNs = ref<string | null>(null);
 const selectedNamespace = ref<string | null>(null);
+const tabKeys = ref({ list: 0, flat: 0, node: 0 });
+
+const handleTabChange = (tab: string) => {
+  activeTab.value = tab as "list" | "flat" | "node";
+  tabKeys.value[tab as keyof typeof tabKeys.value]++;
+  if (tab === "list" || tab === "flat") {
+    kv.fetchNamespaces();
+  }
+};
 
 // Create namespace dialog
 const createOpen = ref(false);
@@ -34,7 +44,7 @@ const viewLoading = ref(false);
 const editOpen = ref(false);
 const editKey = ref<string | undefined>(undefined);
 const editValue = ref<unknown>(undefined);
-const editLoading = ref(false);
+const saveLoading = ref(false);
 
 onMounted(() => kv.init());
 
@@ -78,17 +88,12 @@ const handleView = async (key: string) => {
 
 const handleEdit = async (key: string) => {
   editKey.value = key;
-  editValue.value = undefined;
-  editLoading.value = true;
+  editValue.value = await kv.getValue(key);
   editOpen.value = true;
-  try {
-    editValue.value = await kv.getValue(key);
-  } finally {
-    editLoading.value = false;
-  }
 };
 
 const handleSave = async (key: string, value: unknown) => {
+  saveLoading.value = true;
   try {
     await kv.setValue(key, value);
     editOpen.value = false;
@@ -97,6 +102,8 @@ const handleSave = async (key: string, value: unknown) => {
     }
   } catch (e: unknown) {
     toast.error(e instanceof Error ? e.message : t("dashboard.saveFailed"));
+  } finally {
+    saveLoading.value = false;
   }
 };
 
@@ -112,8 +119,22 @@ const handleDelete = async (key: string) => {
   }
 };
 
-const handleNsDelete = (_ns: string) => {
-  toast.info(t("dashboard.kv.deleteNsDev"));
+const handleNsDelete = async (ns: string) => {
+  deletingNs.value = ns;
+  try {
+    const { partialFailures } = await kv.deleteNamespace(ns);
+    if (partialFailures.length > 0) {
+      toast.warning(
+        `部分 key 删除失败，namespace 仍存在：${partialFailures.join("、")}`,
+      );
+    } else {
+      toast.success(`命名空间「${ns}」已删除`);
+    }
+  } catch (e: unknown) {
+    toast.error(e instanceof Error ? e.message : `删除命名空间失败`);
+  } finally {
+    deletingNs.value = null;
+  }
 };
 
 const handleNsRename = (_ns: string) => {
@@ -135,7 +156,7 @@ const openAddKey = () => {
     <Tabs
       v-if="!selectedNamespace"
       :model-value="activeTab"
-      @update:model-value="activeTab = $event as any"
+      @update:model-value="handleTabChange($event as string)"
     >
       <TabsList>
         <TabsTrigger value="list">{{
@@ -152,23 +173,24 @@ const openAddKey = () => {
       <!-- Normal View: namespace list -->
       <TabsContent value="list" class="mt-4">
         <KvNamespaceTable
+          :key="tabKeys.list"
           :namespaces="kv.namespaces.value"
           :loading="kv.namespacesLoading.value"
+          :deleting-ns="deletingNs"
           @select="enterNamespace"
           @open-create="createOpen = true"
           @delete="handleNsDelete"
-          @rename="handleNsRename"
         />
       </TabsContent>
 
       <!-- Flat View -->
       <TabsContent value="flat" class="mt-4">
-        <KvFlatTable :namespaces="kv.namespaces.value" />
+        <KvFlatTable :key="tabKeys.flat" :namespaces="kv.namespaces.value" />
       </TabsContent>
 
       <!-- Node View -->
       <TabsContent value="node" class="mt-4">
-        <KvNodeTable />
+        <KvNodeTable :key="tabKeys.node" />
       </TabsContent>
     </Tabs>
 
@@ -218,9 +240,9 @@ const openAddKey = () => {
     />
     <KvSetDialog
       :open="editOpen"
+      :loading="saveLoading"
       :edit-key="editKey"
       :edit-value="editValue"
-      :loading="editLoading"
       @update:open="editOpen = $event"
       @save="handleSave"
     />

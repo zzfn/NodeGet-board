@@ -23,59 +23,53 @@ const flatLoading = ref(false);
 const viewOpen = ref(false);
 const viewKey = ref("");
 const viewValue = ref<unknown>(undefined);
-const viewLoading = ref(false);
 
 const editOpen = ref(false);
 const editKey = ref<string | undefined>(undefined);
 const editValue = ref<unknown>(undefined);
-const editLoading = ref(false);
 const editNamespace = ref("");
 
 const loadAll = async () => {
+  if (props.namespaces.length === 0) return;
   flatLoading.value = true;
   flatEntries.value = [];
-  await Promise.allSettled(
-    props.namespaces.map(async (ns) => {
-      kv.namespace.value = ns;
-      await kv.fetchKeys();
-      const nsEntries: FlatEntry[] = kv.entries.value.map((e) => ({
-        namespace: ns,
-        key: e.key,
-        value: e.value,
-      }));
-      flatEntries.value.push(...nsEntries);
-    }),
-  );
-  flatLoading.value = false;
+  try {
+    const namespaceKeys = props.namespaces.map((ns) => ({
+      namespace: ns,
+      key: "*",
+    }));
+    const results = await kv.getMultiValue(namespaceKeys);
+    flatEntries.value = results.map((r) => ({
+      namespace: r.namespace,
+      key: r.key,
+      value: r.value,
+    }));
+  } catch (e: unknown) {
+    toast.error(e instanceof Error ? e.message : "加载失败");
+  } finally {
+    flatLoading.value = false;
+  }
 };
 
 onMounted(loadAll);
 
-const handleView = async (ns: string, key: string) => {
+const handleView = (ns: string, key: string) => {
+  const entry = flatEntries.value.find(
+    (x) => x.namespace === ns && x.key === key,
+  );
   viewKey.value = key;
-  viewValue.value = undefined;
-  viewLoading.value = true;
+  viewValue.value = entry?.value;
   viewOpen.value = true;
-  kv.namespace.value = ns;
-  try {
-    viewValue.value = await kv.getValue(key);
-  } finally {
-    viewLoading.value = false;
-  }
 };
 
-const handleEdit = async (ns: string, key: string) => {
+const handleEdit = (ns: string, key: string) => {
+  const entry = flatEntries.value.find(
+    (x) => x.namespace === ns && x.key === key,
+  );
   editNamespace.value = ns;
   editKey.value = key;
-  editValue.value = undefined;
-  editLoading.value = true;
+  editValue.value = entry?.value;
   editOpen.value = true;
-  kv.namespace.value = ns;
-  try {
-    editValue.value = await kv.getValue(key);
-  } finally {
-    editLoading.value = false;
-  }
 };
 
 const handleSave = async (key: string, value: unknown) => {
@@ -93,7 +87,6 @@ const handleSave = async (key: string, value: unknown) => {
 };
 
 const handleDelete = async (ns: string, key: string) => {
-  if (!confirm(`确定要删除 "${ns}/${key}" 吗？`)) return;
   kv.namespace.value = ns;
   try {
     await kv.deleteKey(key);
@@ -138,7 +131,6 @@ const handleDelete = async (ns: string, key: string) => {
     <KvViewDialog
       :open="viewOpen"
       :kv-key="viewKey"
-      :loading="viewLoading"
       :value="viewValue"
       @update:open="viewOpen = $event"
     />
@@ -146,7 +138,6 @@ const handleDelete = async (ns: string, key: string) => {
       :open="editOpen"
       :edit-key="editKey"
       :edit-value="editValue"
-      :loading="editLoading"
       @update:open="editOpen = $event"
       @save="handleSave"
     />

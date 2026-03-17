@@ -2,6 +2,7 @@
 import { Eye, Pencil, Trash2 } from "lucide-vue-next";
 import type { KvEntry } from "@/composables/useKv";
 import { Button } from "@/components/ui/button";
+import { PopConfirm } from "@/components/ui/pop-confirm";
 import {
   Table,
   TableBody,
@@ -86,13 +87,19 @@ const truncate = (val: unknown, len = 80): string => {
                 @click="emit('edit', entry.key)"
                 ><Pencil class="h-4 w-4"
               /></Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                class="h-8 w-8 text-destructive hover:text-destructive"
-                @click="emit('delete', entry.key)"
-                ><Trash2 class="h-4 w-4"
-              /></Button>
+              <PopConfirm
+                title="确认删除"
+                :description="`删除 key「${entry.key}」后不可恢复`"
+                confirm-text="删除"
+                @confirm="emit('delete', entry.key)"
+              >
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  class="h-8 w-8 text-destructive hover:text-destructive"
+                  ><Trash2 class="h-4 w-4"
+                /></Button>
+              </PopConfirm>
             </div>
           </TableCell>
         </TableRow>

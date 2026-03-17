@@ -19,14 +19,20 @@ export function useKv() {
   const rpc = <T>(method: string, params: unknown): Promise<T> =>
     getWsConnection(backendUrl.value).call<T>(method, params);
 
-  // TODO: replace with kv_list_namespaces RPC once the backend supports it.
-  // For now, derive the single namespace from the token key (format: "token_key:token_secret").
   const fetchNamespaces = async () => {
     if (!backendUrl.value) return;
     namespacesLoading.value = true;
-    const tokenKey = backendToken.value.split(":")[0]?.trim();
-    namespaces.value = tokenKey ? [tokenKey] : [];
-    namespacesLoading.value = false;
+    try {
+      const list = await rpc<string[]>("kv_list_all_namespace", {
+        token: backendToken.value,
+      });
+      namespaces.value = Array.isArray(list) ? list : [];
+    } catch (e: unknown) {
+      namespaces.value = [];
+      error.value = e instanceof Error ? e.message : String(e);
+    } finally {
+      namespacesLoading.value = false;
+    }
   };
 
   const fetchKeys = async () => {
@@ -34,31 +40,33 @@ export function useKv() {
     loading.value = true;
     error.value = null;
     try {
-      const keys = await rpc<string[]>("kv_get_all_keys", {
+      const results = await rpc<
+        { namespace: string; key: string; value: unknown }[]
+      >("kv_get_multi_value", {
         token: backendToken.value,
-        namespace: namespace.value,
+        namespace_key: [{ namespace: namespace.value, key: "*" }],
       });
-      const keyList = Array.isArray(keys) ? keys : [];
-      // Fetch all values concurrently over the same connection
-      const values = await Promise.allSettled(
-        keyList.map((key) =>
-          rpc<unknown>("kv_get_value", {
-            token: backendToken.value,
-            namespace: namespace.value,
-            key,
-          }),
-        ),
-      );
-      entries.value = keyList.map((key, i) => ({
-        key,
-        value: values[i]?.status === "fulfilled" ? values[i].value : undefined,
-      }));
+      entries.value = Array.isArray(results)
+        ? results.map((r) => ({ key: r.key, value: r.value }))
+        : [];
     } catch (e: unknown) {
       error.value = e instanceof Error ? e.message : String(e);
       entries.value = [];
     } finally {
       loading.value = false;
     }
+  };
+
+  const getMultiValue = async (
+    namespaceKeys: { namespace: string; key: string }[],
+  ): Promise<{ namespace: string; key: string; value: unknown }[]> => {
+    const results = await rpc<
+      { namespace: string; key: string; value: unknown }[]
+    >("kv_get_multi_value", {
+      token: backendToken.value,
+      namespace_key: namespaceKeys,
+    });
+    return Array.isArray(results) ? results : [];
   };
 
   const getValue = async (key: string): Promise<unknown> => {
@@ -83,12 +91,64 @@ export function useKv() {
       key,
       value,
     });
+    const actual = await rpc<unknown>("kv_get_value", {
+      token: backendToken.value,
+      namespace: namespace.value,
+      key,
+    });
     const entry = entries.value.find((e) => e.key === key);
     if (entry) {
-      entry.value = value;
+      entry.value = actual;
     } else {
-      entries.value.push({ key, value });
+      entries.value.push({ key, value: actual });
     }
+  };
+
+  const setValueBatch = async (
+    items: Array<{ key: string; value: unknown }>,
+  ): Promise<{ partialFailures: string[] }> => {
+    for (const { value } of items) {
+      try {
+        JSON.stringify(value);
+      } catch {
+        throw new Error("value 必须是可序列化的 JSON");
+      }
+    }
+
+    const conn = getWsConnection(backendUrl.value);
+    const results = await conn.callBatch<{
+      success: boolean;
+      message?: string;
+    }>(
+      items.map(({ key, value }) => ({
+        method: "kv_set_value",
+        params: {
+          token: backendToken.value,
+          namespace: namespace.value,
+          key,
+          value,
+        },
+      })),
+    );
+
+    const partialFailures: string[] = [];
+    results.forEach((result, i) => {
+      const item = items[i]!;
+      if (result?.success === false) {
+        partialFailures.push(
+          item.key + (result.message ? `：${result.message}` : ""),
+        );
+      } else {
+        const entry = entries.value.find((e) => e.key === item.key);
+        if (entry) {
+          entry.value = item.value;
+        } else {
+          entries.value.push({ key: item.key, value: item.value });
+        }
+      }
+    });
+
+    return { partialFailures };
   };
 
   const deleteKey = async (key: string): Promise<void> => {
@@ -100,8 +160,55 @@ export function useKv() {
     entries.value = entries.value.filter((e) => e.key !== key);
   };
 
+  const deleteNamespace = async (
+    ns: string,
+  ): Promise<{ partialFailures: string[] }> => {
+    const results = await getMultiValue([{ namespace: ns, key: "*" }]);
+    const keys = results.map((r) => r.key);
+
+    if (keys.length === 0) {
+      namespaces.value = namespaces.value.filter((n) => n !== ns);
+      return { partialFailures: [] };
+    }
+
+    const conn = getWsConnection(backendUrl.value);
+    const batchResults = await conn.callBatch<{
+      success: boolean;
+      message?: string;
+    }>(
+      keys.map((key) => ({
+        method: "kv_delete_key",
+        params: { token: backendToken.value, namespace: ns, key },
+      })),
+    );
+
+    const partialFailures: string[] = [];
+    batchResults.forEach((r, i) => {
+      if (r?.success === false) {
+        partialFailures.push(keys[i]! + (r.message ? `：${r.message}` : ""));
+      }
+    });
+
+    if (partialFailures.length === 0) {
+      namespaces.value = namespaces.value.filter((n) => n !== ns);
+      if (namespace.value === ns) entries.value = [];
+    }
+
+    return { partialFailures };
+  };
+
   const createNamespace = async (ns: string): Promise<void> => {
     await rpc("kv_create", { token: backendToken.value, namespace: ns });
+  };
+
+  const listAgentUuids = async (): Promise<string[]> => {
+    const result = await rpc<{ uuids: string[] }>(
+      "nodeget-server_list_all_agent_uuid",
+      {
+        token: backendToken.value,
+      },
+    );
+    return Array.isArray(result?.uuids) ? result.uuids : [];
   };
 
   // Initialize by fetching namespace list
@@ -121,8 +228,12 @@ export function useKv() {
     fetchNamespaces,
     fetchKeys,
     getValue,
+    getMultiValue,
     setValue,
+    setValueBatch,
     deleteKey,
+    deleteNamespace,
     createNamespace,
+    listAgentUuids,
   };
 }

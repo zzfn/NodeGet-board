@@ -5,7 +5,12 @@
  * Multiple in-flight requests are multiplexed via JSON-RPC id fields.
  * The connection is created lazily on the first call and re-established
  * automatically if it drops (pending requests are rejected so callers can retry).
+ *
+ * Heartbeat: sends `nodeget-server_hello` every HEARTBEAT_INTERVAL_MS to keep
+ * the connection alive and detect silent network failures early.
  */
+
+const HEARTBEAT_INTERVAL_MS = 30_000;
 
 interface RpcErrorShape {
   message?: unknown;
@@ -25,6 +30,19 @@ interface PendingRequest {
   method: string;
 }
 
+const generateId = (): string => {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
+    return crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+  });
+};
+
 const formatRpcError = (error: unknown): string => {
   if (typeof error === "string") return error;
   if (!error || typeof error !== "object") return "";
@@ -41,17 +59,40 @@ const formatRpcError = (error: unknown): string => {
 class WsConnection {
   private ws: WebSocket | null = null;
   private connectPromise: Promise<void> | null = null;
-  private pending = new Map<number, PendingRequest>();
+  private pending = new Map<string, PendingRequest>();
+  private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private readonly url: string;
 
   constructor(url: string) {
     this.url = url;
   }
 
+  private startHeartbeat() {
+    this.stopHeartbeat();
+    this.heartbeatTimer = setInterval(() => {
+      if (this.ws?.readyState !== WebSocket.OPEN) {
+        this.stopHeartbeat();
+        return;
+      }
+      this.call("nodeget-server_hello", []).catch(() => {
+        // Heartbeat failure means the connection is broken; close it so
+        // ensureConnected() will re-establish on the next real request.
+        this.ws?.close();
+      });
+    }, HEARTBEAT_INTERVAL_MS);
+  }
+
+  private stopHeartbeat() {
+    if (this.heartbeatTimer !== null) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+  }
+
   async call<T>(method: string, params: unknown, timeoutMs = 8000): Promise<T> {
     await this.ensureConnected();
     return new Promise<T>((resolve, reject) => {
-      const id = Date.now() + Math.floor(Math.random() * 10000);
+      const id = generateId();
       const timeout = setTimeout(() => {
         this.pending.delete(id);
         reject(new Error(`${method} request timeout`));
@@ -66,6 +107,80 @@ class WsConnection {
     });
   }
 
+  async callBatch<T>(
+    requests: Array<{ method: string; params: unknown }>,
+    timeoutMs = 8000,
+  ): Promise<T[]> {
+    await this.ensureConnected();
+
+    const items = requests.map(({ method, params }) => ({
+      id: generateId(),
+      method,
+      params,
+    }));
+
+    const promises = items.map(
+      ({ id, method }) =>
+        new Promise<T>((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            this.pending.delete(id);
+            reject(new Error(`${method} batch request timeout`));
+          }, timeoutMs);
+          this.pending.set(id, {
+            resolve: resolve as (v: unknown) => void,
+            reject,
+            timeout,
+            method,
+          });
+        }),
+    );
+
+    this.ws!.send(
+      JSON.stringify(
+        items.map(({ id, method, params }) => ({
+          jsonrpc: "2.0",
+          id,
+          method,
+          params,
+        })),
+      ),
+    );
+
+    return Promise.all(promises);
+  }
+
+  private handleMessage(msg: WsRpcMessage) {
+    const id = msg?.id as string;
+    const req = this.pending.get(id);
+    if (!req) return;
+
+    clearTimeout(req.timeout);
+    this.pending.delete(id);
+
+    if (msg.error) {
+      req.reject(
+        new Error(formatRpcError(msg.error) || `${req.method} rpc error`),
+      );
+      return;
+    }
+
+    // Handle result-wrapped error
+    if (
+      msg.result &&
+      typeof msg.result === "object" &&
+      !Array.isArray(msg.result) &&
+      "error_message" in (msg.result as Record<string, unknown>)
+    ) {
+      const r = msg.result as Record<string, unknown>;
+      req.reject(
+        new Error(String(r.error_message || `${req.method} rpc error`)),
+      );
+      return;
+    }
+
+    req.resolve(msg.result);
+  }
+
   private ensureConnected(): Promise<void> {
     if (this.ws?.readyState === WebSocket.OPEN) return Promise.resolve();
     if (this.connectPromise) return this.connectPromise;
@@ -76,6 +191,7 @@ class WsConnection {
 
       ws.onopen = () => {
         this.connectPromise = null;
+        this.startHeartbeat();
         resolve();
       };
 
@@ -88,6 +204,7 @@ class WsConnection {
       ws.onclose = () => {
         this.connectPromise = null;
         this.ws = null;
+        this.stopHeartbeat();
         // Reject all in-flight requests so they don't hang until timeout
         for (const [id, req] of this.pending) {
           clearTimeout(req.timeout);
@@ -97,46 +214,17 @@ class WsConnection {
       };
 
       ws.onmessage = (event: MessageEvent) => {
-        let msg: WsRpcMessage;
+        let parsed: unknown;
         try {
-          msg = JSON.parse(event.data as string);
+          parsed = JSON.parse(event.data as string);
         } catch {
           return;
         }
-
-        const id = msg?.id as number;
-        const req = this.pending.get(id);
-        if (!req) return;
-
-        clearTimeout(req.timeout);
-        this.pending.delete(id);
-
-        if (msg.error) {
-          req.reject(
-            new Error(formatRpcError(msg.error) || `${req.method} rpc error`),
-          );
-          return;
+        if (Array.isArray(parsed)) {
+          for (const item of parsed) this.handleMessage(item as WsRpcMessage);
+        } else {
+          this.handleMessage(parsed as WsRpcMessage);
         }
-
-        // Handle result-wrapped error
-        if (
-          msg.result &&
-          typeof msg.result === "object" &&
-          !Array.isArray(msg.result) &&
-          "error_message" in msg.result
-        ) {
-          req.reject(
-            new Error(
-              String(
-                (msg.result as { error_message?: unknown }).error_message ||
-                  `${req.method} rpc error`,
-              ),
-            ),
-          );
-          return;
-        }
-
-        req.resolve(msg.result);
       };
     });
 
@@ -144,6 +232,7 @@ class WsConnection {
   }
 
   close() {
+    this.stopHeartbeat();
     this.ws?.close();
     this.ws = null;
   }

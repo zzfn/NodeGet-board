@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { Trash2, Pencil, Plus, Search } from "lucide-vue-next";
+import { Trash2, Plus, Search, Loader2 } from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
+import { PopConfirm } from "@/components/ui/pop-confirm";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -15,13 +16,13 @@ import {
 const props = defineProps<{
   namespaces: string[];
   loading?: boolean;
+  deletingNs?: string | null;
 }>();
 
 const emit = defineEmits<{
   select: [namespace: string];
   openCreate: [];
   delete: [namespace: string];
-  rename: [namespace: string];
 }>();
 
 const searchQuery = ref("");
@@ -37,15 +38,16 @@ const filteredNamespaces = computed(() => {
 <template>
   <div class="space-y-4">
     <div class="flex items-center gap-2">
-      <Input
-        v-model="searchQuery"
-        placeholder="搜索命名空间..."
-        class="max-w-xs"
-      />
-      <Button variant="outline" size="sm">
-        <Search class="h-4 w-4 mr-1" />
-        搜索
-      </Button>
+      <div class="relative max-w-xs w-full">
+        <Search
+          class="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none"
+        />
+        <Input
+          v-model="searchQuery"
+          placeholder="搜索命名空间..."
+          class="pl-8"
+        />
+      </div>
       <div class="flex-1" />
       <Button size="sm" @click="emit('openCreate')">
         <Plus class="h-4 w-4 mr-1" />
@@ -82,21 +84,29 @@ const filteredNamespaces = computed(() => {
           </TableCell>
           <TableCell class="text-right">
             <div class="flex justify-end gap-1">
+              <PopConfirm
+                v-if="deletingNs !== ns"
+                title="确认删除"
+                :description="`删除命名空间「${ns}」后不可恢复`"
+                confirm-text="删除"
+                @confirm="emit('delete', ns)"
+              >
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  class="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                >
+                  <Trash2 class="h-3.5 w-3.5" />
+                </Button>
+              </PopConfirm>
               <Button
+                v-else
                 variant="ghost"
                 size="sm"
-                class="h-7 w-7 p-0"
-                @click="emit('rename', ns)"
+                disabled
+                class="h-7 w-7 p-0 text-destructive"
               >
-                <Pencil class="h-3.5 w-3.5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                class="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                @click="emit('delete', ns)"
-              >
-                <Trash2 class="h-3.5 w-3.5" />
+                <Loader2 class="h-3.5 w-3.5 animate-spin" />
               </Button>
             </div>
           </TableCell>

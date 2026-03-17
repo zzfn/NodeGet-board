@@ -35,12 +35,14 @@ const key = ref("");
 const editorValue = ref<unknown>(undefined);
 
 watch(
-  () => [props.open, props.editValue] as const,
-  ([open, val]) => {
+  () => props.open,
+  (open) => {
     if (open) {
       key.value = props.editKey ?? "";
       editorValue.value =
-        val !== undefined ? JSON.stringify(val, null, 2) : "{}";
+        props.editValue !== undefined
+          ? JSON.stringify(props.editValue, null, 2)
+          : "{}";
     }
   },
 );
@@ -73,24 +75,10 @@ const close = () => emit("update:open", false);
         <DialogDescription>Value 必须为合法的 JSON 格式</DialogDescription>
       </DialogHeader>
 
-      <div
-        v-if="loading"
-        class="flex items-center justify-center py-8 text-muted-foreground gap-2"
-      >
-        <Loader2 class="h-5 w-5 animate-spin" />
-        <span>加载中...</span>
-      </div>
-
-      <div v-else class="space-y-4">
-        <div class="space-y-2">
+      <div class="space-y-4">
+        <div v-if="!isEditMode()" class="space-y-2">
           <Label for="kv-key">Key</Label>
-          <Input
-            id="kv-key"
-            v-model="key"
-            placeholder="输入 key"
-            :readonly="isEditMode()"
-            :class="isEditMode() ? 'opacity-60 cursor-not-allowed' : ''"
-          />
+          <Input id="kv-key" v-model="key" placeholder="输入 key" />
         </div>
 
         <div class="space-y-2">
@@ -98,6 +86,7 @@ const close = () => emit("update:open", false);
           <JsonEditorVue
             v-model="editorValue"
             :mode="Mode.text"
+            :debounce="0"
             :class="themeStore.isDark ? 'jse-theme-dark' : ''"
             :main-menu-bar="false"
             :navigation-bar="false"
@@ -108,7 +97,10 @@ const close = () => emit("update:open", false);
 
       <DialogFooter>
         <Button variant="outline" @click="close">取消</Button>
-        <Button :disabled="loading" @click="handleSave">保存</Button>
+        <Button :disabled="loading" @click="handleSave">
+          <Loader2 v-if="loading" class="h-4 w-4 animate-spin" />
+          保存
+        </Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>

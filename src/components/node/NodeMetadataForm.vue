@@ -1,8 +1,20 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import { X } from "lucide-vue-next";
-import { SwitchRoot, SwitchThumb } from "reka-ui";
+import { computed, ref } from "vue";
+import { Check, ChevronsUpDown, X } from "lucide-vue-next";
+import {
+  AutocompleteAnchor,
+  AutocompleteContent,
+  AutocompleteEmpty,
+  AutocompleteInput,
+  AutocompleteItem,
+  AutocompletePortal,
+  AutocompleteRoot,
+  AutocompleteViewport,
+  SwitchRoot,
+  SwitchThumb,
+} from "reka-ui";
 import { Input } from "@/components/ui/input";
+import { NumberField } from "@/components/ui/number-field";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import {
@@ -13,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { REGIONS } from "@/data/regions";
+import { cn } from "@/lib/utils";
 import type { NodeMetadata } from "@/types/node";
 
 const PRICE_UNITS = [
@@ -56,6 +69,22 @@ function handleTagKeydown(e: KeyboardEvent) {
     addTag();
   }
 }
+
+// Region autocomplete
+const regionSearch = ref(
+  (() => {
+    const found = REGIONS.find((r) => r.code === props.modelValue.region);
+    return found ? `${found.code} · ${found.name}` : "";
+  })(),
+);
+
+const filteredRegions = computed(() => {
+  const q = regionSearch.value.toLowerCase();
+  if (!q) return REGIONS;
+  return REGIONS.filter(
+    (r) => r.code.toLowerCase().includes(q) || r.name.toLowerCase().includes(q),
+  );
+});
 </script>
 
 <template>
@@ -65,9 +94,9 @@ function handleTagKeydown(e: KeyboardEvent) {
       <Label for="nm-name">节点名称</Label>
       <Input
         id="nm-name"
-        :value="modelValue.name"
+        :model-value="modelValue.name"
         placeholder="节点展示名称"
-        @input="update({ name: ($event.target as HTMLInputElement).value })"
+        @update:model-value="update({ name: String($event) })"
       />
     </div>
 
@@ -103,16 +132,12 @@ function handleTagKeydown(e: KeyboardEvent) {
     <div class="grid grid-cols-2 gap-4">
       <div class="space-y-2">
         <Label for="nm-price">价格</Label>
-        <Input
+        <NumberField
           id="nm-price"
-          type="number"
-          :value="modelValue.price"
-          placeholder="0.00"
-          min="0"
-          step="0.01"
-          @input="
-            update({ price: Number(($event.target as HTMLInputElement).value) })
-          "
+          :model-value="modelValue.price"
+          :min="0"
+          :step="0.01"
+          @update:model-value="update({ price: $event })"
         />
       </div>
       <div class="space-y-2">
@@ -140,39 +165,86 @@ function handleTagKeydown(e: KeyboardEvent) {
     <!-- priceCycle -->
     <div class="space-y-2">
       <Label for="nm-price-cycle">计费周期（天）</Label>
-      <Input
+      <NumberField
         id="nm-price-cycle"
-        type="number"
-        :value="modelValue.priceCycle"
-        placeholder="30"
-        min="1"
-        @input="
-          update({
-            priceCycle: Number(($event.target as HTMLInputElement).value),
-          })
-        "
+        :model-value="modelValue.priceCycle"
+        :min="1"
+        :step="1"
+        @update:model-value="update({ priceCycle: $event })"
       />
     </div>
 
     <!-- region -->
     <div class="space-y-2">
-      <Label>地区</Label>
-      <Select
-        :model-value="modelValue.region"
-        @update:model-value="update({ region: $event as string })"
+      <Label for="nm-region">地区</Label>
+      <AutocompleteRoot
+        v-model="regionSearch"
+        :ignore-filter="true"
+        :open-on-focus="true"
+        :open-on-click="true"
       >
-        <SelectTrigger class="w-full">
-          <SelectValue placeholder="选择地区" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem v-for="r in REGIONS" :key="r.code" :value="r.code">
-            <span class="font-mono text-xs text-muted-foreground">{{
-              r.code
-            }}</span>
-            <span class="ml-2">{{ r.name }}</span>
-          </SelectItem>
-        </SelectContent>
-      </Select>
+        <AutocompleteAnchor class="relative">
+          <AutocompleteInput
+            id="nm-region"
+            placeholder="搜索地区代码或名称…"
+            :class="
+              cn(
+                'placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 pr-8 text-base shadow-xs transition-[color,box-shadow] outline-none md:text-sm',
+                'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[1px]',
+              )
+            "
+          />
+          <ChevronsUpDown
+            class="pointer-events-none absolute right-2.5 top-2.5 h-4 w-4 shrink-0 text-muted-foreground"
+          />
+        </AutocompleteAnchor>
+        <AutocompletePortal>
+          <AutocompleteContent
+            position="popper"
+            :side-offset="4"
+            :class="
+              cn(
+                'z-50 min-w-48 w-[var(--reka-combobox-trigger-width)] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md',
+                'data-[state=open]:animate-in data-[state=closed]:animate-out',
+                'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+                'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
+                'data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2',
+              )
+            "
+          >
+            <AutocompleteViewport class="p-1">
+              <AutocompleteEmpty
+                class="py-6 text-center text-sm text-muted-foreground"
+              >
+                无匹配地区
+              </AutocompleteEmpty>
+              <AutocompleteItem
+                v-for="r in filteredRegions"
+                :key="r.code"
+                :value="r.code"
+                :text-value="`${r.code} · ${r.name}`"
+                :class="
+                  cn(
+                    'relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none',
+                    'data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground',
+                    'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+                  )
+                "
+                @select="update({ region: r.code })"
+              >
+                <span class="w-8 font-mono text-xs text-muted-foreground">
+                  {{ r.code }}
+                </span>
+                <span class="ml-2">{{ r.name }}</span>
+                <Check
+                  v-if="modelValue.region === r.code"
+                  class="ml-auto h-4 w-4"
+                />
+              </AutocompleteItem>
+            </AutocompleteViewport>
+          </AutocompleteContent>
+        </AutocompletePortal>
+      </AutocompleteRoot>
     </div>
 
     <!-- hidden -->

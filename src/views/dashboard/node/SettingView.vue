@@ -1,28 +1,108 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { toast } from "vue-sonner";
+import { Loader2 } from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
 import NodeMetadataForm from "@/components/node/NodeMetadataForm.vue";
 import type { NodeMetadata } from "@/types/node";
+import { useKv } from "@/composables/useKv";
 import { useI18n } from "vue-i18n";
 
 const route = useRoute();
 const { t } = useI18n();
-const _uuid = route.params.uuid as string;
+const uuid = route.params.uuid as string;
+
+const kv = useKv();
+const loading = ref(false);
+const saveLoading = ref(false);
 
 const form = ref<NodeMetadata>({
-  name: "Hong Kong Node 01",
-  tags: ["BGP", "CMI", "premium"],
-  price: 29.9,
-  priceUnit: "¥",
+  name: "",
+  tags: [],
+  price: 0,
+  priceUnit: "$",
   priceCycle: 30,
-  region: "HK",
+  region: "",
   hidden: false,
 });
 
-function handleSave() {
-  toast.success(t("dashboard.saveSuccess"));
+onMounted(async () => {
+  loading.value = true;
+  try {
+    kv.namespace.value = uuid;
+    let results = await kv.getMultiValue([
+      { namespace: uuid, key: "metadata_*" },
+    ]);
+
+    // 若 namespace 不存在则先创建再初始化默认值
+    if (results.length === 0) {
+      try {
+        await kv.createNamespace(uuid);
+      } catch {
+        // namespace 可能已存在，忽略
+      }
+      const defaultName = "节点" + uuid.slice(-6);
+      await Promise.all([
+        kv.setValue("metadata_name", [defaultName]),
+        kv.setValue("metadata_tags", [""]),
+        kv.setValue("metadata_price", [0]),
+        kv.setValue("metadata_price_unit", ["$"]),
+        kv.setValue("metadata_price_cycle", [30]),
+        kv.setValue("metadata_region", [""]),
+        kv.setValue("metadata_hidden", [false]),
+      ]);
+      results = await kv.getMultiValue([
+        { namespace: uuid, key: "metadata_*" },
+      ]);
+    }
+
+    const get = (key: string) => results.find((r) => r.key === key)?.value;
+    const unwrap = (v: unknown) => (Array.isArray(v) ? v[0] : v);
+
+    form.value = {
+      name: String(unwrap(get("metadata_name")) ?? "") || uuid.slice(-6),
+      tags: (Array.isArray(get("metadata_tags"))
+        ? (get("metadata_tags") as string[])
+        : []
+      ).filter(Boolean),
+      price: Number(unwrap(get("metadata_price")) ?? 0),
+      priceUnit: String(unwrap(get("metadata_price_unit")) ?? "$"),
+      priceCycle: Number(unwrap(get("metadata_price_cycle")) ?? 30),
+      region: String(unwrap(get("metadata_region")) ?? ""),
+      hidden: Boolean(unwrap(get("metadata_hidden")) ?? false),
+    };
+  } catch (e: unknown) {
+    toast.error(e instanceof Error ? e.message : "加载节点配置失败");
+  } finally {
+    loading.value = false;
+  }
+});
+
+async function handleSave() {
+  saveLoading.value = true;
+  try {
+    kv.namespace.value = uuid;
+    const f = form.value;
+    const { partialFailures } = await kv.setValueBatch([
+      { key: "metadata_name", value: [f.name] },
+      { key: "metadata_tags", value: f.tags },
+      { key: "metadata_price", value: [f.price] },
+      { key: "metadata_price_unit", value: [f.priceUnit] },
+      { key: "metadata_price_cycle", value: [f.priceCycle] },
+      { key: "metadata_region", value: f.region ? [f.region] : [] },
+      { key: "metadata_hidden", value: [f.hidden] },
+    ]);
+    if (partialFailures.length > 0) {
+      toast.warning(`部分字段保存失败：${partialFailures.join("、")}`);
+    } else {
+      toast.success(t("dashboard.saveSuccess"));
+    }
+  } catch (e: unknown) {
+    toast.error(e instanceof Error ? e.message : t("dashboard.saveFailed"));
+  } finally {
+    saveLoading.value = false;
+  }
 }
 </script>
 
@@ -39,11 +119,24 @@ function handleSave() {
           </p>
         </div>
 
-        <NodeMetadataForm v-model="form" />
-
-        <div class="pt-2">
-          <Button @click="handleSave">{{ $t("dashboard.save") }}</Button>
+        <div
+          v-if="loading"
+          class="flex items-center gap-2 text-muted-foreground text-sm py-8"
+        >
+          <Loader2 class="h-4 w-4 animate-spin" />
+          加载中...
         </div>
+
+        <template v-else>
+          <NodeMetadataForm v-model="form" />
+
+          <div class="pt-2">
+            <Button :disabled="saveLoading" @click="handleSave">
+              <Loader2 v-if="saveLoading" class="h-4 w-4 animate-spin mr-2" />
+              {{ saveLoading ? "保存中..." : $t("dashboard.save") }}
+            </Button>
+          </div>
+        </template>
       </div>
     </div>
   </div>
