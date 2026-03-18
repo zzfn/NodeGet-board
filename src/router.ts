@@ -279,13 +279,12 @@ const router = createRouter({
           path: "node/:uuid",
           component: () => import("@/views/dashboard/node/NodeLayout.vue"),
           meta: { title: "router.node.detail", hidden: true },
-          redirect: (to) => `/dashboard/node/${to.params.uuid}/ping`,
+          redirect: (to) => `/dashboard/node/${to.params.uuid}/status`,
           children: [
             {
               path: "status",
               name: "status",
-              component: () =>
-                import("@/views/dashboard/WorkInProcessView.vue"),
+              component: () => import("@/views/dashboard/node/StatusView.vue"),
               meta: { title: "router.node.status" },
             },
             {
