@@ -47,6 +47,7 @@ let terminal: Terminal | null = null;
 let fitAddon: FitAddon | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let dataDisposable: { dispose: () => void } | null = null;
+let resizeDisposable: { dispose: () => void } | null = null;
 let containerClickHandler: (() => void) | null = null;
 let heartbeatTimer: number | null = null;
 let connectId = 0;
@@ -104,6 +105,11 @@ const destroySocket = () => {
   if (dataDisposable) {
     dataDisposable.dispose();
     dataDisposable = null;
+  }
+
+  if (resizeDisposable) {
+    resizeDisposable.dispose();
+    resizeDisposable = null;
   }
 
   if (socket) {
@@ -231,6 +237,29 @@ const connect = async () => {
             socket.send(data);
           }
         }) ?? null;
+
+      resizeDisposable =
+        terminal?.onResize(({ cols, rows }) => {
+          if (socket?.readyState === WebSocket.OPEN) {
+            const resizeMsg = JSON.stringify({
+              type: "resize",
+              cols,
+              rows,
+            });
+            socket.send(resizeMsg);
+          }
+        }) ?? null;
+
+      const dims = fitAddon?.proposeDimensions();
+      if (dims && socket?.readyState === WebSocket.OPEN) {
+        const resizeMsg = JSON.stringify({
+          type: "resize",
+          cols: dims.cols,
+          rows: dims.rows,
+        });
+        socket.send(resizeMsg);
+      }
+
       terminal?.focus();
 
       if (heartbeatTimer !== null) {
