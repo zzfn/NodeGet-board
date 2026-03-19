@@ -1,7 +1,13 @@
 <script setup lang="ts">
-import { useBackendStore } from "@/composables/useBackendStore";
-import CreateTokenCard from "@/components/token-manage/CreateTokenCard.vue";
-import DeleteTokenCard from "@/components/token-manage/DeleteTokenCard.vue";
+import TokenList from "@/components/token/token-list/tokenListCard.vue";
+
+import { useRouter } from "vue-router";
+
+const router = useRouter();
+
+const toCreateToken = () => {
+  router.push("/dashboard/tokenCeate");
+};
 </script>
 
 <template>
@@ -13,9 +19,8 @@ import DeleteTokenCard from "@/components/token-manage/DeleteTokenCard.vue";
       </div>
     </div>
 
-    <div class="grid gap-6 xl:grid-cols-2">
-      <CreateTokenCard />
-      <DeleteTokenCard />
+    <div>
+      <TokenList></TokenList>
     </div>
   </div>
 </template>

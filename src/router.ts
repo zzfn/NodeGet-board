@@ -144,11 +144,25 @@ const router = createRouter({
         {
           path: "token",
           name: "token",
-          component: () => import("@/views/dashboard/TokenManageView.vue"),
+          component: () =>
+            import("@/views/dashboard/token/TokenManageView.vue"),
           meta: {
             title: "router.token",
             icon: Key,
             order: 9,
+            group: "router.group.advanced",
+          },
+        },
+        {
+          path: "tokenCeate",
+          name: "token-create",
+          component: () =>
+            import("@/views/dashboard/token/TokenCreateView.vue"),
+          meta: {
+            title: "router.tokenCreate",
+            // icon: Key,
+            // order: 9,
+            hidden: true,
             group: "router.group.advanced",
           },
         },

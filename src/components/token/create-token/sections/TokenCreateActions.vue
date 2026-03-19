@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { Copy, ShieldAlert, ShieldCheck } from 'lucide-vue-next'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import type { CreateTokenForm } from '../useCreateTokenForm'
+import { Copy, ShieldAlert, ShieldCheck } from "lucide-vue-next";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import type { CreateTokenForm } from "../useCreateTokenForm";
 
 const props = defineProps<{
-  form: CreateTokenForm
-}>()
+  form: CreateTokenForm;
+}>();
 
 const {
   canCreateToken,
@@ -18,7 +18,7 @@ const {
   createdCredential,
   createdTokenText,
   copyText,
-} = props.form
+} = props.form;
 </script>
 
 <template>
@@ -29,12 +29,19 @@ const {
       <AlertDescription>{{ formValidationError }}</AlertDescription>
     </Alert>
 
-    <Button class="w-full" :disabled="!canCreateToken" @click="handleCreateToken">
+    <Button
+      class="w-full"
+      :disabled="!canCreateToken"
+      @click="handleCreateToken"
+    >
       <span v-if="createLoading">Creating...</span>
       <span v-else>Create Token</span>
     </Button>
 
-    <Alert v-if="createToast" :variant="createToast.type === 'success' ? 'default' : 'destructive'">
+    <Alert
+      v-if="createToast"
+      :variant="createToast.type === 'success' ? 'default' : 'destructive'"
+    >
       <ShieldCheck v-if="createToast.type === 'success'" class="h-4 w-4" />
       <ShieldAlert v-else class="h-4 w-4" />
       <AlertTitle>{{ createToast.title }}</AlertTitle>
@@ -49,9 +56,15 @@ const {
           Copy key:secret
         </Button>
       </div>
-      <div class="text-xs font-mono break-all">key: {{ createdCredential.key }}</div>
-      <div class="text-xs font-mono break-all">secret: {{ createdCredential.secret }}</div>
-      <div class="text-xs font-mono break-all">token: {{ createdTokenText }}</div>
+      <div class="text-xs font-mono break-all">
+        key: {{ createdCredential.key }}
+      </div>
+      <div class="text-xs font-mono break-all">
+        secret: {{ createdCredential.secret }}
+      </div>
+      <div class="text-xs font-mono break-all">
+        token: {{ createdTokenText }}
+      </div>
     </div>
   </div>
 </template>

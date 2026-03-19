@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import type { CreateTokenForm } from '../useCreateTokenForm'
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import type { CreateTokenForm } from "../useCreateTokenForm";
 
 const props = defineProps<{
-  form: CreateTokenForm
-}>()
+  form: CreateTokenForm;
+}>();
 
 const {
   kvScopeMode,
@@ -18,7 +18,7 @@ const {
   kvReadTargetsText,
   kvWriteTargetsText,
   kvDeleteTargetsText,
-} = props.form
+} = props.form;
 </script>
 
 <template>
@@ -29,18 +29,31 @@ const {
     </div>
 
     <details class="rounded-md border p-3" open>
-      <summary class="cursor-pointer select-none text-sm font-medium">Scope + permissions</summary>
+      <summary class="cursor-pointer select-none text-sm font-medium">
+        Scope + permissions
+      </summary>
       <div class="mt-3 space-y-3">
         <div class="space-y-2 rounded-md border p-3">
           <Label>KV Scope</Label>
           <div class="flex flex-wrap items-center gap-2">
-            <Button :variant="kvScopeMode === 'global' ? 'default' : 'outline'" size="sm" @click="setKvScopeMode('global')">global</Button>
-            <Button :variant="kvScopeMode === 'kv_namespace' ? 'default' : 'outline'" size="sm" @click="setKvScopeMode('kv_namespace')">
+            <Button
+              :variant="kvScopeMode === 'global' ? 'default' : 'outline'"
+              size="sm"
+              @click="setKvScopeMode('global')"
+              >global</Button
+            >
+            <Button
+              :variant="kvScopeMode === 'kv_namespace' ? 'default' : 'outline'"
+              size="sm"
+              @click="setKvScopeMode('kv_namespace')"
+            >
               kv_namespace
             </Button>
           </div>
           <div v-if="kvScopeMode === 'kv_namespace'" class="space-y-2">
-            <div class="text-xs text-muted-foreground">Selected namespaces: {{ selectedKvNamespaces.length }}</div>
+            <div class="text-xs text-muted-foreground">
+              Selected namespaces: {{ selectedKvNamespaces.length }}
+            </div>
             <Label for="kv-namespaces">KV namespaces</Label>
             <textarea
               id="kv-namespaces"
@@ -52,7 +65,11 @@ const {
         </div>
 
         <div class="flex flex-wrap gap-2">
-          <Button :variant="kvListAllKeys ? 'default' : 'outline'" size="sm" @click="kvListAllKeys = !kvListAllKeys">
+          <Button
+            :variant="kvListAllKeys ? 'default' : 'outline'"
+            size="sm"
+            @click="kvListAllKeys = !kvListAllKeys"
+          >
             list_all_keys
           </Button>
         </div>
@@ -87,7 +104,9 @@ const {
           </div>
         </div>
 
-        <p class="text-xs text-muted-foreground">Enter one key pattern per line, or split by comma.</p>
+        <p class="text-xs text-muted-foreground">
+          Enter one key pattern per line, or split by comma.
+        </p>
       </div>
     </details>
   </div>
