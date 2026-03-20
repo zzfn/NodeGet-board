@@ -58,9 +58,10 @@ const handleAddLimit = () => {
       <TokenLimitItem
         v-for="(item, index) in localToken.token_limit"
         :key="index"
+        :tokenLimit="item"
         :index
         :limitLength="localToken.token_limit.length"
-        v-model:tokenLimit="localToken.token_limit[index]"
+        @update:tokenLimit="(value) => (localToken.token_limit[index] = value)"
         @delete-limit="localToken.token_limit.splice(index, 1)"
       />
       <Button class="w-full" @click="handleAddLimit"><Plus />添加权限</Button>

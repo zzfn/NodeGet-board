@@ -73,7 +73,10 @@ const handleDeleteLimit = () => {
     </div>
 
     <CollapsibleContent class="space-y-2">
-      <limitScopeConfig v-model:scope="localTokenLimit.scopes" />
+      <limitScopeConfig
+        v-if="localTokenLimit"
+        v-model:scope="localTokenLimit.scopes"
+      />
     </CollapsibleContent>
   </Collapsible>
 </template>

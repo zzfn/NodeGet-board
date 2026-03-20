@@ -7,15 +7,26 @@ export type token = {
   token_limit: Array<TokenLimitEntry>;
 };
 
-export type TokenLimitEntry =
+export type TokenLimitEntry = {
+  scopes: TokenLimitScope;
+  permissions: PermissionEntry[];
+};
+
+export type TokenLimitScope = Array<TokenLimitScopeItem>;
+
+export type TokenLimitScopeItem =
   | {
-      scopes: TokenLimitScope;
-      permissions: PermissionEntry[];
+      global: null;
     }
-  | undefined;
-
-export type TokenLimitScope = Array<TokenLimitScopeItem> | undefined;
-
-export type TokenLimitScopeItem = Record<string, string | null>;
+  | {
+      AgentUuid: string[] | null;
+    }
+  | {
+      KvNamespace: string[] | null;
+    };
 
 export type PermissionEntry = Record<string, unknown>;
+
+export type UuidList = {
+  uuids: string[];
+};
