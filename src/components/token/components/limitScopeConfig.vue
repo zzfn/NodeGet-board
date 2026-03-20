@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from "vue";
+import { onMounted, ref, useId, watch } from "vue";
 import { type TokenLimitScope, type TokenLimitScopeItem } from "../type";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,6 +22,7 @@ const localScope = ref<TokenLimitScope>(props.scope);
 const activeTab = ref("Global");
 const agentUuidList = ref<string[]>([]);
 const agentUuidLoading = ref(false);
+const checkboxIdPrefix = useId();
 
 watch(
   () => props.scope,
@@ -127,6 +128,8 @@ const toggleAgentUuid = (value: string, isChecked: boolean) => {
 
   console.log(localScope.value, value);
 };
+
+const getAgentCheckboxId = (value: string) => `${checkboxIdPrefix}-${value}`;
 </script>
 
 <template>
@@ -163,14 +166,14 @@ const toggleAgentUuid = (value: string, isChecked: boolean) => {
               class="flex items-center space-x-2"
             >
               <Checkbox
-                :id="item"
+                :id="getAgentCheckboxId(item)"
                 :checked="isAgentUuidChecked(item)"
                 @update:modelValue="
                   (checked: CheckboxCheckedState) =>
                     toggleAgentUuid(item, checked === true)
                 "
               />
-              <Label :for="item">{{ item }}</Label>
+              <Label :for="getAgentCheckboxId(item)">{{ item }}</Label>
             </div>
           </div>
         </TabsContent>
