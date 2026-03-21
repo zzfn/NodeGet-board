@@ -27,6 +27,10 @@ const nodeGetPermissions = ref<PermissionEntry[]>([]);
 const unknownPermissions = ref<PermissionEntry[]>([]);
 const hydrating = ref(false);
 
+const isSamePermissions = (a: PermissionEntry[], b: PermissionEntry[]) => {
+  return JSON.stringify(a) === JSON.stringify(b);
+};
+
 const splitPermissions = (permissions: PermissionEntry[]) => {
   staticMonitoringPermissions.value = [];
   dynamicMonitoringPermissions.value = [];
@@ -44,7 +48,11 @@ const splitPermissions = (permissions: PermissionEntry[]) => {
       continue;
     }
     if ("dynamic_monitoring" in entry) {
-      dynamicMonitoringPermissions.value.push(entry);
+      if (entry.dynamic_monitoring === "write") {
+        staticMonitoringPermissions.value.push(entry);
+      } else {
+        dynamicMonitoringPermissions.value.push(entry);
+      }
       continue;
     }
     if ("task" in entry) {
@@ -77,7 +85,7 @@ const splitPermissions = (permissions: PermissionEntry[]) => {
 
 const emitAllPermissions = () => {
   if (hydrating.value) return;
-  emits("update:permissions", [
+  const nextPermissions: PermissionEntry[] = [
     ...staticMonitoringPermissions.value,
     ...dynamicMonitoringPermissions.value,
     ...taskPermissions.value,
@@ -87,7 +95,10 @@ const emitAllPermissions = () => {
     ...terminalPermissions.value,
     ...nodeGetPermissions.value,
     ...unknownPermissions.value,
-  ]);
+  ];
+
+  if (isSamePermissions(nextPermissions, props.permissions ?? [])) return;
+  emits("update:permissions", nextPermissions);
 };
 
 watch(
