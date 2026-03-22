@@ -1,31 +1,51 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { ref, watch } from "vue";
 import type { PermissionEntry } from "../../type";
-import { Button } from "@/components/ui/button";
 
 const props = defineProps<{ modelValue: PermissionEntry[] }>();
 const emits = defineEmits<{
   (e: "update:modelValue", value: PermissionEntry[]): void;
 }>();
 
-const read = ref(false);
-const del = ref(false);
+const readTargetsText = ref("");
+const deleteTargetsText = ref("");
 const hydrating = ref(false);
+
+const parseList = (value: string) => [
+  ...new Set(
+    value
+      .split(/[\n,]+/g)
+      .map((item) => item.trim())
+      .filter(Boolean),
+  ),
+];
 
 const build = (): PermissionEntry[] => {
   const result: PermissionEntry[] = [];
-  if (read.value) result.push({ crontab_result: "read" });
-  if (del.value) result.push({ crontab_result: "delete" });
+  for (const target of parseList(readTargetsText.value)) {
+    result.push({ crontab_result: { read: target } });
+  }
+  for (const target of parseList(deleteTargetsText.value)) {
+    result.push({ crontab_result: { delete: target } });
+  }
   return result;
 };
 
 const hydrate = (entries: PermissionEntry[]) => {
-  read.value = false;
-  del.value = false;
+  const reads: string[] = [];
+  const deletes: string[] = [];
+
   for (const entry of entries || []) {
-    if (entry?.crontab_result === "read") read.value = true;
-    if (entry?.crontab_result === "delete") del.value = true;
+    const value = entry?.crontab_result;
+    if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+
+    const obj = value as Record<string, unknown>;
+    if (typeof obj.read === "string") reads.push(obj.read);
+    if (typeof obj.delete === "string") deletes.push(obj.delete);
   }
+
+  readTargetsText.value = [...new Set(reads)].join("\n");
+  deleteTargetsText.value = [...new Set(deletes)].join("\n");
 };
 
 watch(
@@ -39,7 +59,7 @@ watch(
 );
 
 watch(
-  [read, del],
+  [readTargetsText, deleteTargetsText],
   () => {
     if (hydrating.value) return;
     emits("update:modelValue", build());
@@ -53,19 +73,25 @@ watch(
     <summary class="cursor-pointer select-none text-sm font-medium">
       CrontabResult
     </summary>
-    <div class="mt-3 flex flex-wrap gap-2">
-      <Button
-        size="sm"
-        :variant="read ? 'default' : 'outline'"
-        @click="read = !read"
-        >Read</Button
-      >
-      <Button
-        size="sm"
-        :variant="del ? 'default' : 'outline'"
-        @click="del = !del"
-        >Delete</Button
-      >
+    <div class="mt-3 space-y-3">
+      <div class="grid gap-3 md:grid-cols-2">
+        <div class="space-y-1">
+          <div class="text-xs text-muted-foreground">Read targets</div>
+          <textarea
+            v-model="readTargetsText"
+            class="flex min-h-[90px] w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs outline-none"
+            placeholder="history_*"
+          />
+        </div>
+        <div class="space-y-1">
+          <div class="text-xs text-muted-foreground">Delete targets</div>
+          <textarea
+            v-model="deleteTargetsText"
+            class="flex min-h-[90px] w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs outline-none"
+            placeholder="temp_*"
+          />
+        </div>
+      </div>
     </div>
   </details>
 </template>

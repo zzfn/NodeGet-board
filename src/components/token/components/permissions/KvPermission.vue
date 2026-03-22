@@ -9,6 +9,7 @@ const emits = defineEmits<{
 }>();
 
 const listAllKeys = ref(false);
+const listAllNamespace = ref(false);
 const readTargetsText = ref("");
 const writeTargetsText = ref("");
 const deleteTargetsText = ref("");
@@ -26,6 +27,7 @@ const parseList = (value: string) => [
 const build = (): PermissionEntry[] => {
   const result: PermissionEntry[] = [];
   if (listAllKeys.value) result.push({ kv: "list_all_keys" });
+  if (listAllNamespace.value) result.push({ kv: "list_all_namespace" });
   for (const target of parseList(readTargetsText.value))
     result.push({ kv: { read: target } });
   for (const target of parseList(writeTargetsText.value))
@@ -37,6 +39,7 @@ const build = (): PermissionEntry[] => {
 
 const hydrate = (entries: PermissionEntry[]) => {
   listAllKeys.value = false;
+  listAllNamespace.value = false;
   const reads: string[] = [];
   const writes: string[] = [];
   const deletes: string[] = [];
@@ -45,6 +48,10 @@ const hydrate = (entries: PermissionEntry[]) => {
     const value = entry?.kv;
     if (value === "list_all_keys") {
       listAllKeys.value = true;
+      continue;
+    }
+    if (value === "list_all_namespace") {
+      listAllNamespace.value = true;
       continue;
     }
     if (!value || typeof value !== "object" || Array.isArray(value)) continue;
@@ -70,7 +77,13 @@ watch(
 );
 
 watch(
-  [listAllKeys, readTargetsText, writeTargetsText, deleteTargetsText],
+  [
+    listAllKeys,
+    listAllNamespace,
+    readTargetsText,
+    writeTargetsText,
+    deleteTargetsText,
+  ],
   () => {
     if (hydrating.value) return;
     emits("update:modelValue", build());
@@ -82,12 +95,18 @@ watch(
 <template>
   <details class="rounded-md border p-3" open>
     <summary class="cursor-pointer select-none text-sm font-medium">Kv</summary>
-    <div class="mt-3 space-y-3">
+    <div class="mt-3 space-y-3 space-x-2">
       <Button
         size="sm"
         :variant="listAllKeys ? 'default' : 'outline'"
         @click="listAllKeys = !listAllKeys"
         >ListAllKeys</Button
+      >
+      <Button
+        size="sm"
+        :variant="listAllNamespace ? 'default' : 'outline'"
+        @click="listAllNamespace = !listAllNamespace"
+        >ListAllNamespace</Button
       >
 
       <div class="grid gap-3 md:grid-cols-3">
