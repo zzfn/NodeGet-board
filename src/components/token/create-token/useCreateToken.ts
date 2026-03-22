@@ -36,14 +36,14 @@ export const useCreatTokenHook = () => {
           token_creation: normalizedTokenCreation,
         },
       );
-      if (Array.isArray(result.key) && result.secret) {
+      if (result.key && result.secret) {
+        toast.success("创建Token成功");
         return result;
       }
-      toast.error("获取agent-uuid列表失败");
+      toast.error("创建Token失败");
       return {};
     } catch (error) {
-      console.error(error);
-      toast.error("获取agent-uuid列表失败");
+      toast.error("创建Token失败");
       return {};
     }
   };

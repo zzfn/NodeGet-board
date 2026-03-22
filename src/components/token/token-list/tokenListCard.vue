@@ -167,7 +167,15 @@ const handleDeleteToken = (deleteToken: Token) => {
                     <DialogClose as-child>
                       <Button variant="outline"> 取消 </Button>
                     </DialogClose>
-                    <Button @click="handleDeleteToken(token)"> 确认 </Button>
+                    <Button
+                      @click="handleDeleteToken(token)"
+                      :disabled="deleteLoading"
+                    >
+                      <div v-if="deleteLoading" class="flex items-center">
+                        <Spinner />删除中...
+                      </div>
+                      <div v-else>删除</div>
+                    </Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
