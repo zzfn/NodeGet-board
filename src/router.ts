@@ -142,7 +142,7 @@ const router = createRouter({
         {
           path: "batch-exec",
           name: "batch-exec",
-          component: () => import("@/views/dashboard/WorkInProcessView.vue"),
+          component: () => import("@/views/dashboard/BatchExecView.vue"),
           meta: {
             title: "router.batchExec",
             icon: ListCheck,
