@@ -59,6 +59,21 @@ const pageLabel = computed(() => {
 });
 
 onMounted(() => {
+  //   fetchLoading.value = true;
+  //   useTokenList
+  //     .getTokenList()
+  //     .then((res) => {
+  //       tokensList.value = res;
+  //       page.value = 1;
+  //     })
+  //     .finally(() => {
+  //       fetchLoading.value = false;
+  //     });
+  handleGetTokenList();
+});
+
+// 获取token列表
+const handleGetTokenList = () => {
   fetchLoading.value = true;
   useTokenList
     .getTokenList()
@@ -69,7 +84,7 @@ onMounted(() => {
     .finally(() => {
       fetchLoading.value = false;
     });
-});
+};
 
 const toCreateToken = () => {
   router.push("/dashboard/tokenCeate");
@@ -107,11 +122,22 @@ const handleDeleteToken = (deleteToken: Token) => {
 </script>
 
 <template>
-  <div>
-    <div class="flex justify-between gap-4">
+  <div class="space-y-4">
+    <div class="flex items-center justify-between gap-4">
       <div><Input placeholder="输入token_key搜索" /></div>
-      <div>
-        <Button @click="toCreateToken">创建Token</Button>
+      <div class="flex items-center gap-2">
+        <Button type="button" @click="handleGetTokenList" variant="outline">
+          <span class="inline-flex items-center justify-center">重置</span>
+        </Button>
+        <Button type="button" class="min-w-24" @click="handleGetTokenList">
+          <span class="inline-flex w-full items-center justify-center gap-2">
+            <Spinner v-if="fetchLoading" />
+            {{ fetchLoading ? "搜索中..." : "搜索" }}
+          </span>
+        </Button>
+        <Button type="button" @click="toCreateToken">
+          <span class="inline-flex items-center justify-center">创建Token</span>
+        </Button>
       </div>
     </div>
 
