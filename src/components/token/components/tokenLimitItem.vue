@@ -2,7 +2,7 @@
 import { ref, watch } from "vue";
 import { type TokenLimitEntry } from "../type";
 import { detectScopeTab, type ScopeTabValue } from "../scopeUi";
-import { ChevronsUpDown, Trash2 } from "lucide-vue-next";
+import { ChevronDown, Trash2 } from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -67,12 +67,13 @@ const handleDeleteLimit = () => {
         </Button>
       </PopConfirm>
       <CollapsibleTrigger as-child>
-        <div class="flex content-end">
-          <Button variant="ghost" size="icon" class="size-8">
-            <ChevronsUpDown />
-            <span class="sr-only">Toggle</span>
-          </Button>
-        </div>
+        <Button variant="ghost" size="icon" class="size-8">
+          <ChevronDown
+            class="h-4 w-4 transition-transform duration-200"
+            :class="{ 'rotate-180': isOpen }"
+          />
+          <span class="sr-only">Toggle</span>
+        </Button>
       </CollapsibleTrigger>
     </div>
 

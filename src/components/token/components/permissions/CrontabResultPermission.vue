@@ -23,6 +23,7 @@ const dedupeTargets = (targets: string[]) => {
   return [...new Set(targets.map((item) => item.trim()).filter(Boolean))];
 };
 
+// 构建数据用于上层组件消费
 const build = (): PermissionEntry[] => {
   const result: PermissionEntry[] = [];
   for (const target of dedupeTargets(readTargets.value)) {
@@ -34,6 +35,7 @@ const build = (): PermissionEntry[] => {
   return result;
 };
 
+// 解析上层组件的数据用于本地消费
 const hydrate = (entries: PermissionEntry[]) => {
   const reads: string[] = [];
   const deletes: string[] = [];

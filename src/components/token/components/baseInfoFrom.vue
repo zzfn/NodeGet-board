@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { type Token } from "../type";
-import { CircleX, KeyRound } from "lucide-vue-next";
+import { ChevronDown, CircleX } from "lucide-vue-next";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -13,6 +19,7 @@ const emits = defineEmits<{
   (e: "update:token", token: Token): void;
 }>();
 
+const isOpen = ref(false);
 const localToken = ref<Token>(props.token);
 const timestampFromInput = ref(
   formatTimestampForInput(props.token.timestamp_from),
@@ -99,73 +106,83 @@ const clearTimestampTo = () => {
 </script>
 
 <template>
-  <Card>
-    <CardHeader>
-      <CardTitle class="flex items-center gap-2">
-        <!-- <KeyRound class="h-5 w-5" /> -->
-        基础信息
-      </CardTitle>
-    </CardHeader>
+  <Collapsible v-model:open="isOpen">
+    <Card>
+      <CardHeader class="flex flex-row items-center justify-between gap-2">
+        <CardTitle class="flex items-center gap-2">基础信息</CardTitle>
+        <CollapsibleTrigger as-child>
+          <Button variant="ghost" size="icon" class="size-8">
+            <ChevronDown
+              class="h-4 w-4 transition-transform duration-200"
+              :class="{ 'rotate-180': isOpen }"
+            />
+            <span class="sr-only">Toggle base info</span>
+          </Button>
+        </CollapsibleTrigger>
+      </CardHeader>
 
-    <CardContent class="grid gap-6 space-y-6 xl:grid-cols-2">
-      <div class="space-y-2">
-        <Label>用户名</Label>
-        <Input
-          v-model="localToken.username"
-          @blur="updateData()"
-          placeholder="输入用户名（可选）"
-          clearable
-        ></Input>
-      </div>
-      <div class="space-y-2">
-        <Label>密码</Label>
-        <Input
-          v-model="localToken.password"
-          type="password"
-          @blur="updateData()"
-          placeholder="输入密码（可选）"
-        ></Input>
-      </div>
-      <div class="space-y-2">
-        <Label>开始时间</Label>
-        <div class="group relative">
-          <Input
-            v-model="timestampFromInput"
-            :max="timestampFromMax"
-            @blur="handleTimestampFromBlur"
-            type="datetime-local"
-            placeholder="输入开始时间（可选）"
-          ></Input>
-          <button
-            v-if="timestampFromInput"
-            type="button"
-            class="text-muted-foreground hover:text-foreground focus-visible:text-foreground focus-visible:ring-ring/50 absolute top-1/2 right-2 z-10 -translate-y-1/2 rounded-sm bg-background/80 p-0.5 opacity-0 shadow-sm transition-opacity pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-[1px]"
-            @click="clearTimestampFrom"
-          >
-            <CircleX class="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-      <div class="space-y-2">
-        <Label>结束时间</Label>
-        <div class="group relative">
-          <Input
-            v-model="timestampToInput"
-            :min="timestampToMin"
-            @blur="handleTimestampToBlur"
-            type="datetime-local"
-            placeholder="输入结束时间（可选）"
-          ></Input>
-          <button
-            v-if="timestampToInput"
-            type="button"
-            class="text-muted-foreground hover:text-foreground focus-visible:text-foreground focus-visible:ring-ring/50 absolute top-1/2 right-2 z-10 -translate-y-1/2 rounded-sm bg-background/80 p-0.5 opacity-0 shadow-sm transition-opacity pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-[1px]"
-            @click="clearTimestampTo"
-          >
-            <CircleX class="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-    </CardContent>
-  </Card>
+      <CollapsibleContent>
+        <CardContent class="grid gap-6 space-y-6 xl:grid-cols-2">
+          <div class="space-y-2">
+            <Label>用户名</Label>
+            <Input
+              v-model="localToken.username"
+              @blur="updateData()"
+              placeholder="输入用户名（可选）"
+              clearable
+            ></Input>
+          </div>
+          <div class="space-y-2">
+            <Label>密码</Label>
+            <Input
+              v-model="localToken.password"
+              type="password"
+              @blur="updateData()"
+              placeholder="输入密码（可选）"
+            ></Input>
+          </div>
+          <div class="space-y-2">
+            <Label>开始时间</Label>
+            <div class="group relative">
+              <Input
+                v-model="timestampFromInput"
+                :max="timestampFromMax"
+                @blur="handleTimestampFromBlur"
+                type="datetime-local"
+                placeholder="输入开始时间（可选）"
+              ></Input>
+              <button
+                v-if="timestampFromInput"
+                type="button"
+                class="text-muted-foreground hover:text-foreground focus-visible:text-foreground focus-visible:ring-ring/50 absolute top-1/2 right-2 z-10 -translate-y-1/2 rounded-sm bg-background/80 p-0.5 opacity-0 shadow-sm transition-opacity pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-[1px]"
+                @click="clearTimestampFrom"
+              >
+                <CircleX class="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+          <div class="space-y-2">
+            <Label>结束时间</Label>
+            <div class="group relative">
+              <Input
+                v-model="timestampToInput"
+                :min="timestampToMin"
+                @blur="handleTimestampToBlur"
+                type="datetime-local"
+                placeholder="输入结束时间（可选）"
+              ></Input>
+              <button
+                v-if="timestampToInput"
+                type="button"
+                class="text-muted-foreground hover:text-foreground focus-visible:text-foreground focus-visible:ring-ring/50 absolute top-1/2 right-2 z-10 -translate-y-1/2 rounded-sm bg-background/80 p-0.5 opacity-0 shadow-sm transition-opacity pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-[1px]"
+                @click="clearTimestampTo"
+              >
+                <CircleX class="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </CardContent>
+      </CollapsibleContent>
+    </Card>
+  </Collapsible>
 </template>
