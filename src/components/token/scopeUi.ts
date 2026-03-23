@@ -26,3 +26,13 @@ export const getSelectedAgentUuids = (scope: TokenLimitScope) => {
   }
   return [];
 };
+
+// 根据scope值计算当前选中的kv_namespace
+export const getSelectedKvNamespaces = (scope: TokenLimitScope) => {
+  if (scope.length) {
+    const kvNamespaces = scope.filter((item) => "kv_namespace" in item);
+    const result = kvNamespaces.map((item) => item.kv_namespace);
+    return result.length ? result : [];
+  }
+  return [];
+};
