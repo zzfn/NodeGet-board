@@ -33,7 +33,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Eye, Pencil, Trash2 } from "lucide-vue-next";
+import { Eye, Pencil, Trash2, RotateCcw } from "lucide-vue-next";
 import { useTokenListHook, type Token } from "./useTokenList";
 
 const useTokenList = useTokenListHook();
@@ -44,6 +44,12 @@ const fetchLoading = ref(false);
 const deleteLoading = ref(false);
 const page = ref(1);
 const pageSize = 10;
+// 控制重置token弹窗显隐
+const resetTokenOpen = ref(false);
+// 控制重置token loading
+const resetTokenLoading = ref(false);
+// 控制是否显示重置Token结果
+const showResetTokenResult = ref(false);
 
 const total = computed(() => tokensList.value.length);
 const pagedTokens = computed(() => {
@@ -119,6 +125,13 @@ const handleDeleteToken = (deleteToken: Token) => {
       deleteLoading.value = false;
     });
 };
+
+// 打开重置Token弹窗
+const handleOpenResetToken = (token: Token) => {
+  resetTokenOpen.value = true;
+};
+// 确认重置Token操作
+const handleConfirmResetToken = (token: Token) => {};
 </script>
 
 <template>
@@ -171,6 +184,14 @@ const handleDeleteToken = (deleteToken: Token) => {
               <!-- 编辑按钮 -->
               <Button variant="ghost" size="sm" @click="handleEditToken(token)">
                 <Pencil />
+              </Button>
+              <!-- 重置token按钮 -->
+              <Button
+                variant="ghost"
+                size="sm"
+                @click="handleOpenResetToken(token)"
+              >
+                <RotateCcw />
               </Button>
               <!-- 删除操作 -->
               <Dialog>
@@ -252,4 +273,25 @@ const handleDeleteToken = (deleteToken: Token) => {
       </div>
     </div>
   </div>
+  <!-- 重置 Token 弹窗 -->
+  <Dialog v-model:open="resetTokenOpen">
+    <DialogContent class="w-400">
+      <DialogTitle> 重置Token </DialogTitle>
+      <DialogDescription>
+        当丢失token，可使用该功能重新生成token
+      </DialogDescription>
+      是否确认重置，操作进行后此前的token将失效。
+      <DialogFooter>
+        <DialogClose as-child>
+          <Button variant="outline"> 取消 </Button>
+        </DialogClose>
+        <Button @click="handleConfirmResetToken">
+          <div v-if="resetTokenLoading" class="flex items-center">
+            <Spinner />重置中...
+          </div>
+          <div v-else>重置</div>
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 </template>
