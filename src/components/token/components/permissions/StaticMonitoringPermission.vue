@@ -2,6 +2,7 @@
 import { ref, watch } from "vue";
 import type { PermissionEntry } from "../../type";
 import { Button } from "@/components/ui/button";
+import { arePermissionEntriesEqual } from "./permissionsState";
 
 const READ_FIELDS = ["cpu", "system", "gpu"] as const;
 
@@ -60,8 +61,11 @@ const hydrate = (entries: PermissionEntry[]) => {
 watch(
   () => props.modelValue,
   (value) => {
+    const nextEntries = Array.isArray(value) ? value : [];
+    if (arePermissionEntriesEqual(nextEntries, build())) return;
+
     hydrating.value = true;
-    hydrate(Array.isArray(value) ? value : []);
+    hydrate(nextEntries);
     hydrating.value = false;
   },
   { immediate: true, deep: true },
@@ -71,7 +75,9 @@ watch(
   [writeEnabled, readTargets],
   () => {
     if (hydrating.value) return;
-    emits("update:modelValue", build());
+    const nextEntries = build();
+    if (arePermissionEntriesEqual(nextEntries, props.modelValue)) return;
+    emits("update:modelValue", nextEntries);
   },
   { deep: true },
 );
@@ -87,6 +93,7 @@ watch(
       <div class="flex flex-wrap gap-2">
         <Button
           size="sm"
+          type="button"
           :variant="writeEnabled ? 'default' : 'outline'"
           @click="writeEnabled = !writeEnabled"
         >
@@ -100,6 +107,7 @@ watch(
           v-for="field in READ_FIELDS"
           :key="`sm-r-${field}`"
           size="sm"
+          type="button"
           :variant="readTargets.includes(field) ? 'default' : 'outline'"
           @click="toggleReadTarget(field)"
         >

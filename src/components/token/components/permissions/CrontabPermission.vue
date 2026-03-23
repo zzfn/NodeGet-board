@@ -2,6 +2,7 @@
 import { ref, watch } from "vue";
 import type { PermissionEntry } from "../../type";
 import { Button } from "@/components/ui/button";
+import { arePermissionEntriesEqual } from "./permissionsState";
 
 const props = defineProps<{ modelValue: PermissionEntry[] }>();
 const emits = defineEmits<{
@@ -35,8 +36,11 @@ const hydrate = (entries: PermissionEntry[]) => {
 watch(
   () => props.modelValue,
   (value) => {
+    const nextEntries = Array.isArray(value) ? value : [];
+    if (arePermissionEntriesEqual(nextEntries, build())) return;
+
     hydrating.value = true;
-    hydrate(Array.isArray(value) ? value : []);
+    hydrate(nextEntries);
     hydrating.value = false;
   },
   { immediate: true, deep: true },
@@ -46,7 +50,9 @@ watch(
   [read, write, del],
   () => {
     if (hydrating.value) return;
-    emits("update:modelValue", build());
+    const nextEntries = build();
+    if (arePermissionEntriesEqual(nextEntries, props.modelValue)) return;
+    emits("update:modelValue", nextEntries);
   },
   { deep: true },
 );
@@ -59,18 +65,21 @@ watch(
     </summary>
     <div class="mt-3 flex flex-wrap gap-2">
       <Button
+        type="button"
         size="sm"
         :variant="read ? 'default' : 'outline'"
         @click="read = !read"
         >Read</Button
       >
       <Button
+        type="button"
         size="sm"
         :variant="write ? 'default' : 'outline'"
         @click="write = !write"
         >Write</Button
       >
       <Button
+        type="button"
         size="sm"
         :variant="del ? 'default' : 'outline'"
         @click="del = !del"

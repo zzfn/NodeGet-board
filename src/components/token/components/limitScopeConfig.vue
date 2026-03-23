@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { computed, onMounted, ref, useId, watch } from "vue";
+import { computed, ref, useId, watch } from "vue";
 import { type TokenLimitScope } from "../type";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -28,6 +28,7 @@ const localScope = ref<TokenLimitScope>(props.scope);
 const activeTab = ref<ScopeTabValue>(detectScopeTab(props.scope));
 const agentUuidList = ref<string[]>([]);
 const agentUuidLoading = ref(false);
+const agentUuidLoaded = ref(false);
 const checkboxIdPrefix = useId();
 
 watch(
@@ -47,21 +48,33 @@ watch(
   { deep: true },
 );
 
-onMounted(() => {
-  handleGetAgentList();
-});
-
 const handleGetAgentList = () => {
+  if (agentUuidLoading.value) {
+    return;
+  }
+
   agentUuidLoading.value = true;
   useAgent
     .getAgentList()
     .then((res) => {
       agentUuidList.value = res;
+      agentUuidLoaded.value = true;
     })
     .finally(() => {
       agentUuidLoading.value = false;
     });
 };
+
+watch(
+  activeTab,
+  (value) => {
+    if (value !== "AgentUuid" || agentUuidLoaded.value) {
+      return;
+    }
+    handleGetAgentList();
+  },
+  { immediate: true },
+);
 
 const handleTabChange = (value: string) => {
   if (value === "Global") {
@@ -76,10 +89,8 @@ const selectedAgentUuids = computed(() =>
   getSelectedAgentUuids(localScope.value),
 );
 
-const isAgentUuidChecked = (value: string) => {
-  console.log(value, selectedAgentUuids.value.includes(value), "=====");
-  return selectedAgentUuids.value.includes(value);
-};
+const isAgentUuidChecked = (value: string) =>
+  selectedAgentUuids.value.includes(value);
 
 const toggleAgentUuid = (value: string, isChecked: boolean) => {
   if (activeTab.value !== "AgentUuid") {

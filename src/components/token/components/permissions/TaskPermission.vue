@@ -2,6 +2,7 @@
 import { ref, watch } from "vue";
 import type { PermissionEntry } from "../../type";
 import { Button } from "@/components/ui/button";
+import { arePermissionEntriesEqual } from "./permissionsState";
 
 const TASK_TYPES = [
   "ping",
@@ -74,8 +75,11 @@ const hydrate = (entries: PermissionEntry[]) => {
 watch(
   () => props.modelValue,
   (value) => {
+    const nextEntries = Array.isArray(value) ? value : [];
+    if (arePermissionEntriesEqual(nextEntries, build())) return;
+
     hydrating.value = true;
-    hydrate(Array.isArray(value) ? value : []);
+    hydrate(nextEntries);
     hydrating.value = false;
   },
   { immediate: true, deep: true },
@@ -85,7 +89,9 @@ watch(
   [listen, createTargets, readTargets, writeTargets],
   () => {
     if (hydrating.value) return;
-    emits("update:modelValue", build());
+    const nextEntries = build();
+    if (arePermissionEntriesEqual(nextEntries, props.modelValue)) return;
+    emits("update:modelValue", nextEntries);
   },
   { deep: true },
 );
@@ -99,6 +105,7 @@ watch(
     <div class="mt-3 space-y-3">
       <div class="flex flex-wrap gap-2">
         <Button
+          type="button"
           size="sm"
           :variant="listen ? 'default' : 'outline'"
           @click="listen = !listen"
@@ -112,6 +119,7 @@ watch(
           <Button
             v-for="type in TASK_TYPES"
             :key="`task-c-${type}`"
+            type="button"
             size="sm"
             :variant="createTargets.includes(type) ? 'default' : 'outline'"
             @click="toggle(createTargets, type)"
@@ -126,6 +134,7 @@ watch(
           <Button
             v-for="type in TASK_TYPES"
             :key="`task-r-${type}`"
+            type="button"
             size="sm"
             :variant="readTargets.includes(type) ? 'default' : 'outline'"
             @click="toggle(readTargets, type)"
@@ -140,6 +149,7 @@ watch(
           <Button
             v-for="type in TASK_TYPES"
             :key="`task-w-${type}`"
+            type="button"
             size="sm"
             :variant="writeTargets.includes(type) ? 'default' : 'outline'"
             @click="toggle(writeTargets, type)"

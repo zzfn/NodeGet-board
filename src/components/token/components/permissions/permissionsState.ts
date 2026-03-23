@@ -102,3 +102,10 @@ export const replacePermissionBucket = (
     canShowCrontabResultPermission,
   );
 };
+
+export const arePermissionEntriesEqual = (
+  left: PermissionEntry[] | undefined,
+  right: PermissionEntry[] | undefined,
+) => {
+  return JSON.stringify(left ?? []) === JSON.stringify(right ?? []);
+};
