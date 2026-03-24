@@ -738,8 +738,8 @@ const netTimestamps = computed(() => {
                   <UPlotChart
                     :data="displayDiskReadData"
                     :data2="displayDiskWriteData"
-                    color="#4ade80"
-                    color2="#fb7185"
+                    :color="activeTheme.color"
+                    :color2="activeTheme.color"
                     :maxValue="maxDiskSpeed"
                     yLabel="B/s"
                   />
@@ -919,8 +919,8 @@ const netTimestamps = computed(() => {
                   <UPlotChart
                     :data="displayNetRxData"
                     :data2="displayNetTxData"
-                    color="#38bdf8"
-                    color2="#4ade80"
+                    :color="activeTheme.color"
+                    :color2="activeTheme.color"
                     :maxValue="maxNetSpeed"
                     yLabel="B/s"
                     :isTimeSeries="netMode === 'history'"
