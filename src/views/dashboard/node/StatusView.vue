@@ -349,6 +349,31 @@ const netTimestamps = computed(() => {
     );
   }
   return [];
+const cpuTimestamps = computed(() => {
+  if (cpuMode.value === "history") {
+    return historyData.value.map(
+      (item) => new Date(item.timestamp).getTime() / 1000,
+    );
+  }
+  return [];
+});
+
+const ramTimestamps = computed(() => {
+  if (ramMode.value === "history") {
+    return ramHistoryData.value.map(
+      (item) => new Date(item.timestamp).getTime() / 1000,
+    );
+  }
+  return [];
+});
+
+const netTimestamps = computed(() => {
+  if (netMode.value === "history") {
+    return netHistoryData.value.map(
+      (item) => new Date(item.timestamp).getTime() / 1000,
+    );
+  }
+  return [];
 });
 </script>
 
@@ -443,7 +468,7 @@ const netTimestamps = computed(() => {
                     class="text-muted-foreground truncate max-w-[280px]"
                     :title="server?.cpu_static?.per_core?.[0]?.brand"
                   >
-                    {{ server?.cpu_static?.per_core?.[0]?.brand || "Unknown" }}
+                    {{ server?.cpu_static?.per_core?.[0]?.brand || 'Unknown' }}
                   </span>
                 </div>
                 <div class="h-5 flex items-center" v-if="cpuMode === 'history'">
@@ -472,10 +497,18 @@ const netTimestamps = computed(() => {
                     :isTimeSeries="cpuMode === 'history'"
                     :timestamps="cpuTimestamps"
                   />
+                  <UPlotChart
+                    :data="displayData"
+                    :color="activeTheme.color"
+                    :maxValue="100"
+                    yLabel="%"
+                    :isTimeSeries="cpuMode === 'history'"
+                    :timestamps="cpuTimestamps"
+                  />
                   <div
                     class="absolute inset-0 flex items-center justify-center text-muted-foreground/20 font-bold text-6xl select-none pointer-events-none group-hover:opacity-0 transition-opacity"
                   >
-                    {{ cpuMode === "realtime" ? "REALTIME" : "HISTORY" }}
+                    {{ cpuMode === 'realtime' ? 'REALTIME' : 'HISTORY' }}
                   </div>
                   <div
                     v-if="cpuMode === 'history' && historyData.length > 0"
@@ -527,7 +560,7 @@ const netTimestamps = computed(() => {
                                 (server.ram.used_swap / server.ram.total_swap) *
                                 100
                               ).toFixed(1)
-                            : "0.0"
+                            : '0.0'
                         }}%
                         <span class="ml-1">
                           {{ formatBytes(server.ram.used_swap || 0) }} /
@@ -573,10 +606,18 @@ const netTimestamps = computed(() => {
                     :isTimeSeries="ramMode === 'history'"
                     :timestamps="ramTimestamps"
                   />
+                  <UPlotChart
+                    :data="displayRamData"
+                    :color="activeTheme.color"
+                    :maxValue="100"
+                    yLabel="%"
+                    :isTimeSeries="ramMode === 'history'"
+                    :timestamps="ramTimestamps"
+                  />
                   <div
                     class="absolute inset-0 flex items-center justify-center text-muted-foreground/20 font-bold text-6xl select-none pointer-events-none group-hover:opacity-0 transition-opacity"
                   >
-                    {{ ramMode === "realtime" ? "REALTIME" : "HISTORY" }}
+                    {{ ramMode === 'realtime' ? 'REALTIME' : 'HISTORY' }}
                   </div>
                   <div
                     v-if="ramMode === 'history' && ramHistoryData.length > 0"
@@ -697,8 +738,8 @@ const netTimestamps = computed(() => {
                   <UPlotChart
                     :data="displayDiskReadData"
                     :data2="displayDiskWriteData"
-                    :color="activeTheme.color"
-                    :color2="activeTheme.color"
+                    color="#4ade80"
+                    color2="#fb7185"
                     :maxValue="maxDiskSpeed"
                     yLabel="B/s"
                   />
@@ -766,7 +807,7 @@ const netTimestamps = computed(() => {
                   {{
                     formatBytes(
                       (server.network?.interfaces ?? [])
-                        .filter((i: any) => i.interface_name !== "lo")
+                        .filter((i: any) => i.interface_name !== 'lo')
                         .reduce(
                           (s: number, i: any) => s + (i.transmit_speed || 0),
                           0,
@@ -781,7 +822,7 @@ const netTimestamps = computed(() => {
                   {{
                     formatBytes(
                       (server.network?.interfaces ?? [])
-                        .filter((i: any) => i.interface_name !== "lo")
+                        .filter((i: any) => i.interface_name !== 'lo')
                         .reduce(
                           (s: number, i: any) => s + (i.receive_speed || 0),
                           0,
@@ -832,8 +873,8 @@ const netTimestamps = computed(() => {
                       class="text-sm font-medium text-muted-foreground"
                     >
                       {{
-                        selectedIface === "all"
-                          ? "Network Throughput"
+                        selectedIface === 'all'
+                          ? 'Network Throughput'
                           : selectedIface
                       }}
                     </CardTitle>
@@ -878,8 +919,8 @@ const netTimestamps = computed(() => {
                   <UPlotChart
                     :data="displayNetRxData"
                     :data2="displayNetTxData"
-                    :color="activeTheme.color"
-                    :color2="activeTheme.color"
+                    color="#38bdf8"
+                    color2="#4ade80"
                     :maxValue="maxNetSpeed"
                     yLabel="B/s"
                     :isTimeSeries="netMode === 'history'"
@@ -888,7 +929,7 @@ const netTimestamps = computed(() => {
                   <div
                     class="absolute inset-0 flex items-center justify-center text-muted-foreground/20 font-bold text-6xl select-none pointer-events-none group-hover:opacity-0 transition-opacity"
                   >
-                    {{ netMode === "realtime" ? "REALTIME" : "HISTORY" }}
+                    {{ netMode === 'realtime' ? 'REALTIME' : 'HISTORY' }}
                   </div>
                   <div
                     v-if="netMode === 'history' && netHistoryData.length > 0"
