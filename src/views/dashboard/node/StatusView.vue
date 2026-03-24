@@ -462,7 +462,7 @@ const netTimestamps = computed(() => {
               </CardHeader>
               <CardContent>
                 <div
-                  class="h-[260px] w-full bg-muted/10 rounded-md border flex items-end p-0 relative overflow-hidden group"
+                  class="h-[260px] w-full flex items-end p-0 relative overflow-hidden group"
                 >
                   <UPlotChart
                     :data="displayData"
@@ -563,7 +563,7 @@ const netTimestamps = computed(() => {
               </CardHeader>
               <CardContent>
                 <div
-                  class="h-[260px] w-full bg-muted/10 rounded-md border flex items-end p-0 relative overflow-hidden group"
+                  class="h-[260px] w-full flex items-end relative overflow-hidden group"
                 >
                   <UPlotChart
                     :data="displayRamData"
@@ -608,14 +608,14 @@ const netTimestamps = computed(() => {
                 :class="[
                   'flex flex-col items-start px-3 py-2.5 rounded-lg border text-xs whitespace-nowrap transition-all w-[300px] shrink-0',
                   selectedDisk === disk.name
-                    ? 'border-[#fb7185] bg-[#fb7185]/10'
+                    ? `border-[${activeTheme.color}] bg-[${activeTheme.color}]/10`
                     : 'border-border bg-muted/30 hover:bg-muted/50',
                 ]"
               >
                 <span
                   :class="
                     selectedDisk === disk.name
-                      ? 'text-[#fb7185] font-medium'
+                      ? `text-[${activeTheme.color}] font-medium`
                       : 'text-foreground'
                   "
                   class="truncate w-full"
@@ -637,7 +637,7 @@ const netTimestamps = computed(() => {
                             (1 - disk.available_space / disk.total_space) *
                             100
                           ).toFixed(0) + '%',
-                        backgroundColor: '#fb7185',
+                        backgroundColor: activeTheme.color,
                         opacity: selectedDisk === disk.name ? '1' : '0.5',
                       }"
                     ></div>
@@ -654,10 +654,14 @@ const netTimestamps = computed(() => {
                   </span>
                 </div>
                 <div class="flex gap-2 mt-1">
-                  <span class="font-mono text-[10px] text-[#4ade80]"
+                  <span
+                    class="font-mono text-[10px]"
+                    :style="{ color: activeTheme.color }"
                     >↓ {{ formatBytes(disk.read_speed) }}/s</span
                   >
-                  <span class="font-mono text-[10px] text-[#fb7185]"
+                  <span
+                    class="font-mono text-[10px]"
+                    :style="{ color: activeTheme.color, opacity: '0.7' }"
                     >↑ {{ formatBytes(disk.write_speed) }}/s</span
                   >
                 </div>
@@ -675,10 +679,11 @@ const netTimestamps = computed(() => {
                       Disk I/O · {{ selectedDisk }}
                     </CardTitle>
                     <div class="flex items-center gap-3 text-xs font-mono">
-                      <span class="text-[#4ade80]"
+                      <span :style="{ color: activeTheme.color }"
                         >↓ {{ formatBytes(currentDiskRead) }}/s</span
                       >
-                      <span class="text-[#fb7185]"
+                      <span
+                        :style="{ color: activeTheme.color, opacity: '0.7' }"
                         >↑ {{ formatBytes(currentDiskWrite) }}/s</span
                       >
                     </div>
@@ -687,13 +692,13 @@ const netTimestamps = computed(() => {
               </CardHeader>
               <CardContent>
                 <div
-                  class="h-[260px] w-full bg-muted/10 rounded-md border flex items-end p-0 relative overflow-hidden group"
+                  class="h-[260px] w-full flex items-end p-0 relative overflow-hidden group"
                 >
                   <UPlotChart
                     :data="displayDiskReadData"
                     :data2="displayDiskWriteData"
-                    color="#4ade80"
-                    color2="#fb7185"
+                    :color="activeTheme.color"
+                    :color2="activeTheme.color"
                     :maxValue="maxDiskSpeed"
                     yLabel="B/s"
                   />
@@ -706,11 +711,20 @@ const netTimestamps = computed(() => {
                     class="absolute bottom-2 right-3 flex items-center gap-3 text-[10px] font-mono text-muted-foreground"
                   >
                     <span class="flex items-center gap-1">
-                      <span class="inline-block w-3 h-0.5 bg-[#4ade80]"></span>
+                      <span
+                        class="inline-block w-3 h-0.5"
+                        :style="{ backgroundColor: activeTheme.color }"
+                      ></span>
                       Read
                     </span>
                     <span class="flex items-center gap-1">
-                      <span class="inline-block w-3 h-0.5 bg-[#fb7185]"></span>
+                      <span
+                        class="inline-block w-3 h-0.5"
+                        :style="{
+                          backgroundColor: activeTheme.color,
+                          opacity: '0.7',
+                        }"
+                      ></span>
                       Write
                     </span>
                   </div>
@@ -733,19 +747,21 @@ const netTimestamps = computed(() => {
                 :class="[
                   'flex flex-col items-start px-3 py-2.5 rounded-lg border text-xs whitespace-nowrap transition-all w-[120px]',
                   selectedIface === 'all'
-                    ? 'border-[#38bdf8] bg-[#38bdf8]/10'
+                    ? `border-[${activeTheme.color}] bg-[${activeTheme.color}]/10`
                     : 'border-border bg-muted/30 hover:bg-muted/50',
                 ]"
               >
                 <span
                   :class="
                     selectedIface === 'all'
-                      ? 'text-[#38bdf8] font-medium'
+                      ? `text-[${activeTheme.color}] font-medium`
                       : 'text-foreground'
                   "
                   >All</span
                 >
-                <span class="font-mono text-[10px] text-[#4ade80] mt-1"
+                <span
+                  class="font-mono text-[10px] mt-1"
+                  :style="{ color: activeTheme.color }"
                   >↑
                   {{
                     formatBytes(
@@ -758,7 +774,9 @@ const netTimestamps = computed(() => {
                     )
                   }}/s</span
                 >
-                <span class="font-mono text-[10px] text-[#38bdf8]"
+                <span
+                  class="font-mono text-[10px]"
+                  :style="{ color: activeTheme.color, opacity: '0.7' }"
                   >↓
                   {{
                     formatBytes(
@@ -780,22 +798,26 @@ const netTimestamps = computed(() => {
                 :class="[
                   'flex flex-col items-start px-3 py-2.5 rounded-lg border text-xs whitespace-nowrap transition-all w-[120px]',
                   selectedIface === iface.interface_name
-                    ? 'border-[#38bdf8] bg-[#38bdf8]/10'
+                    ? `border-[${activeTheme.color}] bg-[${activeTheme.color}]/10`
                     : 'border-border bg-muted/30 hover:bg-muted/50',
                 ]"
               >
                 <span
                   :class="
                     selectedIface === iface.interface_name
-                      ? 'text-[#38bdf8] font-medium'
+                      ? `text-[${activeTheme.color}] font-medium`
                       : 'text-foreground'
                   "
                   >{{ iface.interface_name }}</span
                 >
-                <span class="font-mono text-[10px] text-[#4ade80] mt-1"
+                <span
+                  class="font-mono text-[10px] mt-1"
+                  :style="{ color: activeTheme.color }"
                   >↑ {{ formatBytes(iface.transmit_speed) }}/s</span
                 >
-                <span class="font-mono text-[10px] text-[#38bdf8]"
+                <span
+                  class="font-mono text-[10px]"
+                  :style="{ color: activeTheme.color, opacity: '0.7' }"
                   >↓ {{ formatBytes(iface.receive_speed) }}/s</span
                 >
               </button>
@@ -816,10 +838,11 @@ const netTimestamps = computed(() => {
                       }}
                     </CardTitle>
                     <div class="flex items-center gap-3 text-xs font-mono">
-                      <span class="text-[#38bdf8]"
+                      <span :style="{ color: activeTheme.color }"
                         >↓ {{ formatBytes(currentNetRx) }}/s</span
                       >
-                      <span class="text-[#4ade80]"
+                      <span
+                        :style="{ color: activeTheme.color, opacity: '0.7' }"
                         >↑ {{ formatBytes(currentNetTx) }}/s</span
                       >
                     </div>
@@ -850,13 +873,13 @@ const netTimestamps = computed(() => {
               </CardHeader>
               <CardContent>
                 <div
-                  class="h-[260px] w-full bg-muted/10 rounded-md border flex items-end p-0 relative overflow-hidden group"
+                  class="h-[260px] w-full flex items-end p-0 relative overflow-hidden group"
                 >
                   <UPlotChart
                     :data="displayNetRxData"
                     :data2="displayNetTxData"
-                    color="#38bdf8"
-                    color2="#4ade80"
+                    :color="activeTheme.color"
+                    :color2="activeTheme.color"
                     :maxValue="maxNetSpeed"
                     yLabel="B/s"
                     :isTimeSeries="netMode === 'history'"
@@ -889,11 +912,20 @@ const netTimestamps = computed(() => {
                   class="flex items-center gap-4 mt-2 text-xs font-mono text-muted-foreground"
                 >
                   <span class="flex items-center gap-1">
-                    <span class="inline-block w-3 h-0.5 bg-[#38bdf8]"></span>
+                    <span
+                      class="inline-block w-3 h-0.5"
+                      :style="{ backgroundColor: activeTheme.color }"
+                    ></span>
                     Download (↓)
                   </span>
                   <span class="flex items-center gap-1">
-                    <span class="inline-block w-3 h-0.5 bg-[#4ade80]"></span>
+                    <span
+                      class="inline-block w-3 h-0.5"
+                      :style="{
+                        backgroundColor: activeTheme.color,
+                        opacity: '0.7',
+                      }"
+                    ></span>
                     Upload (↑)
                   </span>
                   <span
@@ -921,7 +953,7 @@ const netTimestamps = computed(() => {
                     :class="[
                       'flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all',
                       selectedIface === iface.interface_name
-                        ? 'border-[#38bdf8] bg-[#38bdf8]/5'
+                        ? `border-[${activeTheme.color}] bg-[${activeTheme.color}]/5`
                         : 'bg-muted/30 hover:bg-muted/50',
                     ]"
                   >
@@ -954,10 +986,12 @@ const netTimestamps = computed(() => {
                       </div>
                     </div>
                     <div class="text-right text-xs font-mono space-y-1">
-                      <div class="text-[#38bdf8]">
+                      <div :style="{ color: activeTheme.color }">
                         ↓ {{ formatBytes(iface.receive_speed) }}/s
                       </div>
-                      <div class="text-[#4ade80]">
+                      <div
+                        :style="{ color: activeTheme.color, opacity: '0.7' }"
+                      >
                         ↑ {{ formatBytes(iface.transmit_speed) }}/s
                       </div>
                     </div>
