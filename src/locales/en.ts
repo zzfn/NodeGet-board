@@ -1,3 +1,5 @@
+import { version } from "vue";
+
 export default {
   common: {
     cpu: "CPU",
@@ -61,6 +63,37 @@ export default {
     saveFailed: "Save failed",
     save: "Save",
     saving: "Saving...",
+    token: {
+      cancel: "Cancel",
+      delete: "Delete",
+      deleting: "Deleting...",
+      reset: "Reset",
+      reseting: "Reseting...",
+      list: {
+        title: "Token Management",
+        description: "Manage your API tokens.",
+        searchPlaceholder: "Please enter the Token Key to search",
+        resetButton: "Reset",
+        searchButton: "Search",
+        searchingButton: "Loading...",
+        createButton: "Create",
+        table: {
+          loading: "Loading Tokens...",
+          noToken: "No tokens found.",
+          version: "Version",
+          username: "Username",
+          tokenKey: "Token Key",
+          tokenLimit: "Token Limit",
+          actions: "Actions",
+          pageShow: "Showing { pageLabel } of { total } tokens",
+        },
+        deleteDailog: {
+          title: "Delete Token",
+          description:
+            "Are you sure you want to delete this? This action is irreversible!",
+        },
+      },
+    },
     kv: {
       title: "KV Management",
       createSuccess: 'Namespace "{ns}" created successfully',

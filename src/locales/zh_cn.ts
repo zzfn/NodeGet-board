@@ -1,3 +1,5 @@
+import { version } from "vue";
+
 export default {
   common: {
     cpu: "处理器",
@@ -64,6 +66,36 @@ export default {
     saveFailed: "保存失败",
     save: "保存",
     saving: "保存中...",
+    token: {
+      cancel: "取消",
+      delete: "删除",
+      deleting: "删除中...",
+      reset: "重置",
+      reseting: "重置中...",
+      list: {
+        title: "Token 管理",
+        description: "管理你的Token",
+        searchPlaceholder: "请输入Token Key搜索",
+        resetButton: "重置",
+        searchButton: "搜索",
+        searchingButton: "搜索中...",
+        createButton: "创建Token",
+        table: {
+          loading: "加载Token中...",
+          noToken: "未查询到Token",
+          version: "版本",
+          username: "用户名",
+          tokenKey: "Token Key",
+          tokenLimit: "权限数量",
+          actions: "操作",
+          pageShow: "显示 {pageLabel} 条数据，共计 {total} 条数据",
+        },
+        deleteDialog: {
+          title: "删除 Token",
+          confirm: "是否确认删除，此操作不可逆！",
+        },
+      },
+    },
     kv: {
       title: "KV 管理",
       createSuccess: '命名空间 "{ns}" 创建成功',

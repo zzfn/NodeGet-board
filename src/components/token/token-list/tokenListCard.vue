@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,6 +39,7 @@ import { useTokenListHook, type Token } from "./useTokenList";
 
 const useTokenList = useTokenListHook();
 const router = useRouter();
+const { t } = useI18n();
 
 const tokensList = ref<Token[]>([]);
 const fetchLoading = ref(false);
@@ -147,38 +149,56 @@ const handleConfirmResetToken = (token: Token) => {};
       class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
     >
       <div class="w-full lg:max-w-sm">
-        <Input placeholder="输入token_key搜索" />
+        <Input :placeholder="t('dashboard.token.list.searchPlaceholder')" />
       </div>
       <div class="flex flex-wrap items-center gap-2 lg:justify-end">
         <Button type="button" @click="handleGetTokenList" variant="outline">
-          <span class="inline-flex items-center justify-center">重置</span>
+          <span class="inline-flex items-center justify-center">{{
+            t("dashboard.token.list.resetButton")
+          }}</span>
         </Button>
         <Button type="button" class="min-w-24" @click="handleGetTokenList">
           <span class="inline-flex w-full items-center justify-center gap-2">
             <Spinner v-if="fetchLoading" />
-            {{ fetchLoading ? "搜索中..." : "搜索" }}
+            {{
+              fetchLoading
+                ? t("dashboard.token.list.searchingButton")
+                : t("dashboard.token.list.searchButton")
+            }}
           </span>
         </Button>
         <Button type="button" @click="toCreateToken">
-          <span class="inline-flex items-center justify-center">创建Token</span>
+          <span class="inline-flex items-center justify-center">{{
+            t("dashboard.token.list.createButton")
+          }}</span>
         </Button>
       </div>
     </div>
 
     <div v-if="fetchLoading" class="mt-20 flex w-full flex-col items-center">
       <Spinner />
-      <div class="text-sm text-muted-foreground">Loading tokens...</div>
+      <div class="text-sm text-muted-foreground">
+        {{ t("dashboard.token.list.table.loading") }}
+      </div>
     </div>
 
     <div v-else class="space-y-4">
       <Table class="w-full">
         <TableHeader>
           <TableRow>
-            <TableHead>Version</TableHead>
-            <TableHead>Username</TableHead>
-            <TableHead>Token Key</TableHead>
-            <TableHead>Token Limit</TableHead>
-            <TableHead>Actions</TableHead>
+            <TableHead>{{ t("dashboard.token.list.table.version") }}</TableHead>
+            <TableHead>
+              {{ t("dashboard.token.list.table.username") }}
+            </TableHead>
+            <TableHead>
+              {{ t("dashboard.token.list.table.tokenKey") }}
+            </TableHead>
+            <TableHead>
+              {{ t("dashboard.token.list.table.tokenLimit") }}
+            </TableHead>
+            <TableHead>
+              {{ t("dashboard.token.list.table.actions") }}
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -221,22 +241,26 @@ const handleConfirmResetToken = (token: Token) => {};
                   </Button>
                 </DialogTrigger>
                 <DialogContent class="w-400">
-                  <DialogTitle>删除Token</DialogTitle>
+                  <DialogTitle>
+                    {{ t("dashboard.token.list.deleteDailog.title") }}
+                  </DialogTitle>
                   <DialogDescription>
-                    是否确认删除，此操作不可逆！
+                    {{ t("dashboard.token.list.deleteDailog.description") }}
                   </DialogDescription>
                   <DialogFooter>
                     <DialogClose as-child>
-                      <Button variant="outline"> 取消 </Button>
+                      <Button variant="outline">
+                        {{ t("dashboard.token.cancel") }}
+                      </Button>
                     </DialogClose>
                     <Button
                       @click="handleDeleteToken(token)"
                       :disabled="deleteLoading"
                     >
                       <div v-if="deleteLoading" class="flex items-center">
-                        <Spinner />删除中...
+                        <Spinner />{{ t("dashboard.token.deleting") }}
                       </div>
-                      <div v-else>删除</div>
+                      <div v-else>{{ t("dashboard.token.delete") }}</div>
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -248,7 +272,7 @@ const handleConfirmResetToken = (token: Token) => {};
               colspan="5"
               class="py-8 text-center text-muted-foreground"
             >
-              No tokens found.
+              {{ t("dashboard.token.list.table.noToken") }}
             </TableCell>
           </TableRow>
         </TableBody>
@@ -266,7 +290,13 @@ const handleConfirmResetToken = (token: Token) => {};
         >
           <div class="flex items-center justify-center gap-2">
             <div class="text-sm text-muted-foreground">
-              Showing {{ pageLabel }} of {{ total }} tokens
+              <!-- Showing {{ pageLabel }} of {{ total }} tokens -->
+              {{
+                t("dashboard.token.list.table.pageShow", {
+                  pageLabel: pageLabel,
+                  total: total,
+                })
+              }}
             </div>
           </div>
           <PaginationContent v-slot="{ items }">
