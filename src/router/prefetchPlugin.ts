@@ -7,15 +7,21 @@ type Loader<T = unknown> = () => Promise<T>;
 type AsyncComponent = () => Promise<RouteComponent>;
 /** 路由组件，既可能是同步组件，也可能是异步组件。 */
 type RouteComp = RouteComponent | AsyncComponent;
-/** 路由 `meta` 中可声明的预加载模式。 */
-type PrefetchMode = boolean | "high" | "normal" | "low" | "off";
+/** 路由 `meta` 中可声明的预加载模式，也支持直接传入数值优先级。 */
+type PrefetchMode = boolean | number | "high" | "normal" | "low" | "off";
+
+/** 预加载逻辑中使用的固定优先级枚举。 */
+export enum RoutePrefetchPriority {
+  Low = 80,
+  Normal = 180,
+  High = 260,
+}
 
 /** 预加载策略会读取的路由 `meta` 字段。 */
 type PrefetchMeta = {
   hidden?: boolean;
   isClosed?: boolean;
   prefetch?: PrefetchMode;
-  prefetchPriority?: number;
 };
 
 /** 内部维护的可预加载路由组件条目。 */
@@ -329,8 +335,8 @@ function updateDevtoolsInspector() {
 
 function getPriorityBucket(priority: number | null): PriorityBucket {
   if (priority === null) return "skipped";
-  if (priority >= 220) return "high";
-  if (priority >= 120) return "normal";
+  if (priority >= RoutePrefetchPriority.High) return "high";
+  if (priority >= RoutePrefetchPriority.Normal) return "normal";
   return "low";
 }
 
@@ -618,21 +624,30 @@ function getExplicitPriority(meta?: PrefetchMeta): PriorityResult | undefined {
   if (meta.prefetch === false || meta.prefetch === "off") {
     return { priority: null, reason: "meta.prefetch=off" };
   }
-  if (typeof meta.prefetchPriority === "number") {
+  if (typeof meta.prefetch === "number" && Number.isFinite(meta.prefetch)) {
     return {
-      priority: meta.prefetchPriority,
-      reason: "meta.prefetchPriority",
+      priority: meta.prefetch,
+      reason: "meta.prefetch=number",
     };
   }
 
   switch (meta.prefetch) {
     case true:
     case "normal":
-      return { priority: 180, reason: "meta.prefetch=normal" };
+      return {
+        priority: RoutePrefetchPriority.Normal,
+        reason: "meta.prefetch=normal",
+      };
     case "high":
-      return { priority: 260, reason: "meta.prefetch=high" };
+      return {
+        priority: RoutePrefetchPriority.High,
+        reason: "meta.prefetch=high",
+      };
     case "low":
-      return { priority: 80, reason: "meta.prefetch=low" };
+      return {
+        priority: RoutePrefetchPriority.Low,
+        reason: "meta.prefetch=low",
+      };
     default:
       return undefined;
   }
@@ -658,22 +673,37 @@ function getRoutePriority(
   if (depth > 3) return { priority: null, reason: "route depth > 3" };
 
   if (fullPath === "/dashboard") {
-    return { priority: 140, reason: "dashboard root fallback" };
+    return {
+      priority: RoutePrefetchPriority.Normal,
+      reason: "dashboard root fallback",
+    };
   }
   if (fullPath === "/") {
-    return { priority: 120, reason: "home fallback" };
+    return {
+      priority: RoutePrefetchPriority.Normal,
+      reason: "home fallback",
+    };
   }
 
   if (depth === 2 && fullPath.startsWith("/dashboard/")) {
-    return { priority: 150, reason: "dashboard top-level static page" };
+    return {
+      priority: RoutePrefetchPriority.Normal,
+      reason: "dashboard top-level static page",
+    };
   }
 
   if (depth === 3 && fullPath.startsWith("/dashboard/app/")) {
-    return { priority: 110, reason: "dashboard app static child page" };
+    return {
+      priority: RoutePrefetchPriority.Low,
+      reason: "dashboard app static child page",
+    };
   }
 
   if (depth === 3 && fullPath.startsWith("/dashboard/settings/")) {
-    return { priority: 100, reason: "dashboard settings static child page" };
+    return {
+      priority: RoutePrefetchPriority.Low,
+      reason: "dashboard settings static child page",
+    };
   }
 
   return { priority: null, reason: "no prefetch heuristic matched" };
