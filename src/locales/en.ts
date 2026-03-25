@@ -238,11 +238,13 @@ export default {
               title: "Static Monitoring",
               write: "Write",
               read: "Read",
+              delete: "Delete",
             },
             dynamicMonitoring: {
               title: "Dynamic Monitoring",
               write: "Write",
               read: "Read",
+              delete: "Delete",
             },
             task: {
               title: "Task",
@@ -259,7 +261,7 @@ export default {
             },
             crontabReault: {
               title: "Crontab Result",
-              writeTarget: "Write Target",
+              readTarget: "Read Target",
               deleteTarget: "Delete Target",
             },
             kv: {

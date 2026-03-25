@@ -235,11 +235,13 @@ export default {
               title: "静态监控",
               write: "写入",
               read: "读取",
+              delete: "删除",
             },
             dynamicMonitoring: {
               title: "动态监控",
               write: "写入",
               read: "读取",
+              delete: "删除",
             },
             task: {
               title: "任务",
@@ -256,7 +258,7 @@ export default {
             },
             crontabReault: {
               title: "定时任务结果",
-              writeTarget: "写入目标",
+              readTarget: "读取目标",
               deleteTarget: "删除目标",
             },
             kv: {

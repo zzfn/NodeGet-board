@@ -14,6 +14,7 @@ const emits = defineEmits<{
 const { t } = useI18n();
 
 const writeEnabled = ref(false);
+const deleteEnable = ref(false);
 const readTargets = ref<string[]>([]);
 const hydrating = ref(false);
 
@@ -29,6 +30,7 @@ const toggleReadTarget = (target: string) => {
 const build = (): PermissionEntry[] => {
   const result: PermissionEntry[] = [];
   if (writeEnabled.value) result.push({ static_monitoring: "write" });
+  if (deleteEnable.value) result.push({ static_monitoring: "delete" });
   for (const target of readTargets.value) {
     result.push({ static_monitoring: { read: target } });
   }
@@ -38,11 +40,16 @@ const build = (): PermissionEntry[] => {
 const hydrate = (entries: PermissionEntry[]) => {
   writeEnabled.value = false;
   readTargets.value = [];
+  deleteEnable.value = false;
 
   for (const entry of entries || []) {
     const value = entry?.static_monitoring;
     if (value === "write") {
       writeEnabled.value = true;
+      continue;
+    }
+    if (value === "delete") {
+      deleteEnable.value = true;
       continue;
     }
 
@@ -74,7 +81,7 @@ watch(
 );
 
 watch(
-  [writeEnabled, readTargets],
+  [writeEnabled, readTargets, deleteEnable],
   () => {
     if (hydrating.value) return;
     const nextEntries = build();
@@ -98,6 +105,25 @@ watch(
       <div class="text-xs text-muted-foreground">
         {{
           t(
+            "dashboard.token.permissionsConfig.limitItem.permissionCard.staticMonitoring.read",
+          )
+        }}
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <Button
+          v-for="field in READ_FIELDS"
+          :key="`sm-r-${field}`"
+          size="sm"
+          type="button"
+          :variant="readTargets.includes(field) ? 'default' : 'outline'"
+          @click="toggleReadTarget(field)"
+        >
+          {{ field }}
+        </Button>
+      </div>
+      <div class="text-xs text-muted-foreground">
+        {{
+          t(
             "dashboard.token.permissionsConfig.limitItem.permissionCard.staticMonitoring.write",
           )
         }}
@@ -116,24 +142,25 @@ watch(
           }}
         </Button>
       </div>
-
       <div class="text-xs text-muted-foreground">
         {{
           t(
-            "dashboard.token.permissionsConfig.limitItem.permissionCard.staticMonitoring.read",
+            "dashboard.token.permissionsConfig.limitItem.permissionCard.staticMonitoring.delete",
           )
         }}
       </div>
       <div class="flex flex-wrap gap-2">
         <Button
-          v-for="field in READ_FIELDS"
-          :key="`sm-r-${field}`"
           size="sm"
           type="button"
-          :variant="readTargets.includes(field) ? 'default' : 'outline'"
-          @click="toggleReadTarget(field)"
+          :variant="deleteEnable ? 'default' : 'outline'"
+          @click="deleteEnable = !deleteEnable"
         >
-          {{ field }}
+          {{
+            t(
+              "dashboard.token.permissionsConfig.limitItem.permissionCard.staticMonitoring.delete",
+            )
+          }}
         </Button>
       </div>
     </div>

@@ -139,7 +139,7 @@ watch(
         <div class="text-xs text-muted-foreground">
           {{
             t(
-              "dashboard.token.permissionsConfig.limitItem.permissionCard.crontabReault.deleteTarget",
+              "dashboard.token.permissionsConfig.limitItem.permissionCard.crontabReault.readTarget",
             )
           }}
         </div>

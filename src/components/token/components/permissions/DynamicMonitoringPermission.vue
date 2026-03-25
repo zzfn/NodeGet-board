@@ -5,7 +5,15 @@ import type { PermissionEntry } from "../../type";
 import { Button } from "@/components/ui/button";
 import { arePermissionEntriesEqual } from "./permissionsState";
 
-const FIELDS = ["cpu", "system", "gpu"] as const;
+const FIELDS = [
+  "cpu",
+  "ram",
+  "load",
+  "system",
+  "disk",
+  "network",
+  "gpu",
+] as const;
 
 const props = defineProps<{ modelValue: PermissionEntry[] }>();
 const emits = defineEmits<{
@@ -15,6 +23,7 @@ const { t } = useI18n();
 
 const readTargets = ref<string[]>([]);
 const writeEnabled = ref(false);
+const deleteEnabled = ref(false);
 const hydrating = ref(false);
 
 const toggleReadTarget = (target: string) => {
@@ -29,22 +38,31 @@ const toggleReadTarget = (target: string) => {
 const toggleWrite = () => {
   writeEnabled.value = !writeEnabled.value;
 };
+const toggleDelete = () => {
+  deleteEnabled.value = !deleteEnabled.value;
+};
 
 const build = (): PermissionEntry[] => {
   const result: PermissionEntry[] = [];
   for (const field of readTargets.value)
     result.push({ dynamic_monitoring: { read: field } });
   if (writeEnabled.value) result.push({ dynamic_monitoring: "write" });
+  if (deleteEnabled.value) result.push({ dynamic_monitoring: "delete" });
   return result;
 };
 
 const hydrate = (entries: PermissionEntry[]) => {
   readTargets.value = [];
   writeEnabled.value = false;
+  deleteEnabled.value = false;
   for (const entry of entries || []) {
     const value = entry?.dynamic_monitoring;
     if (value === "write") {
       writeEnabled.value = true;
+      continue;
+    }
+    if (value === "delete") {
+      deleteEnabled.value = true;
       continue;
     }
     if (!value || typeof value !== "object" || Array.isArray(value)) continue;
@@ -68,7 +86,7 @@ watch(
 );
 
 watch(
-  [readTargets, writeEnabled],
+  [readTargets, writeEnabled, deleteEnabled],
   () => {
     if (hydrating.value) return;
     const nextEntries = build();
@@ -120,8 +138,34 @@ watch(
           size="sm"
           :variant="writeEnabled ? 'default' : 'outline'"
           @click="toggleWrite"
-          >Write</Button
         >
+          {{
+            t(
+              "dashboard.token.permissionsConfig.limitItem.permissionCard.dynamicMonitoring.write",
+            )
+          }}
+        </Button>
+      </div>
+      <div class="text-xs text-muted-foreground">
+        {{
+          t(
+            "dashboard.token.permissionsConfig.limitItem.permissionCard.dynamicMonitoring.delete",
+          )
+        }}
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          size="sm"
+          :variant="deleteEnabled ? 'default' : 'outline'"
+          @click="toggleDelete"
+        >
+          {{
+            t(
+              "dashboard.token.permissionsConfig.limitItem.permissionCard.dynamicMonitoring.delete",
+            )
+          }}
+        </Button>
       </div>
     </div>
   </details>
