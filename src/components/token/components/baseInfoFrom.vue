@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { type Token } from "../type";
 import { ChevronDown, CircleX } from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ const props = defineProps<{
 const emits = defineEmits<{
   (e: "update:token", token: Token): void;
 }>();
+const { t } = useI18n();
 
 const isOpen = ref(false);
 const localToken = ref<Token>(props.token);
@@ -109,7 +111,9 @@ const clearTimestampTo = () => {
   <Collapsible v-model:open="isOpen">
     <Card>
       <CardHeader class="flex flex-row items-center justify-between gap-2">
-        <CardTitle class="flex items-center gap-2">基础信息</CardTitle>
+        <CardTitle class="flex items-center gap-2">
+          {{ t("dashboard.token.tokenInfo.baseInfoTitle") }}
+        </CardTitle>
         <CollapsibleTrigger as-child>
           <Button variant="ghost" size="icon" class="size-8">
             <ChevronDown
@@ -124,32 +128,40 @@ const clearTimestampTo = () => {
       <CollapsibleContent>
         <CardContent class="grid gap-6 space-y-6 xl:grid-cols-2">
           <div class="space-y-2">
-            <Label>用户名</Label>
+            <Label>
+              {{ t("dashboard.token.tokenInfo.username") }}
+            </Label>
             <Input
               v-model="localToken.username"
               @blur="updateData()"
-              placeholder="输入用户名（可选）"
+              :placeholder="t('dashboard.token.tokenInfo.usernamePlaceholder')"
               clearable
             ></Input>
           </div>
           <div class="space-y-2">
-            <Label>密码</Label>
+            <Label>
+              {{ t("dashboard.token.tokenInfo.password") }}
+            </Label>
             <Input
               v-model="localToken.password"
               type="password"
               @blur="updateData()"
-              placeholder="输入密码（可选）"
+              :placeholder="t('dashboard.token.tokenInfo.passwordPlaceholder')"
             ></Input>
           </div>
           <div class="space-y-2">
-            <Label>开始时间</Label>
+            <Label>
+              {{ t("dashboard.token.tokenInfo.startTime") }}
+            </Label>
             <div class="group relative">
               <Input
                 v-model="timestampFromInput"
                 :max="timestampFromMax"
                 @blur="handleTimestampFromBlur"
                 type="datetime-local"
-                placeholder="输入开始时间（可选）"
+                :placeholder="
+                  t('dashboard.token.tokenInfo.startTimePlaceholder')
+                "
               ></Input>
               <button
                 v-if="timestampFromInput"
@@ -162,14 +174,16 @@ const clearTimestampTo = () => {
             </div>
           </div>
           <div class="space-y-2">
-            <Label>结束时间</Label>
+            <Label>
+              {{ t("dashboard.token.tokenInfo.endTime") }}
+            </Label>
             <div class="group relative">
               <Input
                 v-model="timestampToInput"
                 :min="timestampToMin"
                 @blur="handleTimestampToBlur"
                 type="datetime-local"
-                placeholder="输入结束时间（可选）"
+                :placeholder="t('dashboard.token.tokenInfo.endTimePlaceholder')"
               ></Input>
               <button
                 v-if="timestampToInput"

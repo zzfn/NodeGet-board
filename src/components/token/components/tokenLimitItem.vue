@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { type TokenLimitEntry } from "../type";
 import { detectScopeTab, type ScopeTabValue } from "../scopeUi";
 import { ChevronDown, Trash2 } from "lucide-vue-next";
@@ -28,6 +29,7 @@ const emits = defineEmits<{
   (e: "update:tokenLimit", tokenLimit: TokenLimitEntry): void;
   (e: "deleteLimit", index: number): void;
 }>();
+const { t } = useI18n();
 
 const localTokenLimit = ref<TokenLimitEntry>(props.tokenLimit);
 const scopeTab = ref<ScopeTabValue>(detectScopeTab(props.tokenLimit.scopes));
@@ -84,14 +86,23 @@ const handleTemplateChange = (value: TokenPermissionTemplateValue) => {
 <template>
   <Collapsible v-model:open="isOpen" class="space-y-2">
     <div class="flex w-full items-center justify-between gap-2">
-      <div>权限{{ props.index + 1 }}</div>
+      <div>
+        {{ t("dashboard.token.permissionsConfig.limitItem.title") }}
+        {{ props.index + 1 }}
+      </div>
       <div class="flex-1"></div>
       <PopConfirm
         v-if="props.limitLength > 1"
-        title="确认删除权限"
-        description="删除后当前权限配置将无法恢复。"
-        confirm-text="删除"
-        cancel-text="取消"
+        :title="t('dashboard.token.permissionsConfig.limitItem.deleteTitle')"
+        :description="
+          t('dashboard.token.permissionsConfig.limitItem.deleteDescription')
+        "
+        :confirm-text="
+          t('dashboard.token.permissionsConfig.limitItem.deleteConfirm')
+        "
+        :cancel-text="
+          t('dashboard.token.permissionsConfig.limitItem.deleteCancel')
+        "
         @confirm="handleDeleteLimit"
       >
         <Button variant="ghost" size="icon" class="size-8 text-red-500">

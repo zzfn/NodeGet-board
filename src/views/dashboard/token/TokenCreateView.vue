@@ -3,8 +3,10 @@ import { ArrowLeft } from "lucide-vue-next";
 import CreateTokenCard from "@/components/token/create-token/CreateTokenCard.vue";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
 
 const router = useRouter();
+const { t } = useI18n();
 
 const handleBack = () => {
   router.push({ name: "token" });
@@ -21,11 +23,17 @@ const handleBack = () => {
         @click="handleBack"
       >
         <ArrowLeft class="h-4 w-4" />
-        <span class="sr-only">返回Token列表</span>
+        <span class="sr-only">{{
+          t("dashboard.token.create.returnButtonDescription")
+        }}</span>
       </Button>
       <div>
-        <h2 class="text-2xl font-bold tracking-tight">创建 Token</h2>
-        <p class="text-muted-foreground">新建一个Token</p>
+        <h2 class="text-2xl font-bold tracking-tight">
+          {{ t("dashboard.token.create.title") }}
+        </h2>
+        <p class="text-muted-foreground">
+          {{ t("dashboard.token.create.description") }}
+        </p>
       </div>
     </div>
     <!-- grid gap-6 xl:grid-cols-2 -->

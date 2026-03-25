@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import { useI18n } from "vue-i18n";
 import { toast } from "vue-sonner";
 import { type token } from "../type";
 import { Copy, KeyRound } from "lucide-vue-next";
@@ -22,6 +23,7 @@ import { useCreatTokenHook } from "../create-token/useCreateToken";
 import { createDefaultToken } from "../scopeCodec";
 
 const createToken = useCreatTokenHook();
+const { t } = useI18n();
 
 const tokenFromData = ref<token>(createDefaultToken());
 const createLoading = ref(false);
@@ -38,7 +40,7 @@ const copyText = async (value: string, successMessage: string) => {
     await navigator.clipboard.writeText(value);
     toast.success(successMessage);
   } catch (error) {
-    toast.error("复制失败，请手动复制保存");
+    toast.error(t("dashboard.token.create.createTokenCard.copyFailed"));
   }
 };
 
@@ -68,7 +70,7 @@ const handleCreateToken = () => {
     <CardHeader>
       <CardTitle class="flex items-center gap-2">
         <KeyRound class="h-5 w-5" />
-        创建token
+        {{ t("dashboard.token.create.createTokenCard.title") }}
       </CardTitle>
     </CardHeader>
 
@@ -81,8 +83,12 @@ const handleCreateToken = () => {
           class="w-full"
           :disabled="createLoading"
         >
-          <div v-if="createLoading">创建中...</div>
-          <div v-else>创建token</div>
+          <div v-if="createLoading">
+            {{ t("dashboard.token.create.createTokenCard.creatingButton") }}
+          </div>
+          <div v-else>
+            {{ t("dashboard.token.create.createTokenCard.createButton") }}
+          </div>
         </Button>
       </div>
       <!-- 预览区 -->
@@ -95,9 +101,11 @@ const handleCreateToken = () => {
   <Dialog v-model:open="successDialogOpen">
     <DialogContent class="sm:max-w-xl">
       <DialogHeader>
-        <DialogTitle>Token 创建成功</DialogTitle>
+        <DialogTitle>
+          {{ t("dashboard.token.create.createSuccessDialog.title") }}
+        </DialogTitle>
         <DialogDescription>
-          新创建的 Token 只会显示这一次，请立即复制并妥善保存。
+          {{ t("dashboard.token.create.createSuccessDialog.description") }}
         </DialogDescription>
       </DialogHeader>
 
@@ -110,10 +118,21 @@ const handleCreateToken = () => {
               type="button"
               variant="outline"
               size="icon"
-              @click="copyText(createdTokenInfo.key, 'Token Key 已复制')"
+              @click="
+                copyText(
+                  createdTokenInfo.key,
+                  t(
+                    'dashboard.token.create.createSuccessDialog.copyTokenKeySuccess',
+                  ),
+                )
+              "
             >
               <Copy class="h-4 w-4" />
-              <span class="sr-only">复制 Token Key</span>
+              <span class="sr-only">
+                {{
+                  t("dashboard.token.create.createSuccessDialog.copyTokenKey")
+                }}
+              </span>
             </Button>
           </div>
         </div>
@@ -126,10 +145,23 @@ const handleCreateToken = () => {
               type="button"
               variant="outline"
               size="icon"
-              @click="copyText(createdTokenInfo.secret, 'Token Secret 已复制')"
+              @click="
+                copyText(
+                  createdTokenInfo.secret,
+                  t(
+                    'dashboard.token.create.createSuccessDialog.copyToeknSecretSuccess',
+                  ),
+                )
+              "
             >
               <Copy class="h-4 w-4" />
-              <span class="sr-only">复制 Token Secret</span>
+              <span class="sr-only">
+                {{
+                  t(
+                    "dashboard.token.create.createSuccessDialog.copyTokenSecret",
+                  )
+                }}
+              </span>
             </Button>
           </div>
         </div>
@@ -141,17 +173,19 @@ const handleCreateToken = () => {
           @click="
             copyText(
               `${createdTokenInfo.key}:${createdTokenInfo.secret}`,
-              '完整 Token 已复制',
+              t(
+                'dashboard.token.create.createSuccessDialog.copyFullTokenSuccess',
+              ),
             )
           "
         >
-          复制完整 Token
+          {{ t("dashboard.token.create.createSuccessDialog.copyFullToken") }}
         </Button>
       </div>
 
       <DialogFooter>
         <Button type="button" @click="successDialogOpen = false">
-          我已保存
+          {{ t("dashboard.token.create.createSuccessDialog.saved") }}
         </Button>
       </DialogFooter>
     </DialogContent>

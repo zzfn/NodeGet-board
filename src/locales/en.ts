@@ -93,6 +93,55 @@ export default {
             "Are you sure you want to delete this? This action is irreversible!",
         },
       },
+      create: {
+        title: "Create Token",
+        description: "Create a new API token.",
+        returnButtonDescription: "Return to token list",
+        createTokenCard: {
+          title: "Create Token",
+          createButton: "Create Token",
+          creatingButton: "Creating...",
+        },
+        createSuccessDialog: {
+          title: "Create Token Success",
+          description:
+            "The newly created token will be displayed only this once; please copy and save it securely immediately.",
+          copyTokenKey: "Copy Token Key",
+          copyTokenKeySuccess: "Token key copied successfully",
+          copyTokenSecret: "Copy Token Secret",
+          copyToeknSecretSuccess: "Token secret copied successfully",
+          copyFullToken: "Copy Full Token",
+          copyFullTokenSuccess: "Full token copied successfully",
+          saved: "Saved",
+          copyFailed: "Copy failed",
+        },
+      },
+      tokenInfo: {
+        baseInfoTitle: "Base Info",
+        username: "Username",
+        usernamePlaceholder: "Please enter username(Optional)",
+        password: "Password",
+        passwordPlaceholder: "Please enter password(Optional)",
+        startTime: "Start Time",
+        startTimePlaceholder: "Please select start time(Optional)",
+        endTime: "End Time",
+        endTimePlaceholder: "Please select end time(Optional)",
+      },
+      permissionsConfig: {
+        title: "Token Permissions Config",
+        addPermission: "Add Permission",
+        limitItem: {
+          title: "Permission",
+          deleteTitle: "Delete Permission",
+          deleteDescription:
+            "The current permission configuration cannot be restored after deletion.",
+          deleteCancel: "Cancel",
+          deleteConfirm: "Delete",
+          template: {
+            title: "Permission Template",
+          },
+        },
+      },
     },
     kv: {
       title: "KV Management",

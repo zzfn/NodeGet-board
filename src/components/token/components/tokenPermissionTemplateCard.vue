@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { useI18n } from "vue-i18n";
 import { Check, Sparkles, UserRound, Wrench } from "lucide-vue-next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -10,10 +11,10 @@ import {
 const props = defineProps<{
   modelValue: TokenPermissionTemplateValue;
 }>();
-
 const emits = defineEmits<{
   (e: "update:modelValue", value: TokenPermissionTemplateValue): void;
 }>();
+const { t } = useI18n();
 
 const iconMap = {
   agent: Sparkles,
@@ -34,7 +35,9 @@ const isSelected = (value: TokenPermissionTemplateValue) =>
 <template>
   <Card class="w-full">
     <CardHeader>
-      <CardTitle class="flex items-center gap-2">权限模版</CardTitle>
+      <CardTitle class="flex items-center gap-2">
+        {{ t("dashboard.token.permissionsConfig.limitItem.template.title") }}
+      </CardTitle>
     </CardHeader>
 
     <CardContent class="grid gap-3 md:grid-cols-3">

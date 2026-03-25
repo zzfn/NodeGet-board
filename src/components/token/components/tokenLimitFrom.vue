@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { type Token } from "../type";
 import { Plus } from "lucide-vue-next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +14,7 @@ const props = defineProps<{
 const emits = defineEmits<{
   (e: "update:token", token: Token): void;
 }>();
+const { t } = useI18n();
 
 const localToken = ref<Token>(props.token);
 
@@ -46,7 +48,7 @@ const handleAddLimit = () => {
     <CardHeader>
       <CardTitle class="flex items-center gap-2">
         <!-- <KeyRound class="h-5 w-5" /> -->
-        Token权限配置
+        {{ t("dashboard.token.permissionsConfig.title") }}
       </CardTitle>
     </CardHeader>
 
@@ -61,7 +63,10 @@ const handleAddLimit = () => {
         @update:tokenLimit="(value) => (localToken.token_limit[index] = value)"
         @delete-limit="localToken.token_limit.splice(index, 1)"
       />
-      <Button class="w-full" @click="handleAddLimit"><Plus />添加权限</Button>
+      <Button class="w-full" @click="handleAddLimit">
+        <Plus />
+        {{ t("dashboard.token.permissionsConfig.addPermission") }}
+      </Button>
     </CardContent>
   </Card>
 </template>
