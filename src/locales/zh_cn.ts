@@ -1,3 +1,4 @@
+import { connect } from "echarts";
 import { version } from "vue";
 
 export default {
@@ -72,6 +73,8 @@ export default {
       deleting: "删除中...",
       reset: "重置",
       reseting: "重置中...",
+      refresh: "刷新",
+      refreshing: "刷新中...",
       list: {
         title: "Token 管理",
         description: "管理你的Token",
@@ -117,6 +120,17 @@ export default {
           copyFaild: "复制失败",
         },
       },
+      edit: {
+        title: "编辑 Token",
+        description: "编辑一个已存在的Token。",
+        returnButtonDescription: "返回Token列表",
+        editTokenCard: {
+          title: "编辑Token",
+          updateButton: "更新Token",
+          updetingButton: "更新中...",
+          detailLoading: "加载Token信息中...",
+        },
+      },
       tokenInfo: {
         baseInfoTitle: "基础信息",
         username: "用户名",
@@ -128,6 +142,9 @@ export default {
         endTime: "结束时间",
         endTimePlaceholder: "请选择结束时间(可选)",
       },
+      previeJSON: {
+        title: "格式化预览JSON",
+      },
       permissionsConfig: {
         title: "Token权限配置",
         addPermission: "添加权限",
@@ -138,7 +155,73 @@ export default {
           deleteCancel: "取消",
           deleteConfirm: "删除",
           template: {
-            template: "权限模板",
+            title: "权限模板",
+            agent: {
+              title: "Agent",
+              description: "面向 Agent 使用场景的预设模版。",
+            },
+            visitor: {
+              title: "Visitor",
+              description: "面向访客使用的预设模版。",
+            },
+            custom: {
+              title: "自定义",
+              description: "手动配置作用域和权限内容。",
+            },
+          },
+          scope: {
+            title: "作用域",
+            global: "全局",
+            globalDescription: "当前为 Token 的全局作用域",
+            agent: "Agent",
+            kv: "Kv",
+          },
+          permissionCard: {
+            scope: "权限",
+            staticMonitoring: {
+              title: "静态监控",
+              write: "写入",
+              read: "读取",
+            },
+            dynamicMonitoring: {
+              title: "动态监控",
+              write: "写入",
+              read: "读取",
+            },
+            task: {
+              title: "任务",
+              listen: "监听",
+              create: "创建",
+              read: "读取",
+              write: "写入",
+            },
+            crontab: {
+              title: "定时任务",
+              read: "读取",
+              write: "写入",
+              delete: "删除",
+            },
+            crontabReault: {
+              title: "定时任务结果",
+              writeTarget: "写入目标",
+              deleteTarget: "删除目标",
+            },
+            kv: {
+              title: "KV",
+              listAllKeys: "列出所有 Key",
+              listAllNamespaces: "列出所有命名空间",
+              readTarget: "读取目标",
+              writeTarget: "写入目标",
+              deleteTarget: "删除目标",
+            },
+            terminal: {
+              titile: "终端",
+              connect: "连接",
+            },
+            nodeGet: {
+              title: "节点获取",
+              listAllAgentUuid: "获取所有 Agent UUID",
+            },
           },
         },
       },

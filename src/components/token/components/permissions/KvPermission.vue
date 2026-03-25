@@ -1,5 +1,6 @@
 ﻿<script setup lang="ts">
 import { ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import type { AcceptableInputValue } from "reka-ui";
 import type { PermissionEntry } from "../../type";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ const props = defineProps<{ modelValue: PermissionEntry[] }>();
 const emits = defineEmits<{
   (e: "update:modelValue", value: PermissionEntry[]): void;
 }>();
+const { t } = useI18n();
 
 const listAllKeys = ref(false);
 const listAllNamespace = ref(false);
@@ -117,24 +119,44 @@ watch(
 
 <template>
   <details class="rounded-md border p-3" open>
-    <summary class="cursor-pointer select-none text-sm font-medium">Kv</summary>
+    <summary class="cursor-pointer select-none text-sm font-medium">
+      {{
+        t("dashboard.token.permissionsConfig.limitItem.permissionCard.kv.title")
+      }}
+    </summary>
     <div class="mt-3 space-y-3 space-x-2">
       <Button
         size="sm"
         :variant="listAllKeys ? 'default' : 'outline'"
         @click="listAllKeys = !listAllKeys"
-        >ListAllKeys</Button
       >
+        {{
+          t(
+            "dashboard.token.permissionsConfig.limitItem.permissionCard.kv.listAllKeys",
+          )
+        }}
+      </Button>
       <Button
         size="sm"
         :variant="listAllNamespace ? 'default' : 'outline'"
         @click="listAllNamespace = !listAllNamespace"
-        >ListAllNamespace</Button
       >
+        {{
+          t(
+            "dashboard.token.permissionsConfig.limitItem.permissionCard.kv.listAllNamespaces",
+          )
+        }}
+      </Button>
 
       <div class="space-y-3">
         <div class="space-y-1">
-          <div class="text-xs text-muted-foreground">Read targets</div>
+          <div class="text-xs text-muted-foreground">
+            {{
+              t(
+                "dashboard.token.permissionsConfig.limitItem.permissionCard.kv.readTarget",
+              )
+            }}
+          </div>
           <TagsInput
             :model-value="readTargets"
             class="flex-col items-stretch"
@@ -156,7 +178,13 @@ watch(
         </div>
 
         <div class="space-y-1">
-          <div class="text-xs text-muted-foreground">Write targets</div>
+          <div class="text-xs text-muted-foreground">
+            {{
+              t(
+                "dashboard.token.permissionsConfig.limitItem.permissionCard.kv.writeTarget",
+              )
+            }}
+          </div>
           <TagsInput
             :model-value="writeTargets"
             class="flex-col items-stretch"
@@ -181,7 +209,13 @@ watch(
         </div>
 
         <div class="space-y-1">
-          <div class="text-xs text-muted-foreground">Delete targets</div>
+          <div class="text-xs text-muted-foreground">
+            {{
+              t(
+                "dashboard.token.permissionsConfig.limitItem.permissionCard.kv.deleteTarget",
+              )
+            }}
+          </div>
           <TagsInput
             :model-value="deleteTargets"
             class="flex-col items-stretch"

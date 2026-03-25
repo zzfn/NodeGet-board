@@ -1,5 +1,6 @@
 ﻿<script setup lang="ts">
 import { ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import type { PermissionEntry } from "../../type";
 import { Button } from "@/components/ui/button";
 import { arePermissionEntriesEqual } from "./permissionsState";
@@ -8,6 +9,7 @@ const props = defineProps<{ modelValue: PermissionEntry[] }>();
 const emits = defineEmits<{
   (e: "update:modelValue", value: PermissionEntry[]): void;
 }>();
+const { t } = useI18n();
 
 const read = ref(false);
 const write = ref(false);
@@ -61,7 +63,11 @@ watch(
 <template>
   <details class="rounded-md border p-3" open>
     <summary class="cursor-pointer select-none text-sm font-medium">
-      Crontab
+      {{
+        t(
+          "dashboard.token.permissionsConfig.limitItem.permissionCard.crontab.title",
+        )
+      }}
     </summary>
     <div class="mt-3 flex flex-wrap gap-2">
       <Button
@@ -69,22 +75,37 @@ watch(
         size="sm"
         :variant="read ? 'default' : 'outline'"
         @click="read = !read"
-        >Read</Button
       >
+        {{
+          t(
+            "dashboard.token.permissionsConfig.limitItem.permissionCard.crontab.read",
+          )
+        }}
+      </Button>
       <Button
         type="button"
         size="sm"
         :variant="write ? 'default' : 'outline'"
         @click="write = !write"
-        >Write</Button
       >
+        {{
+          t(
+            "dashboard.token.permissionsConfig.limitItem.permissionCard.crontab.write",
+          )
+        }}
+      </Button>
       <Button
         type="button"
         size="sm"
         :variant="del ? 'default' : 'outline'"
         @click="del = !del"
-        >Delete</Button
       >
+        {{
+          t(
+            "dashboard.token.permissionsConfig.limitItem.permissionCard.crontab.delete",
+          )
+        }}
+      </Button>
     </div>
   </details>
 </template>

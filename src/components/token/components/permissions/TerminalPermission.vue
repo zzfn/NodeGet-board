@@ -1,5 +1,6 @@
 ﻿<script setup lang="ts">
 import { ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import type { PermissionEntry } from "../../type";
 import { Button } from "@/components/ui/button";
 import { arePermissionEntriesEqual } from "./permissionsState";
@@ -8,6 +9,7 @@ const props = defineProps<{ modelValue: PermissionEntry[] }>();
 const emits = defineEmits<{
   (e: "update:modelValue", value: PermissionEntry[]): void;
 }>();
+const { t } = useI18n();
 
 const connect = ref(false);
 const hydrating = ref(false);
@@ -43,7 +45,11 @@ watch(connect, () => {
 <template>
   <details class="rounded-md border p-3" open>
     <summary class="cursor-pointer select-none text-sm font-medium">
-      Terminal
+      {{
+        t(
+          "dashboard.token.permissionsConfig.limitItem.permissionCard.terminal.title",
+        )
+      }}
     </summary>
     <div class="mt-3 flex flex-wrap gap-2">
       <Button
@@ -51,8 +57,13 @@ watch(connect, () => {
         size="sm"
         :variant="connect ? 'default' : 'outline'"
         @click="connect = !connect"
-        >Connect</Button
       >
+        {{
+          t(
+            "dashboard.token.permissionsConfig.limitItem.permissionCard.terminal.connect",
+          )
+        }}
+      </Button>
     </div>
   </details>
 </template>

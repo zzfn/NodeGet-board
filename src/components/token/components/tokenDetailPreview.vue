@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { useI18n } from "vue-i18n";
 import { Eye, ScanEye } from "lucide-vue-next";
 import type {
   PermissionEntry,
@@ -9,7 +10,7 @@ import type {
 } from "../type";
 import {
   detectTokenPermissionTemplate,
-  TOKEN_PERMISSION_TEMPLATE_OPTIONS,
+  getTokenPermissionTemplateOptions,
 } from "../tokenPermissionTemplates";
 import { detectScopeTab } from "../scopeUi";
 import { createPermissionBuckets } from "./permissions/permissionsState";
@@ -34,9 +35,17 @@ const props = withDefaults(
   },
 );
 
-const templateLabelMap = new Map(
-  TOKEN_PERMISSION_TEMPLATE_OPTIONS.map((item) => [item.value, item.label]),
-);
+const { t, locale } = useI18n();
+
+const templateLabelMap = computed(() => {
+  locale.value;
+  return new Map(
+    getTokenPermissionTemplateOptions(t).map((item) => [
+      item.value,
+      item.label,
+    ]),
+  );
+});
 
 const displayText = (
   value: string | number | null | undefined,
@@ -116,7 +125,7 @@ const tokenLimitDetails = computed(() => {
       scopes: formatScopeLabels(limit),
       permissions: buildPermissionSections(limit.permissions ?? []),
       permissionsCount: (limit.permissions ?? []).length,
-      templateLabel: templateLabelMap.get(template) ?? "自定义",
+      templateLabel: templateLabelMap.value.get(template) ?? "自定义",
     };
   });
 });

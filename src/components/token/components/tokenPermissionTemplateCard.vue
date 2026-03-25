@@ -4,7 +4,7 @@ import { useI18n } from "vue-i18n";
 import { Check, Sparkles, UserRound, Wrench } from "lucide-vue-next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  TOKEN_PERMISSION_TEMPLATE_OPTIONS,
+  getTokenPermissionTemplateOptions,
   type TokenPermissionTemplateValue,
 } from "../tokenPermissionTemplates";
 
@@ -14,7 +14,7 @@ const props = defineProps<{
 const emits = defineEmits<{
   (e: "update:modelValue", value: TokenPermissionTemplateValue): void;
 }>();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const iconMap = {
   agent: Sparkles,
@@ -26,6 +26,11 @@ const currentValue = computed({
   get: () => props.modelValue,
   set: (value: TokenPermissionTemplateValue) =>
     emits("update:modelValue", value),
+});
+
+const templateOptions = computed(() => {
+  locale.value;
+  return getTokenPermissionTemplateOptions(t);
 });
 
 const isSelected = (value: TokenPermissionTemplateValue) =>
@@ -42,7 +47,7 @@ const isSelected = (value: TokenPermissionTemplateValue) =>
 
     <CardContent class="grid gap-3 md:grid-cols-3">
       <button
-        v-for="option in TOKEN_PERMISSION_TEMPLATE_OPTIONS"
+        v-for="option in templateOptions"
         :key="option.value"
         type="button"
         class="group rounded-xl border p-4 text-left transition-colors"

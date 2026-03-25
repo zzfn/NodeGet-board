@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from "vue-i18n";
 import type { Token } from "../type";
 import { ScanEye } from "lucide-vue-next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 defineProps<{
   token: Token;
 }>();
+const { t } = useI18n();
 </script>
 
 <template>
@@ -13,7 +15,7 @@ defineProps<{
     <CardHeader>
       <CardTitle class="flex items-center gap-2">
         <ScanEye class="h-5 w-5" />
-        格式化预览Token
+        {{ t("dashboard.token.previeJSON.title") }}
       </CardTitle>
     </CardHeader>
 

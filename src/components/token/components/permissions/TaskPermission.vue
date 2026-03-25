@@ -1,5 +1,6 @@
 ﻿<script setup lang="ts">
 import { ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import type { PermissionEntry } from "../../type";
 import { Button } from "@/components/ui/button";
 import { arePermissionEntriesEqual } from "./permissionsState";
@@ -19,6 +20,7 @@ const props = defineProps<{ modelValue: PermissionEntry[] }>();
 const emits = defineEmits<{
   (e: "update:modelValue", value: PermissionEntry[]): void;
 }>();
+const { t } = useI18n();
 
 const listen = ref(false);
 const createTargets = ref<string[]>([]);
@@ -100,7 +102,11 @@ watch(
 <template>
   <details class="rounded-md border p-3" open>
     <summary class="cursor-pointer select-none text-sm font-medium">
-      Task
+      {{
+        t(
+          "dashboard.token.permissionsConfig.limitItem.permissionCard.task.title",
+        )
+      }}
     </summary>
     <div class="mt-3 space-y-3">
       <div class="flex flex-wrap gap-2">
@@ -109,12 +115,23 @@ watch(
           size="sm"
           :variant="listen ? 'default' : 'outline'"
           @click="listen = !listen"
-          >Listen</Button
         >
+          {{
+            t(
+              "dashboard.token.permissionsConfig.limitItem.permissionCard.task.listen",
+            )
+          }}
+        </Button>
       </div>
 
       <div class="space-y-2">
-        <div class="text-xs text-muted-foreground">Create</div>
+        <div class="text-xs text-muted-foreground">
+          {{
+            t(
+              "dashboard.token.permissionsConfig.limitItem.permissionCard.task.create",
+            )
+          }}
+        </div>
         <div class="flex flex-wrap gap-2">
           <Button
             v-for="type in TASK_TYPES"
@@ -129,7 +146,13 @@ watch(
       </div>
 
       <div class="space-y-2">
-        <div class="text-xs text-muted-foreground">Read</div>
+        <div class="text-xs text-muted-foreground">
+          {{
+            t(
+              "dashboard.token.permissionsConfig.limitItem.permissionCard.task.read",
+            )
+          }}
+        </div>
         <div class="flex flex-wrap gap-2">
           <Button
             v-for="type in TASK_TYPES"
@@ -144,7 +167,13 @@ watch(
       </div>
 
       <div class="space-y-2">
-        <div class="text-xs text-muted-foreground">Write</div>
+        <div class="text-xs text-muted-foreground">
+          {{
+            t(
+              "dashboard.token.permissionsConfig.limitItem.permissionCard.task.write",
+            )
+          }}
+        </div>
         <div class="flex flex-wrap gap-2">
           <Button
             v-for="type in TASK_TYPES"

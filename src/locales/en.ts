@@ -1,4 +1,5 @@
-import { version } from "vue";
+import { connect } from "echarts";
+import { ref, version } from "vue";
 
 export default {
   common: {
@@ -69,6 +70,8 @@ export default {
       deleting: "Deleting...",
       reset: "Reset",
       reseting: "Reseting...",
+      refresh: "Refresh",
+      refreshing: "Refreshing...",
       list: {
         title: "Token Management",
         description: "Manage your API tokens.",
@@ -116,6 +119,17 @@ export default {
           copyFailed: "Copy failed",
         },
       },
+      edit: {
+        title: "Edit Token",
+        description: "Edit an existing API token.",
+        returnButtonDescription: "Return to token list",
+        editTokenCard: {
+          title: "Edit Token",
+          updateButton: "Update Token",
+          updetingButton: "Updating...",
+          detailLoading: "Loading token detail...",
+        },
+      },
       tokenInfo: {
         baseInfoTitle: "Base Info",
         username: "Username",
@@ -126,6 +140,9 @@ export default {
         startTimePlaceholder: "Please select start time(Optional)",
         endTime: "End Time",
         endTimePlaceholder: "Please select end time(Optional)",
+      },
+      previeJSON: {
+        title: "Format JSON Preview",
       },
       permissionsConfig: {
         title: "Token Permissions Config",
@@ -139,6 +156,72 @@ export default {
           deleteConfirm: "Delete",
           template: {
             title: "Permission Template",
+            agent: {
+              title: "Agent",
+              description: "Preset templates tailored for Agent use cases.",
+            },
+            visitor: {
+              title: "Visitor",
+              description: "Preset templates designed for visitors.",
+            },
+            custom: {
+              title: "Custom",
+              description: "Manually configure scopes and permissions.",
+            },
+          },
+          scope: {
+            title: "Scope",
+            global: "Global",
+            globalDescription: "Currently in the global scope of the Token.",
+            agent: "Agent",
+            kv: "Kv",
+          },
+          permissionCard: {
+            title: "Permission",
+            staticMonitoring: {
+              title: "Static Monitoring",
+              write: "Write",
+              read: "Read",
+            },
+            dynamicMonitoring: {
+              title: "Dynamic Monitoring",
+              write: "Write",
+              read: "Read",
+            },
+            task: {
+              title: "Task",
+              listen: "Listen",
+              create: "Create",
+              read: "Read",
+              write: "Write",
+            },
+            crontab: {
+              title: "Crontab",
+              read: "Read",
+              write: "Write",
+              delete: "Delete",
+            },
+            crontabReault: {
+              title: "Crontab Result",
+              writeTarget: "Write Target",
+              deleteTarget: "Delete Target",
+            },
+            kv: {
+              title: "KV",
+              listAllKeys: "List All Keys",
+              listAllNamespaces: "List All Namespace",
+              readTarget: "Read Target",
+              writeTarget: "Write Target",
+              deleteTarget: "Delete Target",
+            },
+            terminal: {
+              title: "Terminal",
+              connect: "Connect",
+            },
+            nodeGet: {
+              title: "Node Get",
+              listAllAgentUuid: "List All Agent Uuid",
+            },
           },
         },
       },

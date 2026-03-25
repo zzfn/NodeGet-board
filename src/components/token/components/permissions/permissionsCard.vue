@@ -1,5 +1,6 @@
 ﻿<script setup lang="ts">
 import { computed, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import type { PermissionEntry, TokenLimitScope } from "../../type";
 import { detectScopeTab, type ScopeTabValue } from "../../scopeUi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +28,7 @@ const props = defineProps<{
 const emits = defineEmits<{
   (e: "update:permissions", token: PermissionEntry[]): void;
 }>();
+const { t } = useI18n();
 
 const currentScopeTab = computed(
   () => props.scopeTab ?? detectScopeTab(props.scope || [], "Global"),
@@ -127,7 +129,11 @@ watch(
 <template>
   <Card class="w-full">
     <CardHeader>
-      <CardTitle class="flex items-center gap-2">Permissions</CardTitle>
+      <CardTitle class="flex items-center gap-2">
+        {{
+          t("dashboard.token.permissionsConfig.limitItem.permissionCard.title")
+        }}
+      </CardTitle>
     </CardHeader>
 
     <CardContent class="grid gap-2 space-y-2">

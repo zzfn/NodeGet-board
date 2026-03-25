@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import type { AcceptableInputValue } from "reka-ui";
 import type { PermissionEntry } from "../../type";
 import {
@@ -14,6 +15,7 @@ const props = defineProps<{ modelValue: PermissionEntry[] }>();
 const emits = defineEmits<{
   (e: "update:modelValue", value: PermissionEntry[]): void;
 }>();
+const { t } = useI18n();
 
 const readTargets = ref<string[]>([]);
 const deleteTargets = ref<string[]>([]);
@@ -126,11 +128,21 @@ watch(
 <template>
   <details class="rounded-md border p-3" open>
     <summary class="cursor-pointer select-none text-sm font-medium">
-      CrontabResult
+      {{
+        t(
+          "dashboard.token.permissionsConfig.limitItem.permissionCard.crontabReault.title",
+        )
+      }}
     </summary>
     <div class="mt-3 space-y-3">
       <div class="space-y-1">
-        <div class="text-xs text-muted-foreground">Read targets</div>
+        <div class="text-xs text-muted-foreground">
+          {{
+            t(
+              "dashboard.token.permissionsConfig.limitItem.permissionCard.crontabReault.deleteTarget",
+            )
+          }}
+        </div>
         <TagsInput
           :model-value="readTargets"
           class="flex-col items-stretch"
@@ -152,7 +164,13 @@ watch(
       </div>
 
       <div class="space-y-1">
-        <div class="text-xs text-muted-foreground">Delete targets</div>
+        <div class="text-xs text-muted-foreground">
+          {{
+            t(
+              "dashboard.token.permissionsConfig.limitItem.permissionCard.crontabReault.deleteTarget",
+            )
+          }}
+        </div>
         <TagsInput
           :model-value="deleteTargets"
           class="flex-col items-stretch"

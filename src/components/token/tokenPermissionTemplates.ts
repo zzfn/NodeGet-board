@@ -11,7 +11,8 @@ type TokenPermissionTemplateOption = {
   description: string;
 };
 
-type TokenPermissionTemplateConfig = TokenPermissionTemplateOption & {
+type TokenPermissionTemplateConfig = {
+  value: Exclude<TokenPermissionTemplateValue, "custom">;
   buildPermissions: () => PermissionEntry[];
   matches: (
     tokenLimit: TokenLimitEntry,
@@ -45,43 +46,44 @@ const normalizeAgentTemplateScopes = (
 
 const normalizeGlobalTemplateScopes = (): TokenLimitScope => [...DEFAULT_SCOPE];
 
-export const TOKEN_PERMISSION_TEMPLATE_OPTIONS: TokenPermissionTemplateOption[] =
-  [
-    {
-      value: "agent",
-      label: "Agent",
-      description: "面向 Agent 使用场景的预设模版。",
-    },
-    {
-      value: "visitor",
-      label: "Visitor",
-      description: "Agent 作用域下的访客只读监控模版。",
-    },
-    {
-      value: "custom",
-      label: "自定义",
-      description: "手动配置作用域和权限内容。",
-    },
-  ];
-
-const AGENT_TEMPLATE_OPTION: TokenPermissionTemplateOption = {
-  value: "agent",
-  label: "Agent",
-  description: "面向 Agent 使用场景的预设模版。",
-};
-
-const VISITOR_TEMPLATE_OPTION: TokenPermissionTemplateOption = {
-  value: "visitor",
-  label: "Visitor",
-  description: "Agent 作用域下的访客只读监控模版。",
-};
+export const getTokenPermissionTemplateOptions = (
+  t: (key: string) => string,
+): TokenPermissionTemplateOption[] => [
+  {
+    value: "agent",
+    label: t(
+      "dashboard.token.permissionsConfig.limitItem.template.agent.title",
+    ),
+    description: t(
+      "dashboard.token.permissionsConfig.limitItem.template.agent.description",
+    ),
+  },
+  {
+    value: "visitor",
+    label: t(
+      "dashboard.token.permissionsConfig.limitItem.template.visitor.title",
+    ),
+    description: t(
+      "dashboard.token.permissionsConfig.limitItem.template.visitor.description",
+    ),
+  },
+  {
+    value: "custom",
+    label: t(
+      "dashboard.token.permissionsConfig.limitItem.template.custom.title",
+    ),
+    description: t(
+      "dashboard.token.permissionsConfig.limitItem.template.custom.description",
+    ),
+  },
+];
 
 const TEMPLATE_CONFIGS: Record<
   Exclude<TokenPermissionTemplateValue, "custom">,
   TokenPermissionTemplateConfig
 > = {
   agent: {
-    ...AGENT_TEMPLATE_OPTION,
+    value: "agent",
     buildPermissions: () => AGENT_PERMISSIONS.map((item) => ({ ...item })),
     matches: (tokenLimit, currentScopeTab) => {
       if (currentScopeTab !== "Global") return false;
@@ -100,7 +102,7 @@ const TEMPLATE_CONFIGS: Record<
     }),
   },
   visitor: {
-    ...VISITOR_TEMPLATE_OPTION,
+    value: "visitor",
     buildPermissions: () => VISITOR_PERMISSIONS.map((item) => ({ ...item })),
     matches: (tokenLimit, currentScopeTab) => {
       if (currentScopeTab !== "AgentUuid") return false;

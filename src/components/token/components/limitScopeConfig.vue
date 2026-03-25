@@ -1,5 +1,6 @@
 ﻿<script setup lang="ts">
 import { computed, ref, useId, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { type TokenLimitScope } from "../type";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -28,6 +29,7 @@ const emits = defineEmits<{
 }>();
 const useAgent = useAgentHook();
 const useKv = useKvHook();
+const { t } = useI18n();
 
 const localScope = ref<TokenLimitScope>(props.scope);
 const activeTab = ref<ScopeTabValue>(
@@ -193,7 +195,9 @@ const getCheckboxId = (value: string) => `${checkboxIdPrefix}-${value}`;
 <template>
   <Card class="w-full">
     <CardHeader>
-      <CardTitle class="flex items-center gap-2">作用域</CardTitle>
+      <CardTitle class="flex items-center gap-2">
+        {{ t("dashboard.token.permissionsConfig.limitItem.scope.title") }}
+      </CardTitle>
     </CardHeader>
 
     <CardContent class="grid gap-6 space-y-6">
@@ -203,18 +207,31 @@ const getCheckboxId = (value: string) => `${checkboxIdPrefix}-${value}`;
         @update:modelValue="handleTabChange"
       >
         <TabsList>
-          <TabsTrigger value="Global">全局</TabsTrigger>
-          <TabsTrigger value="AgentUuid">Agent</TabsTrigger>
-          <TabsTrigger value="KvNamespace">Kv</TabsTrigger>
+          <TabsTrigger value="Global">
+            {{ t("dashboard.token.permissionsConfig.limitItem.scope.global") }}
+          </TabsTrigger>
+          <TabsTrigger value="AgentUuid">
+            {{ t("dashboard.token.permissionsConfig.limitItem.scope.agent") }}
+          </TabsTrigger>
+          <TabsTrigger value="KvNamespace">
+            {{ t("dashboard.token.permissionsConfig.limitItem.scope.kv") }}
+          </TabsTrigger>
         </TabsList>
-        <TabsContent value="Global"> 当前为 Token 的全局作用域 </TabsContent>
+        <TabsContent value="Global">
+          {{
+            t(
+              "dashboard.token.permissionsConfig.limitItem.scope.globalDescription",
+            )
+          }}
+        </TabsContent>
         <TabsContent value="AgentUuid" class="space-y-1">
           <div class="flex w-full justify-end">
             <Button @click="handleGetAgentList" :disabled="agentUuidLoading">
               <div v-if="agentUuidLoading" class="flex items-center">
-                <Spinner />刷新中...
+                <Spinner />
+                {{ t("dashboard.token.refreshing") }}
               </div>
-              <div v-else>刷新 Agent</div>
+              <div v-else>{{ t("dashboard.token.refresh") }}</div>
             </Button>
           </div>
           <div class="space-y-2">
@@ -239,9 +256,10 @@ const getCheckboxId = (value: string) => `${checkboxIdPrefix}-${value}`;
           <div class="flex w-full justify-end">
             <Button @click="handleGetKvList" :disabled="kvNamespaceLoading">
               <div v-if="kvNamespaceLoading" class="flex items-center">
-                <Spinner />刷新中...
+                <Spinner />
+                {{ t("dashboard.token.refreshing") }}
               </div>
-              <div v-else>刷新 Kv</div>
+              <div v-else>{{ t("dashboard.token.refresh") }}</div>
             </Button>
           </div>
           <div class="space-y-2">

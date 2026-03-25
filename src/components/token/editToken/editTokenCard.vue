@@ -1,6 +1,7 @@
 ﻿<script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
 import { type Token } from "../type";
 import { KeyRound } from "lucide-vue-next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +17,7 @@ const useEditToken = useEditTokenHook();
 const useTokenList = useTokenListHook();
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 
 const tokenFromData = ref<Token>(mapTokenDetailToForm(null));
 const createLoading = ref(false);
@@ -64,7 +66,7 @@ const handleUpdateToken = async () => {
     <CardHeader>
       <CardTitle class="flex items-center gap-2">
         <KeyRound class="h-5 w-5" />
-        编辑token
+        {{ t("dashboard.token.edit.editTokenCard.title") }}
       </CardTitle>
     </CardHeader>
 
@@ -74,7 +76,9 @@ const handleUpdateToken = async () => {
         class="flex min-h-[420px] flex-col items-center justify-center gap-3"
       >
         <Spinner />
-        <div class="text-sm text-muted-foreground">正在加载 Token 详情...</div>
+        <div class="text-sm text-muted-foreground">
+          {{ t("dashboard.token.edit.editTokenCard.detailLoading") }}
+        </div>
       </div>
 
       <div v-else class="grid gap-6 xl:grid-cols-2">
@@ -86,8 +90,12 @@ const handleUpdateToken = async () => {
             class="w-full"
             :disabled="createLoading || detailLoading"
           >
-            <div v-if="createLoading">更新中..</div>
-            <div v-else>更新token</div>
+            <div v-if="createLoading">
+              {{ t("dashboard.token.edit.editTokenCard.updetingButton") }}
+            </div>
+            <div v-else>
+              {{ t("dashboard.token.edit.editTokenCard.updateButton") }}
+            </div>
           </Button>
         </div>
         <div>
