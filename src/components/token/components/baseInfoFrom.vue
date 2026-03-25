@@ -120,7 +120,9 @@ const clearTimestampTo = () => {
               class="h-4 w-4 transition-transform duration-200"
               :class="{ 'rotate-180': isOpen }"
             />
-            <span class="sr-only">Toggle base info</span>
+            <span class="sr-only">{{
+              t("dashboard.token.permissionsConfig.toggleAriaLabel")
+            }}</span>
           </Button>
         </CollapsibleTrigger>
       </CardHeader>

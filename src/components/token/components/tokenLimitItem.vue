@@ -107,7 +107,9 @@ const handleTemplateChange = (value: TokenPermissionTemplateValue) => {
       >
         <Button variant="ghost" size="icon" class="size-8 text-red-500">
           <Trash2 />
-          <span class="sr-only">Delete</span>
+          <span class="sr-only">{{
+            t("dashboard.token.permissionsConfig.deleteAriaLabel")
+          }}</span>
         </Button>
       </PopConfirm>
       <CollapsibleTrigger as-child>
@@ -116,7 +118,9 @@ const handleTemplateChange = (value: TokenPermissionTemplateValue) => {
             class="h-4 w-4 transition-transform duration-200"
             :class="{ 'rotate-180': isOpen }"
           />
-          <span class="sr-only">Toggle</span>
+          <span class="sr-only">{{
+            t("dashboard.token.permissionsConfig.toggleAriaLabel")
+          }}</span>
         </Button>
       </CollapsibleTrigger>
     </div>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
 import { toast } from "vue-sonner";
 import { ArrowLeft, Copy, KeyRound, Pencil } from "lucide-vue-next";
@@ -12,6 +13,7 @@ import { Button } from "@/components/ui/button";
 const useTokenList = useTokenListHook();
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 
 const detailLoading = ref(false);
 const rawDetail = ref<TokenDetail | null>(null);
@@ -55,7 +57,7 @@ const copyText = async (value: string, successMessage: string) => {
     await navigator.clipboard.writeText(value);
     toast.success(successMessage);
   } catch {
-    toast.error("复制失败，请手动复制");
+    toast.error(t("dashboard.token.detail.copyFailed"));
   }
 };
 
@@ -88,15 +90,19 @@ onMounted(() => {
             @click="handleBack"
           >
             <ArrowLeft class="h-4 w-4" />
-            <span class="sr-only">返回Token列表</span>
+            <span class="sr-only">{{
+              t("dashboard.token.detail.returnButtonDescription")
+            }}</span>
           </Button>
           <div class="space-y-1">
             <div class="flex items-center gap-2">
               <KeyRound class="h-5 w-5" />
-              <h2 class="text-2xl font-bold tracking-tight">Token 详情</h2>
+              <h2 class="text-2xl font-bold tracking-tight">
+                {{ t("dashboard.token.detail.title") }}
+              </h2>
             </div>
             <p class="text-muted-foreground">
-              查看 Token 基础信息、权限配置和原始 JSON 返回。
+              {{ t("dashboard.token.detail.description") }}
             </p>
           </div>
         </div>
@@ -105,20 +111,30 @@ onMounted(() => {
       <div class="flex flex-wrap gap-2">
         <Button variant="outline" @click="handleEdit">
           <Pencil class="h-4 w-4" />
-          编辑 Token
+          {{ t("dashboard.token.detail.editButton") }}
         </Button>
         <Button
           variant="outline"
           @click="
-            copyText(displayText(rawDetail?.token_key, ''), 'token_key 已复制')
+            copyText(
+              displayText(rawDetail?.token_key, ''),
+              t('dashboard.token.detail.copyTokenKeySuccess'),
+            )
           "
         >
           <Copy class="h-4 w-4" />
-          复制 token_key
+          {{ t("dashboard.token.detail.copyTokenKey") }}
         </Button>
-        <Button @click="copyText(formattedJson, '完整 JSON 已复制')">
+        <Button
+          @click="
+            copyText(
+              formattedJson,
+              t('dashboard.token.detail.copyFullJsonSuccess'),
+            )
+          "
+        >
           <Copy class="h-4 w-4" />
-          复制完整 JSON
+          {{ t("dashboard.token.detail.copyFullJson") }}
         </Button>
       </div>
     </div>

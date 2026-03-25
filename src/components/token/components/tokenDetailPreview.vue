@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { Eye, ScanEye } from "lucide-vue-next";
+import { ChevronDown, Eye, ScanEye } from "lucide-vue-next";
 import type {
   PermissionEntry,
   Token,
@@ -16,6 +16,11 @@ import { detectScopeTab } from "../scopeUi";
 import { createPermissionBuckets } from "./permissions/permissionsState";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Spinner } from "@/components/ui/spinner";
 
 type PermissionSection = {
@@ -57,22 +62,38 @@ const displayText = (
 };
 
 const formatTimestamp = (value: number | null | undefined) => {
-  if (value === null || value === undefined || value === 0) return "未设置";
+  if (value === null || value === undefined || value === 0) {
+    return t("dashboard.token.detail.preview.notSet");
+  }
   const date = new Date(value * 1000);
-  if (Number.isNaN(date.getTime())) return "未设置";
-  return date.toLocaleString("zh-CN", { hour12: false });
+  if (Number.isNaN(date.getTime())) {
+    return t("dashboard.token.detail.preview.notSet");
+  }
+  return date.toLocaleString(locale.value === "zh_cn" ? "zh-CN" : "en-US", {
+    hour12: false,
+  });
 };
 
 const formatScopeLabels = (limit: TokenLimitEntry) => {
   if (!Array.isArray(limit.scopes) || limit.scopes.length === 0) {
-    return ["未设置"];
+    return [t("dashboard.token.detail.preview.notSet")];
   }
 
   return limit.scopes.map((item) => {
-    if ("global" in item) return "Global";
-    if ("agent_uuid" in item) return `Agent: ${item.agent_uuid}`;
-    if ("kv_namespace" in item) return `Kv: ${item.kv_namespace}`;
-    return "未知作用域";
+    if ("global" in item) {
+      return t("dashboard.token.detail.preview.globalScope");
+    }
+    if ("agent_uuid" in item) {
+      return t("dashboard.token.detail.preview.agentScope", {
+        value: item.agent_uuid,
+      });
+    }
+    if ("kv_namespace" in item) {
+      return t("dashboard.token.detail.preview.kvScope", {
+        value: item.kv_namespace,
+      });
+    }
+    return t("dashboard.token.detail.preview.unknownScope");
   });
 };
 
@@ -97,15 +118,42 @@ const formatPermissionEntry = (entry: PermissionEntry) => {
 const buildPermissionSections = (permissions: PermissionEntry[]) => {
   const buckets = createPermissionBuckets(permissions);
   const sections: Array<{ title: string; entries: PermissionEntry[] }> = [
-    { title: "静态监控", entries: buckets.staticMonitoringPermissions },
-    { title: "动态监控", entries: buckets.dynamicMonitoringPermissions },
-    { title: "Task", entries: buckets.taskPermissions },
-    { title: "Crontab", entries: buckets.crontabPermissions },
-    { title: "CrontabResult", entries: buckets.crontabResultPermissions },
-    { title: "Kv", entries: buckets.kvPermissions },
-    { title: "Terminal", entries: buckets.terminalPermissions },
-    { title: "NodeGet", entries: buckets.nodeGetPermissions },
-    { title: "未识别权限", entries: buckets.unknownPermissions },
+    {
+      title: t("dashboard.token.detail.preview.staticMonitoringTitle"),
+      entries: buckets.staticMonitoringPermissions,
+    },
+    {
+      title: t("dashboard.token.detail.preview.dynamicMonitoringTitle"),
+      entries: buckets.dynamicMonitoringPermissions,
+    },
+    {
+      title: t("dashboard.token.detail.preview.taskTitle"),
+      entries: buckets.taskPermissions,
+    },
+    {
+      title: t("dashboard.token.detail.preview.crontabTitle"),
+      entries: buckets.crontabPermissions,
+    },
+    {
+      title: t("dashboard.token.detail.preview.crontabResultTitle"),
+      entries: buckets.crontabResultPermissions,
+    },
+    {
+      title: t("dashboard.token.detail.preview.kvTitle"),
+      entries: buckets.kvPermissions,
+    },
+    {
+      title: t("dashboard.token.detail.preview.terminalTitle"),
+      entries: buckets.terminalPermissions,
+    },
+    {
+      title: t("dashboard.token.detail.preview.nodeGetTitle"),
+      entries: buckets.nodeGetPermissions,
+    },
+    {
+      title: t("dashboard.token.detail.preview.unknownPermissions"),
+      entries: buckets.unknownPermissions,
+    },
   ];
 
   return sections
@@ -125,13 +173,25 @@ const tokenLimitDetails = computed(() => {
       scopes: formatScopeLabels(limit),
       permissions: buildPermissionSections(limit.permissions ?? []),
       permissionsCount: (limit.permissions ?? []).length,
-      templateLabel: templateLabelMap.value.get(template) ?? "自定义",
+      templateLabel:
+        templateLabelMap.value.get(template) ??
+        t("dashboard.token.detail.preview.customTemplate"),
     };
   });
 });
 
 const previewJson = computed(() =>
   JSON.stringify(props.rawDetail ?? props.token ?? {}, null, 2),
+);
+
+const openedPermissionCards = ref<boolean[]>([]);
+
+watch(
+  tokenLimitDetails,
+  (details) => {
+    openedPermissionCards.value = details.map((_, index) => index === 0);
+  },
+  { immediate: true },
 );
 
 const rawSummary = computed(() => {
@@ -150,7 +210,9 @@ const rawSummary = computed(() => {
     class="flex min-h-[320px] flex-col items-center justify-center gap-3"
   >
     <Spinner />
-    <div class="text-sm text-muted-foreground">正在加载 Token 详情...</div>
+    <div class="text-sm text-muted-foreground">
+      {{ t("dashboard.token.detail.detailLoading") }}
+    </div>
   </div>
 
   <div v-else class="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
@@ -159,34 +221,49 @@ const rawSummary = computed(() => {
         <CardHeader>
           <CardTitle class="flex items-center gap-2">
             <Eye class="h-5 w-5" />
-            基础信息
+            {{ t("dashboard.token.detail.preview.baseInfoTitle") }}
           </CardTitle>
         </CardHeader>
         <CardContent class="grid gap-4 md:grid-cols-2">
           <div class="space-y-1">
-            <div class="text-xs text-muted-foreground">Token Key</div>
+            <div class="text-xs text-muted-foreground">
+              {{ t("dashboard.token.detail.preview.tokenKey") }}
+            </div>
             <div class="font-mono text-sm break-all">
               {{ displayText(rawSummary.token_key) }}
             </div>
           </div>
           <div class="space-y-1">
-            <div class="text-xs text-muted-foreground">Version</div>
+            <div class="text-xs text-muted-foreground">
+              {{ t("dashboard.token.detail.preview.version") }}
+            </div>
             <div class="text-sm">
               {{ displayText(rawSummary.version ?? token.version) }}
             </div>
           </div>
           <div class="space-y-1">
-            <div class="text-xs text-muted-foreground">Username</div>
+            <div class="text-xs text-muted-foreground">
+              {{ t("dashboard.token.detail.preview.username") }}
+            </div>
             <div class="text-sm">
-              {{ displayText(rawSummary.username ?? token.username, "未设置") }}
+              {{
+                displayText(
+                  rawSummary.username ?? token.username,
+                  t("dashboard.token.detail.preview.notSet"),
+                )
+              }}
             </div>
           </div>
           <div class="space-y-1">
-            <div class="text-xs text-muted-foreground">Token Limit 数量</div>
+            <div class="text-xs text-muted-foreground">
+              {{ t("dashboard.token.detail.preview.tokenLimitCount") }}
+            </div>
             <div class="text-sm">{{ token.token_limit.length }}</div>
           </div>
           <div class="space-y-1">
-            <div class="text-xs text-muted-foreground">生效时间</div>
+            <div class="text-xs text-muted-foreground">
+              {{ t("dashboard.token.detail.preview.startTime") }}
+            </div>
             <div class="text-sm">
               {{
                 formatTimestamp(
@@ -196,7 +273,9 @@ const rawSummary = computed(() => {
             </div>
           </div>
           <div class="space-y-1">
-            <div class="text-xs text-muted-foreground">失效时间</div>
+            <div class="text-xs text-muted-foreground">
+              {{ t("dashboard.token.detail.preview.endTime") }}
+            </div>
             <div class="text-sm">
               {{
                 formatTimestamp(rawSummary.timestamp_to ?? token.timestamp_to)
@@ -207,59 +286,94 @@ const rawSummary = computed(() => {
       </Card>
 
       <div class="space-y-4">
-        <Card
+        <Collapsible
           v-for="limit in tokenLimitDetails"
           :key="`token-limit-${limit.index}`"
+          v-model:open="openedPermissionCards[limit.index]"
         >
-          <CardHeader>
-            <div
-              class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
-            >
-              <CardTitle>权限 {{ limit.index + 1 }}</CardTitle>
-              <div class="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary"
-                  >模版: {{ limit.templateLabel }}</Badge
+          <Card>
+            <CardHeader>
+              <CollapsibleTrigger as-child>
+                <button
+                  type="button"
+                  class="flex w-full flex-col gap-3 rounded-md text-left transition-colors hover:bg-muted/40 focus-visible:ring-ring/50 focus-visible:outline-none focus-visible:ring-[1px] lg:flex-row lg:items-center lg:justify-between"
                 >
-                <Badge variant="outline"
-                  >权限数: {{ limit.permissionsCount }}</Badge
-                >
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent class="space-y-5">
-            <div class="space-y-2">
-              <div class="text-xs text-muted-foreground">作用域</div>
-              <div class="flex flex-wrap gap-2">
-                <Badge
-                  v-for="scope in limit.scopes"
-                  :key="`${limit.index}-${scope}`"
-                  variant="secondary"
-                >
-                  {{ scope }}
-                </Badge>
-              </div>
-            </div>
-
-            <div class="grid gap-4 md:grid-cols-2">
-              <div
-                v-for="section in limit.permissions"
-                :key="`${limit.index}-${section.title}`"
-                class="rounded-lg border p-3"
-              >
-                <div class="mb-3 text-sm font-medium">{{ section.title }}</div>
-                <div class="flex flex-wrap gap-2">
-                  <Badge
-                    v-for="item in section.items"
-                    :key="`${limit.index}-${section.title}-${item}`"
-                    variant="outline"
-                  >
-                    {{ item }}
-                  </Badge>
+                  <div class="flex items-center gap-2">
+                    <CardTitle>{{
+                      t("dashboard.token.detail.preview.permissionsTitle", {
+                        index: limit.index + 1,
+                      })
+                    }}</CardTitle>
+                    <span
+                      class="inline-flex size-8 items-center justify-center rounded-md"
+                    >
+                      <ChevronDown
+                        class="h-4 w-4 transition-transform duration-200"
+                        :class="{
+                          'rotate-180': openedPermissionCards[limit.index],
+                        }"
+                      />
+                    </span>
+                    <span class="sr-only">{{
+                      t("dashboard.token.permissionsConfig.toggleAriaLabel")
+                    }}</span>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary">{{
+                      t("dashboard.token.detail.preview.templateLabel", {
+                        template: limit.templateLabel,
+                      })
+                    }}</Badge>
+                    <Badge variant="outline">{{
+                      t("dashboard.token.detail.preview.permissionsCount", {
+                        count: limit.permissionsCount,
+                      })
+                    }}</Badge>
+                  </div>
+                </button>
+              </CollapsibleTrigger>
+            </CardHeader>
+            <CollapsibleContent>
+              <CardContent class="space-y-5">
+                <div class="space-y-2">
+                  <div class="text-xs text-muted-foreground">
+                    {{ t("dashboard.token.detail.preview.scope") }}
+                  </div>
+                  <div class="flex flex-wrap gap-2">
+                    <Badge
+                      v-for="scope in limit.scopes"
+                      :key="`${limit.index}-${scope}`"
+                      variant="secondary"
+                    >
+                      {{ scope }}
+                    </Badge>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+
+                <div class="grid gap-4 md:grid-cols-2">
+                  <div
+                    v-for="section in limit.permissions"
+                    :key="`${limit.index}-${section.title}`"
+                    class="rounded-lg border p-3"
+                  >
+                    <div class="mb-3 text-sm font-medium">
+                      {{ section.title }}
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                      <Badge
+                        v-for="item in section.items"
+                        :key="`${limit.index}-${section.title}-${item}`"
+                        variant="outline"
+                      >
+                        {{ item }}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
       </div>
     </div>
 
@@ -267,7 +381,7 @@ const rawSummary = computed(() => {
       <CardHeader>
         <CardTitle class="flex items-center gap-2">
           <ScanEye class="h-5 w-5" />
-          原始 JSON
+          {{ t("dashboard.token.detail.preview.rawJsonTitle") }}
         </CardTitle>
       </CardHeader>
       <CardContent class="min-w-0 max-w-full">

@@ -242,10 +242,10 @@ const handleConfirmResetToken = (token: Token) => {};
                 </DialogTrigger>
                 <DialogContent class="w-400">
                   <DialogTitle>
-                    {{ t("dashboard.token.list.deleteDailog.title") }}
+                    {{ t("dashboard.token.list.deleteDialog.title") }}
                   </DialogTitle>
                   <DialogDescription>
-                    {{ t("dashboard.token.list.deleteDailog.description") }}
+                    {{ t("dashboard.token.list.deleteDialog.confirm") }}
                   </DialogDescription>
                   <DialogFooter>
                     <DialogClose as-child>
@@ -321,20 +321,26 @@ const handleConfirmResetToken = (token: Token) => {};
   <!-- 重置 Token 弹窗 -->
   <Dialog v-model:open="resetTokenOpen">
     <DialogContent class="w-400">
-      <DialogTitle> 重置Token </DialogTitle>
+      <DialogTitle>
+        {{ t("dashboard.token.list.resetDialog.title") }}
+      </DialogTitle>
       <DialogDescription>
-        当丢失token，可使用该功能重新生成token
+        {{ t("dashboard.token.list.resetDialog.description") }}
       </DialogDescription>
-      是否确认重置，操作进行后此前的token将失效。
+      {{ t("dashboard.token.list.resetDialog.confirm") }}
       <DialogFooter>
         <DialogClose as-child>
-          <Button variant="outline"> 取消 </Button>
+          <Button variant="outline"> {{ t("dashboard.token.cancel") }} </Button>
         </DialogClose>
         <Button @click="handleConfirmResetToken">
           <div v-if="resetTokenLoading" class="flex items-center">
-            <Spinner />重置中...
+            <Spinner />{{
+              t("dashboard.token.list.resetDialog.confirmingButton")
+            }}
           </div>
-          <div v-else>重置</div>
+          <div v-else>
+            {{ t("dashboard.token.list.resetDialog.confirmButton") }}
+          </div>
         </Button>
       </DialogFooter>
     </DialogContent>

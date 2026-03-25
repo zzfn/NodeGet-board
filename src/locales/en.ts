@@ -90,10 +90,19 @@ export default {
           actions: "Actions",
           pageShow: "Showing { pageLabel } of { total } tokens",
         },
-        deleteDailog: {
+        deleteDialog: {
           title: "Delete Token",
-          description:
+          confirm:
             "Are you sure you want to delete this? This action is irreversible!",
+        },
+        resetDialog: {
+          title: "Reset Token",
+          description:
+            "If the token is lost, you can regenerate a new one with this action.",
+          confirm:
+            "Are you sure you want to reset it? The previous token will become invalid after this action.",
+          confirmButton: "Reset",
+          confirmingButton: "Resetting...",
         },
       },
       create: {
@@ -104,13 +113,16 @@ export default {
           title: "Create Token",
           createButton: "Create Token",
           creatingButton: "Creating...",
+          copyFailed: "Copy failed",
         },
         createSuccessDialog: {
           title: "Create Token Success",
           description:
             "The newly created token will be displayed only this once; please copy and save it securely immediately.",
+          tokenKeyLabel: "Token Key",
           copyTokenKey: "Copy Token Key",
           copyTokenKeySuccess: "Token key copied successfully",
+          tokenSecretLabel: "Token Secret",
           copyTokenSecret: "Copy Token Secret",
           copyToeknSecretSuccess: "Token secret copied successfully",
           copyFullToken: "Copy Full Token",
@@ -130,6 +142,48 @@ export default {
           detailLoading: "Loading token detail...",
         },
       },
+      detail: {
+        title: "Token Detail",
+        description:
+          "View token basics, permission configuration, and the raw JSON payload.",
+        returnButtonDescription: "Return to token list",
+        editButton: "Edit Token",
+        copyTokenKey: "Copy Token Key",
+        copyTokenKeySuccess: "Token key copied successfully",
+        copyFullJson: "Copy Full JSON",
+        copyFullJsonSuccess: "Full JSON copied successfully",
+        copyFailed: "Copy failed, please copy it manually",
+        detailLoading: "Loading token detail...",
+        preview: {
+          baseInfoTitle: "Base Info",
+          tokenKey: "Token Key",
+          version: "Version",
+          username: "Username",
+          tokenLimitCount: "Permission Count",
+          startTime: "Start Time",
+          endTime: "End Time",
+          permissionsTitle: "Permission {index}",
+          templateLabel: "Template: {template}",
+          permissionsCount: "Permissions: {count}",
+          scope: "Scope",
+          rawJsonTitle: "Raw JSON",
+          notSet: "Not set",
+          unknownScope: "Unknown scope",
+          customTemplate: "Custom",
+          globalScope: "Global",
+          agentScope: "Agent: {value}",
+          kvScope: "Kv: {value}",
+          staticMonitoringTitle: "Static Monitoring",
+          dynamicMonitoringTitle: "Dynamic Monitoring",
+          taskTitle: "Task",
+          crontabTitle: "Crontab",
+          crontabResultTitle: "Crontab Result",
+          kvTitle: "KV",
+          terminalTitle: "Terminal",
+          nodeGetTitle: "Node Get",
+          unknownPermissions: "Unknown Permissions",
+        },
+      },
       tokenInfo: {
         baseInfoTitle: "Base Info",
         username: "Username",
@@ -147,6 +201,8 @@ export default {
       permissionsConfig: {
         title: "Token Permissions Config",
         addPermission: "Add Permission",
+        deleteAriaLabel: "Delete permission",
+        toggleAriaLabel: "Expand or collapse permission config",
         limitItem: {
           title: "Permission",
           deleteTitle: "Delete Permission",

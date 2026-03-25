@@ -111,7 +111,9 @@ const handleCreateToken = () => {
 
       <div class="space-y-4">
         <div class="space-y-2">
-          <Label>Token Key</Label>
+          <Label>{{
+            t("dashboard.token.create.createSuccessDialog.tokenKeyLabel")
+          }}</Label>
           <div class="flex items-center gap-2">
             <Input :model-value="createdTokenInfo.key" readonly />
             <Button
@@ -138,7 +140,9 @@ const handleCreateToken = () => {
         </div>
 
         <div class="space-y-2">
-          <Label>Token Secret</Label>
+          <Label>{{
+            t("dashboard.token.create.createSuccessDialog.tokenSecretLabel")
+          }}</Label>
           <div class="flex items-center gap-2">
             <Input :model-value="createdTokenInfo.secret" readonly />
             <Button
