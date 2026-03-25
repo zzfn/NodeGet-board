@@ -129,6 +129,29 @@ export const buildLimitPayload = (token: Token) => {
   }));
 };
 
+export const buildCredentialPayload = (
+  source: Pick<Token, "username" | "password">,
+) => {
+  const username = source.username.trim();
+  const password = source.password.trim();
+
+  if (!username && !password) {
+    return {};
+  }
+
+  if (username && !password) {
+    return {
+      username,
+      password: crypto.randomUUID(),
+    };
+  }
+
+  return {
+    username,
+    password,
+  };
+};
+
 export const mapTokenDetailToForm = (detail: TokenDetail | null): Token => {
   if (!detail) return createDefaultToken();
 

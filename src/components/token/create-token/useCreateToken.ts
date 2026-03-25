@@ -3,7 +3,7 @@ import { useBackendStore } from "@/composables/useBackendStore";
 import { wsRpcCall } from "@/composables/useWsRpc";
 import { toast } from "vue-sonner";
 import { type UuidList, type token } from "../type";
-import { buildLimitPayload } from "../scopeCodec";
+import { buildCredentialPayload, buildLimitPayload } from "../scopeCodec";
 
 export type errorResponse = {
   error: {
@@ -23,9 +23,15 @@ export const useCreatTokenHook = () => {
     const url = backendUrl.value.trim();
     const token = currentBackend.value?.token?.trim() || "";
     if (!url || !token) return {};
+    const {
+      username: _username,
+      password: _password,
+      ...restTokenCreation
+    } = token_creation;
     const normalizedTokenCreation = {
-      ...token_creation,
+      ...restTokenCreation,
       token_limit: buildLimitPayload(token_creation),
+      ...buildCredentialPayload(token_creation),
     };
     try {
       const result = await wsRpcCall<{ key?: string; secret?: string }>(

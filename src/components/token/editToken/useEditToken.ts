@@ -3,7 +3,11 @@ import { useBackendStore } from "@/composables/useBackendStore";
 import { wsRpcCall } from "@/composables/useWsRpc";
 import { toast } from "vue-sonner";
 import { type Token } from "../type";
-import { buildLimitPayload, mapTokenDetailToForm } from "../scopeCodec";
+import {
+  buildCredentialPayload,
+  buildLimitPayload,
+  mapTokenDetailToForm,
+} from "../scopeCodec";
 
 export type errorResponse = {
   error: {
@@ -31,8 +35,6 @@ export const useEditTokenHook = () => {
 
     const normalizedLimit = buildLimitPayload(tokenData);
     const version = tokenData.version ?? 1;
-    const username = tokenData.username ?? "";
-    const password = tokenData.password ?? "";
     const timestamp_from = toNullableTimestamp(tokenData.timestamp_from);
     const timestamp_to = toNullableTimestamp(tokenData.timestamp_to);
     try {
@@ -44,11 +46,10 @@ export const useEditTokenHook = () => {
         token,
         target_token,
         version,
-        username,
-        password,
         timestamp_from,
         timestamp_to,
         limit: normalizedLimit,
+        ...buildCredentialPayload(tokenData),
       });
 
       if (result?.success || result?.message || result?.token_key) {
