@@ -6,81 +6,16 @@ import LatencyChart from "@/components/node/latency/latency.vue";
 import { useBackendStore } from "@/composables/useBackendStore";
 import { useCronHistory } from "@/composables/useCronHistory";
 import type { TaskQueryResult } from "@/composables/useCronHistory";
+import {
+  computeStats,
+  type SeriesStats,
+} from "@/components/node/latency/utils";
 
 definePage({
   meta: {
     title: "router.node.latency",
   },
 });
-
-const CHART_COLORS = [
-  "#3b82f6",
-  "#10b981",
-  "#f59e0b",
-  "#ef4444",
-  "#8b5cf6",
-  "#06b6d4",
-];
-
-function nameColor(name: string): string {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  return CHART_COLORS[h % CHART_COLORS.length]!;
-}
-
-type SeriesStats = {
-  name: string;
-  color: string;
-  avg: number | null;
-  jitter: number | null;
-  lossRate: number;
-};
-
-function computeStats(
-  data: TaskQueryResult[],
-  type: "ping" | "tcp_ping",
-): SeriesStats[] {
-  const cronNames = [...new Set(data.map((r) => r.cron_source ?? "未知"))];
-  return cronNames
-    .map((name) => {
-      const rows = data.filter((r) => (r.cron_source ?? "未知") === name);
-      const total = rows.length;
-      const color = nameColor(name);
-      if (total === 0)
-        return { name, color, avg: null, jitter: null, lossRate: 0 };
-
-      const vals = rows
-        .filter(
-          (r) =>
-            r.success &&
-            r.task_event_result &&
-            typeof r.task_event_result[type] === "number",
-        )
-        .map((r) => r.task_event_result![type] as number);
-
-      const lossRate = ((total - vals.length) / total) * 100;
-      if (vals.length === 0)
-        return { name, color, avg: null, jitter: null, lossRate };
-
-      const avg = vals.reduce((s, v) => s + v, 0) / vals.length;
-      const jitter =
-        vals.length >= 2
-          ? vals.slice(1).reduce((s, v, i) => s + Math.abs(v - vals[i]!), 0) /
-            (vals.length - 1)
-          : null;
-
-      return { name, color, avg, jitter, lossRate };
-    })
-    .sort((a, b) => {
-      const avgA = a.avg ?? Infinity;
-      const avgB = b.avg ?? Infinity;
-      if (avgA !== avgB) return avgA - avgB;
-      const jitterA = a.jitter ?? Infinity;
-      const jitterB = b.jitter ?? Infinity;
-      if (jitterA !== jitterB) return jitterA - jitterB;
-      return a.lossRate - b.lossRate;
-    });
-}
 
 const route = useRoute();
 const uuid = computed(() => route.params.uuid as string);
