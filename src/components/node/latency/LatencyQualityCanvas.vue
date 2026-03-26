@@ -1,21 +1,20 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from "vue";
+import { onMounted, ref, watch } from "vue";
 import {
   LATENCY_SEGMENTS,
   LOSS_COLOR,
 } from "@/components/ping/pingLatencyConfig";
 
-const CANVAS_HEIGHT = 24;
+const CANVAS_WIDTH = 200;
+const CANVAS_HEIGHT = 16;
 const HEIGHT_CAP_MS = 400;
+const SAMPLE_LIMIT = 200;
 
 const props = defineProps<{
   bars: Array<number | null>;
 }>();
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
-const wrapperRef = ref<HTMLDivElement | null>(null);
-let resizeObserver: ResizeObserver | null = null;
-let canvasWidth = 0;
 
 function draw() {
   const canvas = canvasRef.value;
@@ -24,18 +23,16 @@ function draw() {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
-  if (canvasWidth <= 0) return;
-
-  canvas.width = canvasWidth;
+  canvas.width = CANVAS_WIDTH;
   canvas.height = CANVAS_HEIGHT;
-  ctx.clearRect(0, 0, canvasWidth, CANVAS_HEIGHT);
+  ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
   if (props.bars.length === 0) return;
 
-  const visibleBars = props.bars.slice(-canvasWidth);
+  const visibleBars = props.bars.slice(-SAMPLE_LIMIT);
   if (visibleBars.length === 0) return;
 
-  const colW = Math.max(1, canvasWidth / visibleBars.length);
+  const colW = Math.max(1, CANVAS_WIDTH / visibleBars.length);
 
   for (let i = 0; i < visibleBars.length; i++) {
     const latency = visibleBars[i];
@@ -64,21 +61,7 @@ function draw() {
   }
 }
 
-onMounted(() => {
-  resizeObserver = new ResizeObserver(([entry]) => {
-    if (!entry) return;
-    const width = Math.max(0, Math.floor(entry.contentRect.width));
-    if (width === canvasWidth) return;
-    canvasWidth = width;
-    draw();
-  });
-
-  if (wrapperRef.value) resizeObserver.observe(wrapperRef.value);
-});
-
-onUnmounted(() => {
-  resizeObserver?.disconnect();
-});
+onMounted(draw);
 
 watch(
   () => props.bars,
@@ -88,7 +71,10 @@ watch(
 </script>
 
 <template>
-  <div ref="wrapperRef" class="w-full">
-    <canvas ref="canvasRef" class="block h-6 w-full rounded-sm" />
-  </div>
+  <canvas
+    ref="canvasRef"
+    :width="CANVAS_WIDTH"
+    :height="CANVAS_HEIGHT"
+    class="block h-4 w-[200px] bg-black/4"
+  />
 </template>

@@ -74,6 +74,7 @@ const refreshInterval = ref(10_000);
 let timerId: ReturnType<typeof setInterval> | null = null;
 const isRefreshing = computed(() => pingLoading.value || tcpPingLoading.value);
 const LATENCY_QUERY_TIMEOUT_MS = 20_000;
+let fetchPromise: Promise<void> | null = null;
 
 function stopRefresh() {
   if (timerId !== null) {
@@ -85,6 +86,7 @@ function stopRefresh() {
 function startRefresh() {
   stopRefresh();
   timerId = setInterval(() => {
+    if (fetchPromise) return;
     void fetchData();
   }, refreshInterval.value);
 }
@@ -114,60 +116,70 @@ function mergeAndTrim(
 }
 
 const fetchData = async () => {
-  if (!uuid.value || !currentBackend.value?.url) {
-    pingData.value = [];
-    tcpPingData.value = [];
-    return;
-  }
+  if (fetchPromise) return fetchPromise;
 
-  const now = Date.now();
-  const cutoff = now - windowMs.value;
+  fetchPromise = (async () => {
+    if (!uuid.value || !currentBackend.value?.url) {
+      pingData.value = [];
+      tcpPingData.value = [];
+      return;
+    }
 
-  // 有已有数据时从最新时间戳开始增量拉取，否则全量查所选时间窗口
-  const pingFrom = latestTs(pingData.value) ?? cutoff;
-  const tcpFrom = latestTs(tcpPingData.value) ?? cutoff;
+    const now = Date.now();
+    const cutoff = now - windowMs.value;
 
-  pingLoading.value = true;
-  tcpPingLoading.value = true;
+    // 有已有数据时从最新时间戳开始增量拉取，否则全量查所选时间窗口
+    const pingFrom = latestTs(pingData.value) ?? cutoff;
+    const tcpFrom = latestTs(tcpPingData.value) ?? cutoff;
 
-  const [pingResult, tcpResult] = await Promise.allSettled([
-    queryTask(
-      [
-        { uuid: uuid.value },
-        { timestamp_from_to: [pingFrom, now] },
-        { type: "ping" },
-      ],
-      LATENCY_QUERY_TIMEOUT_MS,
-    ),
-    queryTask(
-      [
-        { uuid: uuid.value },
-        { timestamp_from_to: [tcpFrom, now] },
-        { type: "tcp_ping" },
-      ],
-      LATENCY_QUERY_TIMEOUT_MS,
-    ),
-  ]);
+    pingLoading.value = true;
+    tcpPingLoading.value = true;
 
-  pingLoading.value = false;
-  tcpPingLoading.value = false;
+    const [pingResult, tcpResult] = await Promise.allSettled([
+      queryTask(
+        [
+          { uuid: uuid.value },
+          { timestamp_from_to: [pingFrom, now] },
+          { type: "ping" },
+        ],
+        LATENCY_QUERY_TIMEOUT_MS,
+      ),
+      queryTask(
+        [
+          { uuid: uuid.value },
+          { timestamp_from_to: [tcpFrom, now] },
+          { type: "tcp_ping" },
+        ],
+        LATENCY_QUERY_TIMEOUT_MS,
+      ),
+    ]);
 
-  if (pingResult.status === "fulfilled") {
-    const incoming = Array.isArray(pingResult.value) ? pingResult.value : [];
-    pingData.value = mergeAndTrim(pingData.value, incoming, cutoff);
-  } else {
-    toast.error(
-      `ping 查询失败：${pingResult.reason instanceof Error ? pingResult.reason.message : String(pingResult.reason)}`,
-    );
-  }
+    pingLoading.value = false;
+    tcpPingLoading.value = false;
 
-  if (tcpResult.status === "fulfilled") {
-    const incoming = Array.isArray(tcpResult.value) ? tcpResult.value : [];
-    tcpPingData.value = mergeAndTrim(tcpPingData.value, incoming, cutoff);
-  } else {
-    toast.error(
-      `tcp_ping 查询失败：${tcpResult.reason instanceof Error ? tcpResult.reason.message : String(tcpResult.reason)}`,
-    );
+    if (pingResult.status === "fulfilled") {
+      const incoming = Array.isArray(pingResult.value) ? pingResult.value : [];
+      pingData.value = mergeAndTrim(pingData.value, incoming, cutoff);
+    } else {
+      toast.error(
+        `ping 查询失败：${pingResult.reason instanceof Error ? pingResult.reason.message : String(pingResult.reason)}`,
+      );
+    }
+
+    if (tcpResult.status === "fulfilled") {
+      const incoming = Array.isArray(tcpResult.value) ? tcpResult.value : [];
+      tcpPingData.value = mergeAndTrim(tcpPingData.value, incoming, cutoff);
+    } else {
+      toast.error(
+        `tcp_ping 查询失败：${tcpResult.reason instanceof Error ? tcpResult.reason.message : String(tcpResult.reason)}`,
+      );
+    }
+  })();
+
+  try {
+    await fetchPromise;
+  } finally {
+    fetchPromise = null;
   }
 };
 
@@ -358,7 +370,7 @@ watch(
           >
             <div class="flex items-center min-w-0 flex-1 mr-4">
               <span class="flex-1">来源</span>
-              <span class="min-w-0 flex-1 text-left">质量</span>
+              <span class="w-[200px] shrink-0 text-left">质量</span>
             </div>
             <div class="flex">
               <span class="w-20 text-right">平均延迟</span>
@@ -390,7 +402,7 @@ watch(
                   />
                   <span class="truncate text-foreground">{{ s.name }}</span>
                 </span>
-                <span class="min-w-0 flex-1">
+                <span class="w-[200px] shrink-0">
                   <LatencyQualityCanvas :bars="s.qualityBars" />
                 </span>
               </div>
@@ -457,7 +469,7 @@ watch(
           >
             <div class="flex items-center min-w-0 flex-1 mr-4">
               <span class="flex-1">来源</span>
-              <span class="min-w-0 flex-1 text-left">质量</span>
+              <span class="w-[200px] shrink-0 text-left">质量</span>
             </div>
             <div class="flex">
               <span class="w-20 text-right">平均延迟</span>
@@ -488,7 +500,7 @@ watch(
                   />
                   <span class="truncate text-foreground">{{ s.name }}</span>
                 </span>
-                <span class="min-w-0 flex-1">
+                <span class="w-[200px] shrink-0">
                   <LatencyQualityCanvas :bars="s.qualityBars" />
                 </span>
               </div>
