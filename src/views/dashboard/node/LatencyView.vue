@@ -16,6 +16,12 @@ const CHART_COLORS = [
   "#06b6d4",
 ];
 
+function nameColor(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return CHART_COLORS[h % CHART_COLORS.length]!;
+}
+
 type SeriesStats = {
   name: string;
   color: string;
@@ -31,10 +37,9 @@ function computeStats(
   const cronNames = [...new Set(data.map((r) => r.cron_source ?? "未知"))];
   return cronNames
     .map((name) => {
-      const colorIndex = cronNames.indexOf(name);
       const rows = data.filter((r) => (r.cron_source ?? "未知") === name);
       const total = rows.length;
-      const color = CHART_COLORS[colorIndex % CHART_COLORS.length]!;
+      const color = nameColor(name);
       if (total === 0)
         return { name, color, avg: null, jitter: null, lossRate: 0 };
 
@@ -85,8 +90,8 @@ const tcpPingData = ref<TaskQueryResult[]>([]);
 const pingPeakCut = ref(true);
 const tcpPingPeakCut = ref(true);
 
-const pingVisible = ref<boolean[]>([]);
-const tcpPingVisible = ref<boolean[]>([]);
+const pingVisible = ref<Record<string, boolean>>({});
+const tcpPingVisible = ref<Record<string, boolean>>({});
 
 // ── 时间窗口 ──────────────────────────────────────────────
 const WINDOWS = [
@@ -218,14 +223,18 @@ const tcpPingStats = computed(() =>
 watch(
   pingStats,
   (stats) => {
-    pingVisible.value = stats.map((_, i) => pingVisible.value[i] ?? true);
+    const next: Record<string, boolean> = {};
+    for (const s of stats) next[s.name] = pingVisible.value[s.name] ?? true;
+    pingVisible.value = next;
   },
   { immediate: true },
 );
 watch(
   tcpPingStats,
   (stats) => {
-    tcpPingVisible.value = stats.map((_, i) => tcpPingVisible.value[i] ?? true);
+    const next: Record<string, boolean> = {};
+    for (const s of stats) next[s.name] = tcpPingVisible.value[s.name] ?? true;
+    tcpPingVisible.value = next;
   },
   { immediate: true },
 );
@@ -342,9 +351,9 @@ watch(
               :key="s.name"
               class="flex items-center justify-between px-2 py-1.5 rounded-md text-xs cursor-pointer select-none transition-all hover:bg-muted"
               :class="
-                tcpPingVisible[i] === false ? 'opacity-35' : 'opacity-100'
+                tcpPingVisible[s.name] === false ? 'opacity-35' : 'opacity-100'
               "
-              @click="tcpPingVisible[i] = !tcpPingVisible[i]"
+              @click="tcpPingVisible[s.name] = !tcpPingVisible[s.name]"
             >
               <span class="flex items-center gap-2 min-w-0 flex-1 mr-4">
                 <span
@@ -434,8 +443,10 @@ watch(
               v-for="(s, i) in pingStats"
               :key="s.name"
               class="flex items-center justify-between px-2 py-1.5 rounded-md text-xs cursor-pointer select-none transition-all hover:bg-muted"
-              :class="pingVisible[i] === false ? 'opacity-35' : 'opacity-100'"
-              @click="pingVisible[i] = !pingVisible[i]"
+              :class="
+                pingVisible[s.name] === false ? 'opacity-35' : 'opacity-100'
+              "
+              @click="pingVisible[s.name] = !pingVisible[s.name]"
             >
               <span class="flex items-center gap-2 min-w-0 flex-1 mr-4">
                 <span

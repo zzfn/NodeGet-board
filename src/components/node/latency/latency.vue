@@ -9,7 +9,7 @@ const props = withDefaults(
     data: TaskQueryResult[];
     type: "ping" | "tcp_ping";
     peakCut?: boolean;
-    visibleSeries?: boolean[];
+    visibleSeries?: Record<string, boolean>;
   }>(),
   { peakCut: true },
 );
@@ -22,6 +22,12 @@ const COLORS = [
   "#8b5cf6",
   "#06b6d4",
 ];
+
+function nameColor(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return COLORS[h % COLORS.length]!;
+}
 
 function normalizeTs(ts: number): number {
   return ts < 1_000_000_000_000 ? ts * 1000 : ts;
@@ -127,7 +133,7 @@ function tooltipPlugin(): uPlot.Plugin {
           const series = u.series[i];
           if (!series) continue;
           const val = (u.data[i] as (number | null)[])[idx];
-          const color = COLORS[(i - 1) % COLORS.length];
+          const color = nameColor(series.label ?? "");
           const isTimeout = currentTimeoutFlags[i - 1]?.[idx] ?? false;
           const valStr = isTimeout
             ? `<span style="color:#ef4444;font-weight:600">超时</span>`
@@ -167,9 +173,9 @@ function makeOpts(
     padding: [8, 12, 0, 0],
     series: [
       {},
-      ...cronNames.map((name, i) => ({
+      ...cronNames.map((name) => ({
         label: name,
-        stroke: COLORS[i % COLORS.length],
+        stroke: nameColor(name),
         width: 2,
         spanGaps: false,
         points: { show: false },
@@ -219,8 +225,10 @@ function destroy() {
 
 function applyVisibility() {
   if (!chart || !props.visibleSeries) return;
-  props.visibleSeries.forEach((show, i) => {
-    chart!.setSeries(i + 1, { show });
+  (chart.series as uPlot.Series[]).forEach((series, i) => {
+    if (i === 0 || series.label == null) return;
+    const show = props.visibleSeries![series.label] ?? true;
+    chart!.setSeries(i, { show });
   });
 }
 
