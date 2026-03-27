@@ -62,7 +62,7 @@ const copyText = async (value: string, successMessage: string) => {
 };
 
 const handleBack = () => {
-  router.push({ name: "token" });
+  router.push("/dashboard/token");
 };
 
 const handleEdit = () => {

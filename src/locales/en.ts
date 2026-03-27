@@ -337,6 +337,8 @@ export default {
             },
           },
         },
+      },
+    },
     kv: {
       title: "KV Management",
       createSuccess: 'Namespace "{ns}" created successfully',

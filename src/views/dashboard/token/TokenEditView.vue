@@ -9,7 +9,7 @@ const router = useRouter();
 const { t } = useI18n();
 
 const handleBack = () => {
-  router.push({ name: "token" });
+  router.push("/dashboard/token");
 };
 </script>
 

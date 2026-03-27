@@ -332,6 +332,8 @@ export default {
             },
           },
         },
+      },
+    },
     kv: {
       title: "KV 管理",
       createSuccess: '命名空间 "{ns}" 创建成功',

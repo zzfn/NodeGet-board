@@ -77,6 +77,9 @@ declare module 'vue-router/auto-routes' {
       | '/dashboard/settings/notification'
       | '/dashboard/settings/site'
       | '/dashboard/token'
+      | '/dashboard/tokenCeate'
+      | '/dashboard/tokenDetail'
+      | '/dashboard/tokenEdit'
     >,
     '/dashboard/about': RouteRecordInfo<
       '/dashboard/about',
@@ -389,6 +392,27 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/dashboard/tokenCeate': RouteRecordInfo<
+      '/dashboard/tokenCeate',
+      '/dashboard/tokenCeate',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/dashboard/tokenDetail': RouteRecordInfo<
+      '/dashboard/tokenDetail',
+      '/dashboard/tokenDetail',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/dashboard/tokenEdit': RouteRecordInfo<
+      '/dashboard/tokenEdit',
+      '/dashboard/tokenEdit',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/server-detail': RouteRecordInfo<
       '/server-detail',
       '/s/:uuid',
@@ -460,6 +484,9 @@ declare module 'vue-router/auto-routes' {
         | '/dashboard/settings/notification'
         | '/dashboard/settings/site'
         | '/dashboard/token'
+        | '/dashboard/tokenCeate'
+        | '/dashboard/tokenDetail'
+        | '/dashboard/tokenEdit'
       views:
         | 'default'
     }
@@ -732,6 +759,24 @@ declare module 'vue-router/auto-routes' {
     'src/pages/dashboard/token.vue': {
       routes:
         | '/dashboard/token'
+      views:
+        | never
+    }
+    'src/pages/dashboard/tokenCeate.vue': {
+      routes:
+        | '/dashboard/tokenCeate'
+      views:
+        | never
+    }
+    'src/pages/dashboard/tokenDetail.vue': {
+      routes:
+        | '/dashboard/tokenDetail'
+      views:
+        | never
+    }
+    'src/pages/dashboard/tokenEdit.vue': {
+      routes:
+        | '/dashboard/tokenEdit'
       views:
         | never
     }
