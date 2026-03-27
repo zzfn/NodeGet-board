@@ -1,4 +1,5 @@
 import { computed } from "vue";
+import { useI18n } from "vue-i18n";
 import { useBackendStore } from "@/composables/useBackendStore";
 import { wsRpcCall } from "@/composables/useWsRpc";
 import { toast } from "vue-sonner";
@@ -23,6 +24,7 @@ export { mapTokenDetailToForm };
 export const useEditTokenHook = () => {
   const { currentBackend } = useBackendStore();
   const backendUrl = computed(() => currentBackend.value?.url ?? "");
+  const { t } = useI18n();
 
   const updateToken = async (
     tokenData: Token,
@@ -53,15 +55,15 @@ export const useEditTokenHook = () => {
       });
 
       if (result?.success || result?.message || result?.token_key) {
-        toast.success("更新Token成功");
+        toast.success(t("dashboard.token.api.updateSuccess"));
         return true;
       }
 
-      toast.error("更新Token失败");
+      toast.error(t("dashboard.token.api.updateFailed"));
       return false;
     } catch (error) {
       console.error(error);
-      toast.error("更新Token失败");
+      toast.error(t("dashboard.token.api.updateFailed"));
       return false;
     }
   };

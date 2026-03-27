@@ -127,6 +127,16 @@ export default {
       reseting: "Reseting...",
       refresh: "Refresh",
       refreshing: "Refreshing...",
+      api: {
+        createSuccess: "Token created successfully",
+        createFailed: "Failed to create token",
+        updateSuccess: "Token updated successfully",
+        updateFailed: "Failed to update token",
+        listFailed: "Failed to fetch token list",
+        deleteSuccess: "Deleted successfully",
+        deleteFailed: "Deletion failed",
+        detailFailed: "Failed to fetch token detail",
+      },
       list: {
         title: "Token Management",
         description: "Manage your API tokens.",

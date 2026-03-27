@@ -128,6 +128,16 @@ export default {
       reseting: "重置中...",
       refresh: "刷新",
       refreshing: "刷新中...",
+      api: {
+        createSuccess: "创建Token成功",
+        createFailed: "创建Token失败",
+        updateSuccess: "更新Token成功",
+        updateFailed: "更新Token失败",
+        listFailed: "获取Token列表失败",
+        deleteSuccess: "删除成功",
+        deleteFailed: "删除失败",
+        detailFailed: "获取Token详情失败",
+      },
       list: {
         title: "Token 管理",
         description: "管理你的Token",

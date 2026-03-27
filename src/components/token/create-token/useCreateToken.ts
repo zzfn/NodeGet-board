@@ -1,4 +1,5 @@
 import { computed, onMounted, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { useBackendStore } from "@/composables/useBackendStore";
 import { wsRpcCall } from "@/composables/useWsRpc";
 import { toast } from "vue-sonner";
@@ -15,6 +16,7 @@ export type errorResponse = {
 export const useCreatTokenHook = () => {
   const { currentBackend } = useBackendStore();
   const backendUrl = computed(() => currentBackend.value?.url ?? "");
+  const { t } = useI18n();
 
   //   获取agent-uuid列表
   const createToken = async (
@@ -43,13 +45,13 @@ export const useCreatTokenHook = () => {
         },
       );
       if (result.key && result.secret) {
-        toast.success("创建Token成功");
+        toast.success(t("dashboard.token.api.createSuccess"));
         return result;
       }
-      toast.error("创建Token失败");
+      toast.error(t("dashboard.token.api.createFailed"));
       return {};
     } catch (error) {
-      toast.error("创建Token失败");
+      toast.error(t("dashboard.token.api.createFailed"));
       return {};
     }
   };

@@ -9,7 +9,7 @@ definePage({
   meta: {
     title: "router.token",
     icon: Key,
-    order: 9,
+    order: 8,
     group: "router.group.advanced",
   },
 });

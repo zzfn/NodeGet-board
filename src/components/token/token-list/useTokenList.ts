@@ -1,4 +1,5 @@
 ﻿import { computed, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { useBackendStore } from "@/composables/useBackendStore";
 import { wsRpcCall } from "@/composables/useWsRpc";
 import { toast } from "vue-sonner";
@@ -28,6 +29,7 @@ export type Token = {
 export const useTokenListHook = () => {
   const { currentBackend } = useBackendStore();
   const backendUrl = computed(() => currentBackend.value?.url ?? "");
+  const { t } = useI18n();
 
   const getTokenList = async (): Promise<Token[]> => {
     const url = backendUrl.value.trim();
@@ -44,11 +46,11 @@ export const useTokenListHook = () => {
       if (Array.isArray(result?.tokens) && result.tokens.length > 0) {
         return result.tokens;
       }
-      toast.error("获取token列表失败");
+      toast.error(t("dashboard.token.api.listFailed"));
       return [];
     } catch (error) {
       console.error(error);
-      toast.error("获取token列表失败");
+      toast.error(t("dashboard.token.api.listFailed"));
       return [];
     }
   };
@@ -64,13 +66,14 @@ export const useTokenListHook = () => {
         target_token,
       });
       if (result?.message) {
-        toast.success("删除成功");
+        toast.success(t("dashboard.token.api.deleteSuccess"));
         getTokenList();
       } else {
-        toast.error("删除失败");
+        toast.error(t("dashboard.token.api.deleteFailed"));
       }
     } catch (error) {
       console.error(error);
+      toast.error(t("dashboard.token.api.deleteFailed"));
     }
   };
 
@@ -90,11 +93,11 @@ export const useTokenListHook = () => {
       if (result?.token_key) {
         return result;
       }
-      toast.error("获取Token详情失败");
+      toast.error(t("dashboard.token.api.detailFailed"));
       return null;
     } catch (error) {
       console.error(error);
-      toast.error("获取Token详情失败");
+      toast.error(t("dashboard.token.api.detailFailed"));
       return null;
     }
   };
