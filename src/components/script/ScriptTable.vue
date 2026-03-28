@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, ref, watch, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
-import { Loader2, Pencil, Trash2 } from "lucide-vue-next";
+import { Loader2, Pencil, Trash2, Menu } from "lucide-vue-next";
 import {
   Table,
   TableHeader,
@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PopConfirm } from "@/components/ui/pop-confirm";
 import type { Script } from "@/composables/useScripts";
+
+const tables = ref<Script[]>([]);
 
 const props = defineProps<{
   scripts: Script[];
@@ -31,6 +33,13 @@ const formatTime = (ts: number) => {
 };
 
 const isDeleting = (name: string) => props.deletingNames.includes(name);
+
+watch(
+  () => props.scripts,
+  () => {
+    tables.value = props.scripts.sort((a, b) => a.order - b.order);
+  },
+);
 </script>
 
 <template>
@@ -44,15 +53,23 @@ const isDeleting = (name: string) => props.deletingNames.includes(name);
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>{{ $t("dashboard.scripts.order") }}</TableHead>
-          <TableHead>{{ $t("dashboard.scripts.name") }}</TableHead>
-          <TableHead>{{ $t("dashboard.scripts.lang") }}</TableHead>
-          <TableHead>{{ $t("dashboard.scripts.updatedTime") }}</TableHead>
+          <TableHead class="text-center">{{
+            $t("dashboard.scripts.order")
+          }}</TableHead>
+          <TableHead class="text-center">{{
+            $t("dashboard.scripts.name")
+          }}</TableHead>
+          <TableHead class="text-center">{{
+            $t("dashboard.scripts.lang")
+          }}</TableHead>
+          <TableHead class="text-center">{{
+            $t("dashboard.scripts.updatedTime")
+          }}</TableHead>
           <TableHead>{{ $t("dashboard.scripts.actions") }}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        <TableRow v-if="loading && !scripts.length">
+        <TableRow v-if="loading && !tables.length">
           <TableCell colspan="7" class="h-32 text-center text-muted-foreground">
             <div class="flex flex-col items-center justify-center space-y-3">
               <Loader2 class="w-6 h-6 animate-spin text-muted-foreground/50" />
@@ -62,7 +79,7 @@ const isDeleting = (name: string) => props.deletingNames.includes(name);
             </div>
           </TableCell>
         </TableRow>
-        <TableRow v-else-if="!scripts.length">
+        <TableRow v-else-if="!tables.length">
           <TableCell
             colspan="7"
             class="text-center text-muted-foreground py-12"
@@ -70,15 +87,22 @@ const isDeleting = (name: string) => props.deletingNames.includes(name);
             {{ $t("dashboard.cron.empty") }}
           </TableCell>
         </TableRow>
-        <TableRow v-for="(script, index) in scripts" :key="script.name">
-          <TableCell>{{ index + 1 }}</TableCell>
-          <TableCell class="font-medium">
+        <TableRow v-for="(script, index) in tables" :key="script.name">
+          <TableCell class="text-center cursor-move select-none">
+            <div class="flex items-center justify-center">
+              <Menu class="h-4 w-4 mr-1" />
+              <span>{{ index + 1 }}</span>
+            </div>
+          </TableCell>
+          <TableCell class="font-medium text-center">
             {{ script.name }}
           </TableCell>
-          <TableCell class="font-medium">
-            {{ script.lang }}
+          <TableCell class="font-medium text-center">
+            <Badge variant="secondary">{{ script.lang }}</Badge>
           </TableCell>
-          <TableCell>{{ formatTime(script.updated_at) }}</TableCell>
+          <TableCell class="text-center">{{
+            formatTime(script.updated_at)
+          }}</TableCell>
           <TableCell>
             <Button
               variant="ghost"

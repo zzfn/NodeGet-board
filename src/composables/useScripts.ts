@@ -23,7 +23,7 @@ export function useScripts() {
   } = useKv();
   const scriptNamespace = "script_snippet";
   const scripts = ref<Script[]>([]);
-  const loading = ref(false);
+  const loading = ref(true);
   const error = ref<string | null>(null);
   /**
    * 初始化 namespace，如果不存在就创建
