@@ -251,6 +251,15 @@ export default {
       empty: "No script snippets available",
       deleteConfirm:
         "Are you sure you want to delete the script snippet {name}?",
+      edit: "Edit Script Snippet",
+      nameRequired: "Script name cannot be empty",
+      contentRequired: "Script snippet cannot be empty",
+      content: "Script Snippet",
+      cancel: "Cancel",
+      createSuccess: "Created successfully",
+      editSuccess: "Edited successfully",
+      repeatNameError: "This name already exists, please use a different name",
+      nameCannotContainAsterisk: "Name cannot contain the '*' character",
     },
   },
   router: {
