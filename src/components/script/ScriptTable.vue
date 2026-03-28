@@ -24,8 +24,9 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  edit: [task: Script];
+  edit: [script: Script];
   delete: [name: string];
+  updateOrder: [script: Script];
 }>();
 
 const formatTime = (ts: number) => {
@@ -40,6 +41,106 @@ watch(
     tables.value = props.scripts.sort((a, b) => a.order - b.order);
   },
 );
+
+const draggingIndex = ref<number | null>(null);
+let startY = 0;
+let isTouch = false;
+
+const startDrag = (
+  event: MouseEvent | TouchEvent,
+  index: number,
+  touch = false,
+) => {
+  draggingIndex.value = index;
+  isTouch = touch;
+
+  startY = touch
+    ? event instanceof TouchEvent
+      ? (event.touches[0]?.clientY ?? 0)
+      : 0
+    : event instanceof MouseEvent
+      ? event.clientY
+      : 0;
+
+  const onMove = (e: MouseEvent | TouchEvent) => {
+    const clientY = isTouch
+      ? e instanceof TouchEvent
+        ? (e.touches[0]?.clientY ?? 0)
+        : 0
+      : e instanceof MouseEvent
+        ? e.clientY
+        : 0;
+
+    if (draggingIndex.value === null) return;
+
+    const deltaY = clientY - startY;
+
+    if (Math.abs(deltaY) > 40) {
+      const targetIndex =
+        deltaY > 0 ? draggingIndex.value + 1 : draggingIndex.value - 1;
+      if (targetIndex >= 0 && targetIndex < tables.value.length) {
+        const temp = tables.value[targetIndex]!;
+        tables.value[targetIndex] = tables.value[draggingIndex.value]!;
+        tables.value[draggingIndex.value] = temp;
+        draggingIndex.value = targetIndex;
+        startY = clientY;
+      }
+    }
+  };
+
+  const onEnd = () => {
+    updateOrderIfChanged();
+    draggingIndex.value = null;
+    window.removeEventListener(isTouch ? "touchmove" : "mousemove", onMove);
+    window.removeEventListener(isTouch ? "touchend" : "mouseup", onEnd);
+  };
+
+  window.addEventListener(isTouch ? "touchmove" : "mousemove", onMove);
+  window.addEventListener(isTouch ? "touchend" : "mouseup", onEnd);
+};
+
+const updateOrderIfChanged = () => {
+  if (!props.scripts || !tables.value) return;
+
+  // 先对 props.scripts 按 order 排序
+  const tmpScripts = [...props.scripts].sort((a, b) => a.order - b.order);
+
+  tables.value.forEach((script, index) => {
+    const originalIndex = tmpScripts.findIndex((s) => s.name === script.name);
+    if (originalIndex !== index) {
+      let newOrder: number;
+
+      // 拖到最前
+      if (index === 0) {
+        const second = tables.value[1];
+        newOrder =
+          second?.order !== undefined ? second.order - 1 : script.order - 1;
+      }
+      // 拖到最后
+      else if (index === tables.value.length - 1) {
+        const penultimate = tables.value[tables.value.length - 2];
+        newOrder =
+          penultimate?.order !== undefined
+            ? penultimate.order + 1
+            : script.order + 1;
+      }
+      // 拖到中间
+      else {
+        const prev = tables.value[index - 1];
+        const next = tables.value[index + 1];
+        const prevOrder = prev?.order ?? script.order - 1;
+        const nextOrder = next?.order ?? script.order + 1;
+        newOrder = (prevOrder + nextOrder) / 2;
+      }
+
+      // 如果 order 发生变化，触发 emit
+      if (newOrder !== script.order) {
+        script.order = newOrder;
+        emit("updateOrder", script);
+      }
+    }
+  });
+};
 </script>
 
 <template>
@@ -88,7 +189,11 @@ watch(
           </TableCell>
         </TableRow>
         <TableRow v-for="(script, index) in tables" :key="script.name">
-          <TableCell class="text-center cursor-move select-none">
+          <TableCell
+            class="text-center cursor-move select-none"
+            @mousedown="startDrag($event, index)"
+            @touchstart.prevent="startDrag($event, index, true)"
+          >
             <div class="flex items-center justify-center">
               <Menu class="h-4 w-4 mr-1" />
               <span>{{ index + 1 }}</span>

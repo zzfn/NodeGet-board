@@ -60,6 +60,17 @@ const onDel = async (scriptName: string) => {
   );
 };
 
+// 修改Order
+const updateOrder = async (script: Script) => {
+  console.log("updateOrder", script);
+  if (!script) return;
+  try {
+    add(script);
+  } catch (e: any) {
+    toast.error(e.message);
+  }
+};
+
 const getRepeatName = (name: string) => {
   return scripts.value.some((script) => script.name === name);
 };
@@ -128,6 +139,7 @@ const handleSave = async (script: Script) => {
         :deletingNames="deletingNames"
         @edit="openEdit"
         @delete="onDel"
+        @updateOrder="updateOrder"
       ></ScriptTable>
     </div>
 
