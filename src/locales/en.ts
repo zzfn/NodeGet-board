@@ -297,6 +297,16 @@ export default {
       totalNodesCount: "Total {count} nodes",
       waitToRun: "Waiting to run...",
       warningCommand: "Warning command:",
+      scriptsSelect: "Select Script Snippet",
+      scripts: {
+        desc: "Here you can select your script snippets",
+        search: "Search Script Snippets",
+        searchPlaceholder: "Enter script snippet name to search",
+        name: "Script Name",
+        contentSummary: "Script Summary",
+        cancel: "Cancel",
+        select: "Select",
+      },
     },
     scripts: {
       desc: "You can create your script snippets here",
