@@ -318,6 +318,8 @@ export default {
       editSuccess: "Edited successfully",
       repeatNameError: "This name already exists, please use a different name",
       nameCannotContainAsterisk: "Name cannot contain the '*' character",
+      sortEdit: "Edit Order",
+      sortSave: "Save Order",
     },
   },
   router: {

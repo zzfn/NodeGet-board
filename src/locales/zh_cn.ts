@@ -314,6 +314,8 @@ export default {
       editSuccess: "编辑成功",
       repeatNameError: "该名称已存在，请使用其他名称",
       nameCannotContainAsterisk: "名称不能包含*号",
+      sortEdit: "编辑排序",
+      sortSave: "保存排序",
     },
   },
   router: {

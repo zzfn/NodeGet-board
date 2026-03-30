@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
 import { Button } from "@/components/ui/button";
-import { Plus, FileTerminal } from "lucide-vue-next";
+import { Plus, FileTerminal, Menu } from "lucide-vue-next";
 import { toast } from "vue-sonner";
 
 definePage({
@@ -24,9 +24,7 @@ import ScriptFormDialog from "@/components/script/ScriptFormDialog.vue";
 
 const deletingNames = ref<string[]>([]);
 
-watch(scripts, () => {
-  console.log("Scripts", scripts.value);
-});
+watch(scripts, () => {});
 
 import ScriptTable from "@/components/script/ScriptTable.vue";
 
@@ -35,9 +33,9 @@ const saveLoading = ref(false);
 const formOpen = ref(false);
 const script = ref<Script | null>(null);
 const errors = ref<Record<string, string> | null>({});
+const sortable = ref(false);
 // 创建
 const openCreate = () => {
-  console.log("openCreate");
   script.value = null;
   formOpen.value = true;
 };
@@ -62,7 +60,6 @@ const onDel = async (scriptName: string) => {
 
 // 修改Order
 const updateOrder = async (script: Script) => {
-  console.log("updateOrder", script);
   if (!script) return;
   try {
     add(script);
@@ -76,7 +73,6 @@ const getRepeatName = (name: string) => {
 };
 
 const handleSave = async (script: Script) => {
-  console.log("handleSave", script);
   saveLoading.value = true;
   if (!script) return;
   if (script.order === -1 && getRepeatName(script.name)) {
@@ -120,16 +116,26 @@ const handleSave = async (script: Script) => {
 <template>
   <div>
     <div class="flex items-start justify-between">
-      <div>
+      <div class="flex-1">
         <h1 class="text-2xl font-semibold">{{ $t("router.scripts") }}</h1>
         <p class="text-sm text-muted-foreground mt-1">
           {{ $t("dashboard.scripts.desc") }}
         </p>
       </div>
-      <Button @click="openCreate">
-        <Plus class="h-4 w-4 mr-1.5" />
-        {{ $t("dashboard.scripts.create") }}
-      </Button>
+      <div class="flex flex-col md:flex-row gap-1 md:gap-2">
+        <Button @click="sortable = !sortable" size="sm" variant="outline">
+          <Menu class="h-4 w-4 mr-1.5" />
+          {{
+            sortable
+              ? $t("dashboard.scripts.sortSave")
+              : $t("dashboard.scripts.sortEdit")
+          }}
+        </Button>
+        <Button @click="openCreate" size="sm">
+          <Plus class="h-4 w-4 mr-1.5" />
+          {{ $t("dashboard.scripts.create") }}
+        </Button>
+      </div>
     </div>
 
     <div class="rounded-md border">
@@ -137,6 +143,7 @@ const handleSave = async (script: Script) => {
         :loading="loading"
         :scripts="scripts"
         :deletingNames="deletingNames"
+        :sortable="sortable"
         @edit="openEdit"
         @delete="onDel"
         @updateOrder="updateOrder"

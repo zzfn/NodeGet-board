@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
-import { Loader2, Pencil, Trash2, Menu } from "lucide-vue-next";
+import { Loader2, Pencil, Trash2, GripVertical } from "lucide-vue-next";
 import {
   Table,
   TableHeader,
@@ -21,6 +21,7 @@ const props = defineProps<{
   scripts: Script[];
   loading?: boolean;
   deletingNames: string[];
+  sortable?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -41,63 +42,6 @@ watch(
     tables.value = props.scripts.sort((a, b) => a.order - b.order);
   },
 );
-
-const draggingIndex = ref<number | null>(null);
-let startY = 0;
-let isTouch = false;
-
-const startDrag = (
-  event: MouseEvent | TouchEvent,
-  index: number,
-  touch = false,
-) => {
-  draggingIndex.value = index;
-  isTouch = touch;
-
-  startY = touch
-    ? event instanceof TouchEvent
-      ? (event.touches[0]?.clientY ?? 0)
-      : 0
-    : event instanceof MouseEvent
-      ? event.clientY
-      : 0;
-
-  const onMove = (e: MouseEvent | TouchEvent) => {
-    const clientY = isTouch
-      ? e instanceof TouchEvent
-        ? (e.touches[0]?.clientY ?? 0)
-        : 0
-      : e instanceof MouseEvent
-        ? e.clientY
-        : 0;
-
-    if (draggingIndex.value === null) return;
-
-    const deltaY = clientY - startY;
-
-    if (Math.abs(deltaY) > 40) {
-      const targetIndex =
-        deltaY > 0 ? draggingIndex.value + 1 : draggingIndex.value - 1;
-      if (targetIndex >= 0 && targetIndex < tables.value.length) {
-        const temp = tables.value[targetIndex]!;
-        tables.value[targetIndex] = tables.value[draggingIndex.value]!;
-        tables.value[draggingIndex.value] = temp;
-        draggingIndex.value = targetIndex;
-        startY = clientY;
-      }
-    }
-  };
-
-  const onEnd = () => {
-    updateOrderIfChanged();
-    draggingIndex.value = null;
-    window.removeEventListener(isTouch ? "touchmove" : "mousemove", onMove);
-    window.removeEventListener(isTouch ? "touchend" : "mouseup", onEnd);
-  };
-
-  window.addEventListener(isTouch ? "touchmove" : "mousemove", onMove);
-  window.addEventListener(isTouch ? "touchend" : "mouseup", onEnd);
-};
 
 const updateOrderIfChanged = () => {
   if (!props.scripts || !tables.value) return;
@@ -141,6 +85,38 @@ const updateOrderIfChanged = () => {
     }
   });
 };
+
+// drag
+const onDragStart = (event: DragEvent, index: number) => {
+  event.dataTransfer?.setData("text/plain", index.toString());
+  event.dataTransfer!.effectAllowed = "move";
+};
+
+const onDragOver = (event: DragEvent) => {
+  event.preventDefault();
+  event.dataTransfer!.dropEffect = "move";
+};
+
+const onDrop = (event: DragEvent, targetIndex: number) => {
+  event.preventDefault();
+  const fromIndexStr = event.dataTransfer?.getData("text/plain");
+  if (fromIndexStr === undefined || fromIndexStr === null) return;
+
+  const fromIndex = parseInt(fromIndexStr, 10);
+  if (isNaN(fromIndex) || fromIndex === targetIndex) return;
+
+  const movedItem: Script = tables.value.splice(fromIndex, 1)[0] as Script;
+  tables.value.splice(targetIndex, 0, movedItem);
+};
+
+watch(
+  () => props.sortable,
+  () => {
+    if (props.sortable === false) {
+      updateOrderIfChanged();
+    }
+  },
+);
 </script>
 
 <template>
@@ -188,14 +164,18 @@ const updateOrderIfChanged = () => {
             {{ $t("dashboard.cron.empty") }}
           </TableCell>
         </TableRow>
-        <TableRow v-for="(script, index) in tables" :key="script.name">
-          <TableCell
-            class="text-center cursor-move select-none"
-            @mousedown="startDrag($event, index)"
-            @touchstart.prevent="startDrag($event, index, true)"
-          >
+        <TableRow
+          v-for="(script, index) in tables"
+          :key="script.name"
+          :draggable="sortable"
+          @dragstart="(e: DragEvent) => onDragStart(e, index)"
+          @dragover="onDragOver"
+          @drop="(e: DragEvent) => onDrop(e, index)"
+          :class="sortable ? 'cursor-move select-none' : ''"
+        >
+          <TableCell class="text-center">
             <div class="flex items-center justify-center">
-              <Menu class="h-4 w-4 mr-1" />
+              <GripVertical class="h-4 w-4 mr-1" v-show="sortable" />
               <span>{{ index + 1 }}</span>
             </div>
           </TableCell>
