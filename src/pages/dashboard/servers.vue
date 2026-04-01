@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
-import { useRouter } from "vue-router";
+import { ref, watch, onMounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { Router, Wrench, Plus } from "lucide-vue-next";
+import { Router, Wrench, Plus, Trash2 } from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PopConfirm } from "@/components/ui/pop-confirm";
 import {
   Table,
   TableBody,
@@ -28,8 +29,10 @@ definePage({
 });
 
 const { t } = useI18n();
+const route = useRoute();
 const router = useRouter();
-const { backends, currentBackend, selectBackend } = useBackendStore();
+const { backends, currentBackend, selectBackend, removeBackend, addBackend } =
+  useBackendStore();
 
 const addOpen = ref(false);
 
@@ -72,6 +75,30 @@ const isActive = (backend: Backend) =>
 const handleManage = (backend: Backend) => {
   router.push(`/dashboard/servers-detail/${encodeURIComponent(backend.token)}`);
 };
+
+onMounted(() => {
+  const raw = route.query.add;
+  if (!raw || typeof raw !== "string") return;
+
+  try {
+    const decoded = JSON.parse(atob(raw)) as Backend;
+    if (!decoded.url || !decoded.token || !decoded.name) return;
+
+    const exists = backends.value.some(
+      (b) => b.url === decoded.url && b.token === decoded.token,
+    );
+    if (!exists) {
+      addBackend(decoded);
+      if (backends.value.length === 1) {
+        selectBackend(decoded);
+      }
+    }
+  } catch {
+    // 解码或解析失败时静默忽略
+  }
+
+  router.replace({ query: { ...route.query, add: undefined } });
+});
 </script>
 
 <template>
@@ -137,20 +164,37 @@ const handleManage = (backend: Backend) => {
               </Button>
             </TableCell>
             <TableCell class="text-right">
-              <Button
-                size="icon"
-                variant="ghost"
-                class="h-8 w-8"
-                @click="handleManage(backend)"
-              >
-                <Wrench class="h-4 w-4" />
-              </Button>
+              <div class="flex items-center justify-end gap-1">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  class="h-8 w-8"
+                  @click="handleManage(backend)"
+                >
+                  <Wrench class="h-4 w-4" />
+                </Button>
+                <PopConfirm
+                  :title="t('dashboard.servers.deleteConfirmTitle')"
+                  :description="t('dashboard.servers.deleteConfirmDesc')"
+                  :confirm-text="t('dashboard.servers.deleteConfirm')"
+                  :cancel-text="t('dashboard.servers.deleteCancel')"
+                  @confirm="removeBackend(backend)"
+                >
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    class="h-8 w-8 text-destructive hover:text-destructive/90"
+                  >
+                    <Trash2 class="h-4 w-4" />
+                  </Button>
+                </PopConfirm>
+              </div>
             </TableCell>
           </TableRow>
         </TableBody>
       </Table>
     </div>
 
-    <BackendSwitcher v-model:open="addOpen" />
+    <BackendSwitcher v-model:open="addOpen" :show-list="false" />
   </div>
 </template>

@@ -2,7 +2,7 @@
 import { ref, computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { Loader2, PackageOpen } from "lucide-vue-next";
+import { Loader2, PackageOpen, ArrowLeft, Copy, Check } from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -111,6 +111,14 @@ const handleTabChange = (tab: string) => {
 
 const activeTab = ref("info");
 
+const copiedKey = ref<string | null>(null);
+const copyText = (key: string, text: string | null | undefined) => {
+  if (!text) return;
+  navigator.clipboard.writeText(text);
+  copiedKey.value = key;
+  setTimeout(() => (copiedKey.value = null), 1500);
+};
+
 const editorExtensions = computed(() => [
   StreamLanguage.define(toml),
   ...(themeStore.isDark ? [oneDark] : []),
@@ -122,18 +130,16 @@ const editorExtensions = computed(() => [
     <!-- Header -->
     <div class="flex items-center gap-3">
       <Button
-        variant="outline"
-        size="sm"
+        variant="ghost"
+        size="icon"
+        class="h-8 w-8"
         @click="router.push('/dashboard/servers')"
       >
-        {{ t("dashboard.servers.detail.back") }}
+        <ArrowLeft class="h-4 w-4" />
       </Button>
       <h1 class="text-2xl font-semibold">
         {{ backend?.name ?? t("dashboard.servers.detail.title") }}
       </h1>
-      <Badge v-if="isActive" variant="default">
-        {{ t("dashboard.servers.detail.infoActive") }}
-      </Badge>
     </div>
 
     <!-- Tabs -->
@@ -166,13 +172,43 @@ const editorExtensions = computed(() => [
             <span class="text-sm text-muted-foreground w-28 shrink-0">
               {{ t("dashboard.servers.detail.infoId") }}
             </span>
-            <span class="text-sm font-mono">{{ serverUuid ?? "--" }}</span>
+            <div class="flex items-center gap-1.5 min-w-0">
+              <span class="text-sm font-mono">{{ serverUuid ?? "--" }}</span>
+              <Button
+                v-if="serverUuid"
+                size="icon"
+                variant="ghost"
+                class="h-6 w-6 shrink-0"
+                @click="copyText('uuid', serverUuid)"
+              >
+                <Check
+                  v-if="copiedKey === 'uuid'"
+                  class="h-3.5 w-3.5 text-green-500"
+                />
+                <Copy v-else class="h-3.5 w-3.5 text-muted-foreground" />
+              </Button>
+            </div>
           </div>
           <div class="flex items-center px-4 py-3 gap-4">
             <span class="text-sm text-muted-foreground w-28 shrink-0">
               {{ t("dashboard.servers.detail.infoEndpoint") }}
             </span>
-            <span class="text-sm font-mono">{{ backend?.url ?? "--" }}</span>
+            <div class="flex items-center gap-1.5 min-w-0">
+              <span class="text-sm font-mono">{{ backend?.url ?? "--" }}</span>
+              <Button
+                v-if="backend?.url"
+                size="icon"
+                variant="ghost"
+                class="h-6 w-6 shrink-0"
+                @click="copyText('url', backend?.url)"
+              >
+                <Check
+                  v-if="copiedKey === 'url'"
+                  class="h-3.5 w-3.5 text-green-500"
+                />
+                <Copy v-else class="h-3.5 w-3.5 text-muted-foreground" />
+              </Button>
+            </div>
           </div>
           <div class="flex items-center px-4 py-3 gap-4">
             <span class="text-sm text-muted-foreground w-28 shrink-0">
@@ -195,9 +231,24 @@ const editorExtensions = computed(() => [
             <span class="text-sm text-muted-foreground w-28 shrink-0 pt-0.5">
               {{ t("dashboard.servers.detail.infoToken") }}
             </span>
-            <span class="text-sm font-mono break-all">{{
-              backend?.token ?? "--"
-            }}</span>
+            <div class="flex items-start gap-1.5 min-w-0">
+              <span class="text-sm font-mono break-all">{{
+                backend?.token ?? "--"
+              }}</span>
+              <Button
+                v-if="backend?.token"
+                size="icon"
+                variant="ghost"
+                class="h-6 w-6 shrink-0 mt-0.5"
+                @click="copyText('token', backend?.token)"
+              >
+                <Check
+                  v-if="copiedKey === 'token'"
+                  class="h-3.5 w-3.5 text-green-500"
+                />
+                <Copy v-else class="h-3.5 w-3.5 text-muted-foreground" />
+              </Button>
+            </div>
           </div>
         </div>
       </TabsContent>
