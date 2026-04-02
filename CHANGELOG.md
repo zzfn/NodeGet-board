@@ -13,6 +13,7 @@
 
 ### 🛠 修复与改进 (Fixes & Improvements)
 
+- **Mock 数据同步优化**: 修复了 `updateWorker` 方法中 Mock 模式下更新 `mockWorkers` 数组的同步问题，使用 `splice` 确保数据一致性。
 - **侧边栏路由修复**: 修复了由于动态路由被误加入侧边栏导致缺失 "id" 参数的报错（在详情页增加了 `meta.hidden: true`）。
 - **依赖修复**: 安装了缺失的 `@codemirror/lang-javascript` 依赖，解决了 Worker 编辑器无法加载的问题。
 - **路由修复**: 修复了由于 `lucide-vue-next` 图标引用错误和 `useRoute` 类型不匹配导致的页面报错。

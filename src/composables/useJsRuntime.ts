@@ -121,7 +121,7 @@ export function useJsRuntime() {
         // 同步更新 mockWorkers 以便持久化（内存中）
         const mockIdx = mockWorkers.findIndex((w) => w.id === id);
         if (mockIdx !== -1) {
-          (mockWorkers as JsWorker[])[mockIdx] = updated;
+          mockWorkers.splice(mockIdx, 1, updated);
         }
         return updated;
       }
