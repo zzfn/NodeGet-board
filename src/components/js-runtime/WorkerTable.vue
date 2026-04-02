@@ -1,0 +1,128 @@
+<script setup lang="ts">
+import { useI18n } from "vue-i18n";
+import { useRouter } from "vue-router";
+import { Pencil, Trash2, Loader2 } from "lucide-vue-next";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { PopConfirm } from "@/components/ui/pop-confirm";
+import type { JsWorker } from "@/composables/useJsRuntime";
+
+const props = defineProps<{
+  workers: JsWorker[];
+  loading?: boolean;
+  deletingIds: string[];
+}>();
+
+const emit = defineEmits<{
+  delete: [id: string];
+  edit: [worker: JsWorker];
+}>();
+
+const { t } = useI18n();
+const router = useRouter();
+
+const formatTime = (ts: number | null) => {
+  if (!ts) return "-";
+  return new Date(ts).toLocaleString();
+};
+
+const openDetail = (worker: JsWorker) => {
+  void router.push(`/dashboard/js-runtime/${worker.id}`);
+};
+
+const isDeleting = (id: string) => props.deletingIds.includes(id);
+</script>
+
+<template>
+  <div class="relative w-full">
+    <div
+      v-if="loading && workers.length"
+      class="absolute inset-0 z-10 bg-background/40 backdrop-blur-[1px] flex flex-col items-center justify-center rounded-md"
+    >
+      <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
+    </div>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>{{ t("dashboard.jsRuntime.id") }}</TableHead>
+          <TableHead>{{ t("dashboard.jsRuntime.name") }}</TableHead>
+          <TableHead>{{ t("dashboard.jsRuntime.route") }}</TableHead>
+          <TableHead>{{ t("dashboard.jsRuntime.createdAt") }}</TableHead>
+          <TableHead>{{ t("dashboard.jsRuntime.updatedAt") }}</TableHead>
+          <TableHead class="text-right">{{
+            t("dashboard.jsRuntime.actions")
+          }}</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        <TableRow v-if="loading && !workers.length">
+          <TableCell colspan="6" class="h-32 text-center text-muted-foreground">
+            <div class="flex flex-col items-center justify-center space-y-3">
+              <Loader2 class="w-6 h-6 animate-spin text-muted-foreground/50" />
+              <span class="text-sm font-medium">{{ t("common.loading") }}</span>
+            </div>
+          </TableCell>
+        </TableRow>
+        <TableRow v-else-if="!workers.length">
+          <TableCell
+            colspan="6"
+            class="text-center text-muted-foreground py-12"
+          >
+            {{ t("common.noData") }}
+          </TableCell>
+        </TableRow>
+        <TableRow v-for="worker in workers" :key="worker.id">
+          <TableCell class="font-mono text-xs">{{ worker.id }}</TableCell>
+          <TableCell class="font-medium">{{ worker.name }}</TableCell>
+          <TableCell class="font-mono text-sm">{{
+            worker.route || "-"
+          }}</TableCell>
+          <TableCell class="text-sm text-muted-foreground">{{
+            formatTime(worker.created_at)
+          }}</TableCell>
+          <TableCell class="text-sm text-muted-foreground">{{
+            formatTime(worker.updated_at)
+          }}</TableCell>
+          <TableCell class="text-right">
+            <div class="flex items-center justify-end gap-1">
+              <Button
+                size="icon"
+                variant="ghost"
+                class="h-8 w-8"
+                @click="openDetail(worker)"
+              >
+                <Pencil class="h-4 w-4" />
+              </Button>
+              <PopConfirm
+                :description="
+                  t('dashboard.jsRuntime.deleteConfirm', { name: worker.name })
+                "
+                @confirm="emit('delete', worker.id)"
+              >
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  class="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  :disabled="isDeleting(worker.id)"
+                >
+                  <Loader2
+                    v-if="isDeleting(worker.id)"
+                    class="h-4 w-4 animate-spin"
+                  />
+                  <Trash2 v-else class="h-4 w-4" />
+                </Button>
+              </PopConfirm>
+            </div>
+          </TableCell>
+        </TableRow>
+      </TableBody>
+    </Table>
+  </div>
+</template>
