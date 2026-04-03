@@ -1,145 +1,145 @@
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { useBackendStore } from "@/composables/useBackendStore";
 import { getWsConnection } from "@/composables/useWsConnection";
-import { mockWorkers, mockRunResult } from "@/mocks/jsRuntimeData";
-import type { JsWorker } from "@/types/worker";
+import type { JsWorker, JsResult } from "@/types/worker";
 
-/**
- * 是否启用 Mock 模式 (代码级开关，方便开发者随时切换)
- * true: 强制使用 Mock 数据
- * false: 优先使用真实后端接口
- */
-const MOCK_ENABLED = true;
+export type { JsWorker, JsResult };
 
 export function useJsRuntime() {
   const { currentBackend } = useBackendStore();
+  const backendUrl = computed(() => currentBackend.value?.url ?? "");
+  const backendToken = computed(() => currentBackend.value?.token ?? "");
 
   const workers = ref<JsWorker[]>([]);
   const loading = ref(false);
 
-  const isMockMode = () => {
-    if (MOCK_ENABLED) return true;
-    if (!currentBackend.value?.url) return true;
-    return false;
+  const rpc = <T>(method: string, params: unknown): Promise<T> =>
+    getWsConnection(backendUrl.value).call<T>(method, params);
+
+  /**
+   * 列出可见脚本
+   * 列出当前 Token 可见且真实存在于数据库中的脚本名。
+   * API: js-worker_list_all_js_worker
+   *
+   * @returns {Promise<string[]>} 包含可见脚本名词的数组
+   */
+  const listAllWorkers = async (): Promise<string[]> => {
+    if (!backendUrl.value) return [];
+    return await rpc<string[]>("js-worker_list_all_js_worker", {
+      token: backendToken.value,
+    });
   };
 
-  const fetchWorkers = async () => {
-    if (isMockMode()) {
-      loading.value = true;
-      await new Promise((r) => setTimeout(r, 500));
-      workers.value = [...mockWorkers];
-      loading.value = false;
-      return;
-    }
-
-    const backend = currentBackend.value;
-    if (!backend) return;
-
-    loading.value = true;
-    try {
-      const result = await getWsConnection(backend.url).call<JsWorker[]>(
-        "js-worker_list",
-        { token: backend.token },
-      );
-      workers.value = result || [];
-    } catch (e) {
-      console.error("Failed to fetch workers", e);
-      throw e;
-    } finally {
-      loading.value = false;
-    }
+  /**
+   * 获取 Runtime 池信息
+   * 查看当前 JS Runtime 池状态（每个工作线程池活跃请求数，上次使用时间，空闲时间等）。
+   * API: js-worker_get_rt_pool
+   */
+  const getRtPool = async () => {
+    if (!backendUrl.value) return null;
+    return await rpc<any>("js-worker_get_rt_pool", {
+      token: backendToken.value,
+    });
   };
 
-  const addWorker = async (name: string, content: string) => {
-    const performMockAdd = () => {
-      const newWorker: JsWorker = {
-        id: "worker_" + Math.random().toString(36).slice(2, 9),
-        name,
-        route: "/" + name.toLowerCase().replace(/\s+/g, "-"),
-        content,
-        created_at: Date.now(),
-        updated_at: Date.now(),
-        env: {},
-        runtime_clean_time: "1h",
-      };
-      mockWorkers.push(newWorker);
-      workers.value = [...mockWorkers];
-      return newWorker;
-    };
-
-    if (isMockMode()) return performMockAdd();
-
-    const backend = currentBackend.value;
-    if (!backend) return;
+  /**
+   * 创建脚本
+   * API: js-worker_create
+   *
+   * @param {string} name 脚本唯一名称
+   * @param {string} content Base64 编码前的 UTF-8 JS 源码
+   * @param {string} [routeName] 可选。若设置则开启 HTTP 路由入口，对应路径前缀为 /worker-route/{route_name}
+   * @param {number} [runtimeCleanTime] 脚本 Runtime 空闲清理时间（毫秒），null 表示不自动清理
+   * @param {Record<string, any>} [env] 可选，任意 JSON 结构，存入数据库并可在运行时传给脚本
+   */
+  const addWorker = async (
+    name: string,
+    content: string,
+    routeName?: string | null,
+    runtimeCleanTime?: number | null,
+    env?: Record<string, any>,
+  ) => {
+    if (!backendUrl.value) return;
 
     const contentBase64 = btoa(unescape(encodeURIComponent(content)));
-    return await getWsConnection(backend.url).call<JsWorker>(
-      "js-worker_create",
-      {
-        token: backend.token,
-        name,
-        js_script_base64: contentBase64,
-      },
-    );
-  };
-
-  const deleteWorker = async (id: string) => {
-    const performMockDelete = () => {
-      const idx = mockWorkers.findIndex((w) => w.id === id);
-      if (idx !== -1) mockWorkers.splice(idx, 1);
-      workers.value = [...mockWorkers];
-    };
-
-    if (isMockMode()) return performMockDelete();
-
-    const backend = currentBackend.value;
-    if (!backend) return;
-
-    await getWsConnection(backend.url).call("js-worker_delete", {
-      token: backend.token,
-      id,
+    return await rpc<any>("js-worker_create", {
+      token: backendToken.value,
+      name,
+      js_script_base64: contentBase64,
+      route_name: routeName,
+      runtime_clean_time: runtimeCleanTime,
+      env: env,
     });
   };
 
-  const getWorker = async (id: string) => {
-    if (isMockMode()) return mockWorkers.find((w) => w.id === id) || null;
+  /**
+   * 删除脚本
+   * 删除成功后，脚本对应的 Runtime 实例会被立即驱逐。
+   * API: js-worker_delete
+   *
+   * @param {string} name 脚本名称
+   */
+  const deleteWorker = async (name: string) => {
+    if (!backendUrl.value) return;
 
-    const backend = currentBackend.value;
-    if (!backend) return null;
-
-    return await getWsConnection(backend.url).call<JsWorker>("js-worker_get", {
-      token: backend.token,
-      id,
+    await rpc("js-worker_delete", {
+      token: backendToken.value,
+      name,
     });
   };
 
-  const updateWorker = async (id: string, updates: Partial<JsWorker>) => {
-    const performMockUpdate = () => {
-      const idx = workers.value.findIndex((w) => w.id === id);
-      const existing = workers.value[idx];
-      if (existing) {
-        const updated: JsWorker = {
-          ...existing,
-          ...updates,
-          id: existing.id,
-          updated_at: Date.now(),
-        };
-        workers.value[idx] = updated;
-        const mockIdx = mockWorkers.findIndex((w) => w.id === id);
-        if (mockIdx !== -1) mockWorkers.splice(mockIdx, 1, updated);
-        return updated;
+  /**
+   * 读取脚本信息
+   * API: js-worker_read
+   *
+   * @param {string} name 脚本名
+   * @returns 脚本信息对象
+   */
+  const getWorker = async (name: string): Promise<JsWorker | null> => {
+    if (!backendUrl.value) return null;
+
+    const res = await rpc<any>("js-worker_read", {
+      token: backendToken.value,
+      name,
+    });
+
+    if (!res) return null;
+
+    let decodedContent = "";
+    try {
+      if (res.js_script_base64) {
+        decodedContent = decodeURIComponent(escape(atob(res.js_script_base64)));
       }
-      return null;
+    } catch {
+      decodedContent = "// Base64 Decode Error";
+    }
+
+    return {
+      id: res.name, // backend replaced id with name entirely
+      name: res.name,
+      route: res.route_name || "",
+      content: decodedContent,
+      created_at: res.create_at || 0,
+      updated_at: res.update_at || 0,
+      env: res.env || {},
+      runtime_clean_time: res.runtime_clean_time,
     };
+  };
 
-    if (isMockMode()) return performMockUpdate();
-
-    const backend = currentBackend.value;
-    if (!backend) return;
+  /**
+   * 更新脚本
+   * 更新后会重新预编译字节码，已存在的 Runtime 实例会被立即驱逐。
+   * API: js-worker_update
+   *
+   * @param {string} name 脚本名称
+   * @param {Partial<JsWorker>} updates 更新属性，例如 content, route, runtime_clean_time 和 env
+   */
+  const updateWorker = async (name: string, updates: Partial<JsWorker>) => {
+    if (!backendUrl.value) return;
 
     const params: any = {
-      token: backend.token,
-      id,
+      token: backendToken.value,
+      name,
       ...updates,
     };
     if (updates.content) {
@@ -148,43 +148,75 @@ export function useJsRuntime() {
       );
       delete params.content;
     }
-    return await getWsConnection(backend.url).call<JsWorker>(
-      "js-worker_update",
-      params,
-    );
+    return await rpc<any>("js-worker_update", params);
   };
 
+  /**
+   * 运行特定类型的脚本
+   * run 不会等待脚本执行结束。它只负责将任务推入，并返回一条记录 ID。
+   * 执行结果请通过 js-result_query 异步查询。
+   * API: js-worker_run
+   *
+   * @param {string} name 脚本名 (js_script_name)
+   * @param {"call"|"cron"} runType 运行类型：call / cron
+   * @param {any} params 任意 JSON，传给脚本入口函数第一个参数
+   * @param {any} [env] 传入时使用请求里的 env；不传则使用数据库中保存的 env
+   */
   const runWorker = async (
-    id: string,
+    name: string,
     runType: "call" | "cron",
     params: any,
-    env: any,
+    env?: any,
   ) => {
-    if (isMockMode()) {
-      await new Promise((r) => setTimeout(r, 300));
-      return mockRunResult(id, runType, params, env);
-    }
+    if (!backendUrl.value) return;
 
-    const backend = currentBackend.value;
-    if (!backend) return;
-
-    return await getWsConnection(backend.url).call("js-worker_run", {
-      token: backend.token,
-      id,
+    return await rpc<{ id: number }>("js-worker_run", {
+      token: backendToken.value,
+      js_script_name: name,
       run_type: runType,
       params,
       env,
     });
   };
 
+  /**
+   * 查询 JS 运行结果
+   * API: js-result_query
+   */
+  const getWorkerLogs = async (condition: any[]): Promise<JsResult[]> => {
+    if (!backendUrl.value) return [];
+    const results = await rpc<JsResult[]>("js-result_query", {
+      token: backendToken.value,
+      query: {
+        condition,
+      },
+    });
+    return results || [];
+  };
+
+  /**
+   * 删除 JS 运行结果
+   * API: js-result_delete
+   */
+  const deleteWorkerLog = async (id: number): Promise<void> => {
+    if (!backendUrl.value) return;
+    await rpc("js-result_delete", {
+      token: backendToken.value,
+      id,
+    });
+  };
+
   return {
     workers,
     loading,
-    fetchWorkers,
+    listAllWorkers,
+    getRtPool,
     addWorker,
     deleteWorker,
     getWorker,
     updateWorker,
     runWorker,
+    getWorkerLogs,
+    deleteWorkerLog,
   };
 }

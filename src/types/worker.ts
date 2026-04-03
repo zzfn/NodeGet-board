@@ -8,3 +8,13 @@ export interface JsWorker {
   env?: Record<string, string>;
   runtime_clean_time?: string;
 }
+export interface JsResult {
+  id: number;
+  js_worker_id: number;
+  js_worker_name: string;
+  start_time: number;
+  finish_time: number | null;
+  param: any;
+  result: any;
+  error_message: string | null;
+}

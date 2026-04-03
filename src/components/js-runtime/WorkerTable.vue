@@ -34,10 +34,10 @@ const formatTime = (ts: number | null) => {
 };
 
 const openDetail = (worker: JsWorker) => {
-  void router.push(`/dashboard/js-runtime/${worker.id}`);
+  void router.push(`/dashboard/js-runtime/${worker.name}`);
 };
 
-const isDeleting = (id: string) => props.deletingIds.includes(id);
+const isDeleting = (name: string) => props.deletingIds.includes(name);
 </script>
 
 <template>
@@ -104,16 +104,16 @@ const isDeleting = (id: string) => props.deletingIds.includes(id);
                 :description="
                   t('dashboard.jsRuntime.deleteConfirm', { name: worker.name })
                 "
-                @confirm="emit('delete', worker.id)"
+                @confirm="emit('delete', worker.name)"
               >
                 <Button
                   size="icon"
                   variant="ghost"
                   class="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                  :disabled="isDeleting(worker.id)"
+                  :disabled="isDeleting(worker.name)"
                 >
                   <Loader2
-                    v-if="isDeleting(worker.id)"
+                    v-if="isDeleting(worker.name)"
                     class="h-4 w-4 animate-spin"
                   />
                   <Trash2 v-else class="h-4 w-4" />
