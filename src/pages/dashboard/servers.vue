@@ -23,7 +23,7 @@ definePage({
   meta: {
     title: "router.servers",
     icon: Router,
-    order: 3,
+    order: 2,
     group: "router.group.nodeManage",
   },
 });
