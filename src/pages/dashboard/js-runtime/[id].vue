@@ -282,6 +282,12 @@ const updateWorkerContentFun = async () => {
   }
 };
 
+const handleJsonParseError = (errorMessage: string): boolean => {
+  toast.error(errorMessage);
+  runLoading.value = false;
+  return false;
+};
+
 const runWorkerFun = async (runType: "call" | "cron") => {
   if (!worker.value) return;
   isPreviewMode.value = false;
@@ -293,16 +299,12 @@ const runWorkerFun = async (runType: "call" | "cron") => {
     try {
       paramsObj = JSON.parse(runParams.value);
     } catch {
-      toast.error("Invalid Params JSON");
-      runLoading.value = false;
-      return;
+      if (!handleJsonParseError("Invalid Params JSON")) return;
     }
     try {
       envObj = JSON.parse(runEnv.value);
     } catch {
-      toast.error("Invalid Env JSON");
-      runLoading.value = false;
-      return;
+      if (!handleJsonParseError("Invalid Env JSON")) return;
     }
 
     const result = await runtime.runWorker(
@@ -590,7 +592,7 @@ const formatTime = (ts: number | null) => {
                       v-else
                       :key="iframeKey"
                       :src="`/worker-route/${worker?.route}`"
-                      sandbox=""
+                      sandbox="allow-scripts allow-same-origin"
                       class="w-full h-full border-0"
                     ></iframe>
                   </template>
