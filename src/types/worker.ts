@@ -9,6 +9,16 @@ export interface JsWorker {
   runtime_clean_time?: number | null;
   description?: string;
 }
+
+export interface JsWorkerOptions {
+  name: string;
+  content: string;
+  routeName?: string | null;
+  runtimeCleanTime?: number | null;
+  env?: Record<string, any>;
+  description?: string;
+}
+
 export interface JsResult {
   id: number;
   js_worker_id: number;

@@ -1,9 +1,9 @@
 import { ref, computed } from "vue";
 import { useBackendStore } from "@/composables/useBackendStore";
 import { getWsConnection } from "@/composables/useWsConnection";
-import type { JsWorker, JsResult } from "@/types/worker";
+import type { JsWorker, JsResult, JsWorkerOptions } from "@/types/worker";
 
-export type { JsWorker, JsResult };
+export type { JsWorker, JsResult, JsWorkerOptions };
 
 export function useJsRuntime() {
   const { currentBackend } = useBackendStore();
@@ -46,21 +46,9 @@ export function useJsRuntime() {
    * 添加新脚本
    * API: js-worker_create
    *
-   * @param {Object} options 参数对象
-   * @param {string} options.name 脚本的唯一名称 (js_script_name)
-   * @param {string} options.content Base64 编码前的 UTF-8 JS 源码
-   * @param {string} [options.routeName] 可选。若设置则开启 HTTP 路由入口，对应路径前缀为 /worker-route/{route_name}
-   * @param {number} [options.runtimeCleanTime] 脚本 Runtime 空闲清理时间（毫秒），null 表示不自动清理
-   * @param {Record<string, any>} [options.env] 可选，任意 JSON 结构，存入数据库并可在运行时传给脚本
+   * @param {JsWorkerOptions} options 参数对象
    */
-  const addWorker = async (options: {
-    name: string;
-    content: string;
-    routeName?: string | null;
-    runtimeCleanTime?: number | null;
-    env?: Record<string, any>;
-    description?: string;
-  }) => {
+  const addWorker = async (options: JsWorkerOptions) => {
     if (!backendUrl.value) return;
 
     const contentBase64 = btoa(unescape(encodeURIComponent(options.content)));
