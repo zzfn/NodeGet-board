@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-import { useI18n } from "vue-i18n";
 import { Earth } from "lucide-vue-next";
+import { useI18n } from "vue-i18n";
 import FlatWorldMap from "@/components/map/FlatWorldMap.vue";
 import Globe3DMap from "@/components/map/Globe3DMap.vue";
 import { getDisplayCountryName } from "@/components/map/countryName";
@@ -12,6 +12,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+
+definePage({
+  meta: {
+    title: "router.map",
+    icon: Earth,
+    order: 5,
+    group: "router.group.nodeManage",
+  },
+});
 
 const { t, locale } = useI18n();
 const activeView = ref("flat");
@@ -26,7 +35,6 @@ const userLocation = ref<{
 const locationStatus = ref<
   "idle" | "loading" | "success" | "unavailable" | "denied"
 >("idle");
-
 const displayedUserLocation = computed(() => {
   if (!showUserLinks.value || !userLocation.value) return null;
   return {
@@ -34,7 +42,6 @@ const displayedUserLocation = computed(() => {
     value: [...userLocation.value.value] as [number, number, number],
   };
 });
-
 const locationStatusText = computed(() => {
   if (!showUserLinks.value) return "";
   if (locationStatus.value === "loading")
@@ -47,7 +54,6 @@ const locationStatusText = computed(() => {
     return t("dashboard.map.locationStatus.denied");
   return "";
 });
-
 let locationWatchId: number | null = null;
 const regionDisplayNames =
   typeof Intl !== "undefined"
@@ -103,12 +109,12 @@ function stopUserLocationWatch() {
 }
 
 function startUserLocationWatch() {
-  if (typeof navigator === "undefined" || !navigator.geolocation) {
+  if (
+    typeof navigator === "undefined" ||
+    !navigator.geolocation ||
+    locationWatchId !== null
+  ) {
     locationStatus.value = "unavailable";
-    return;
-  }
-
-  if (locationWatchId !== null) {
     return;
   }
 
@@ -135,15 +141,6 @@ function startUserLocationWatch() {
     },
   );
 }
-
-definePage({
-  meta: {
-    title: "router.map",
-    icon: Earth,
-    order: 5,
-    group: "router.group.nodeManage",
-  },
-});
 
 onMounted(() => {
   start();
