@@ -83,6 +83,7 @@ const runLoading = ref(false);
 const saveLoading = ref(false);
 const isPreviewMode = ref(false);
 const activeEditorTab = ref("params");
+const iframeKey = ref(0);
 
 // Settings Tab State
 const envVars = ref<{ key: string; value: string }[]>([]);
@@ -293,12 +294,14 @@ const runWorkerFun = async (runType: "call" | "cron") => {
       paramsObj = JSON.parse(runParams.value);
     } catch {
       toast.error("Invalid Params JSON");
+      runLoading.value = false;
       return;
     }
     try {
       envObj = JSON.parse(runEnv.value);
     } catch {
       toast.error("Invalid Env JSON");
+      runLoading.value = false;
       return;
     }
 
@@ -308,7 +311,26 @@ const runWorkerFun = async (runType: "call" | "cron") => {
       paramsObj,
       envObj,
     );
+
     runResult.value = result;
+
+    // JS execution is asynchronous, poll for the actual result using the returned ID
+    if (result && result.id) {
+      for (let i = 0; i < 10; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        const logs = await runtime.getWorkerLogs([{ id: Number(result.id) }]);
+        if (logs && logs.length > 0) {
+          const log = logs[0];
+          if (log) {
+            runResult.value = log;
+            // If finish_time is present, the script has completed execution
+            if (log.finish_time) {
+              break;
+            }
+          }
+        }
+      }
+    }
   } catch (e: any) {
     runResult.value = { error: e.message || "Run failed" };
   } finally {
@@ -528,12 +550,24 @@ const formatTime = (ts: number | null) => {
               <div
                 class="flex-1 min-h-0 border rounded-lg overflow-hidden flex flex-col bg-card"
               >
-                <div class="p-2 border-b bg-muted/30">
+                <div
+                  class="p-2 border-b bg-muted/30 flex items-center justify-between"
+                >
                   <span class="text-sm font-medium px-2">{{
                     isPreviewMode
                       ? t("dashboard.jsRuntime.editor.preview")
                       : t("dashboard.jsRuntime.editor.result")
                   }}</span>
+                  <Button
+                    v-if="isPreviewMode && worker?.route"
+                    variant="ghost"
+                    size="icon"
+                    class="h-6 w-6"
+                    @click="iframeKey++"
+                    :title="t('common.refresh', '刷新')"
+                  >
+                    <RotateCcw class="h-3 w-3" />
+                  </Button>
                 </div>
                 <div class="flex-1 min-h-0 overflow-hidden relative">
                   <div
@@ -550,11 +584,13 @@ const formatTime = (ts: number | null) => {
                       v-if="!worker?.route"
                       class="flex items-center justify-center h-full text-muted-foreground text-sm"
                     >
-                      该 Worker 暂未绑定路由，无法预览
+                      未绑定路由，请先绑定路由后操作
                     </div>
                     <iframe
                       v-else
-                      :src="`/${worker?.route}`"
+                      :key="iframeKey"
+                      :src="`/worker-route/${worker?.route}`"
+                      sandbox=""
                       class="w-full h-full border-0"
                     ></iframe>
                   </template>
