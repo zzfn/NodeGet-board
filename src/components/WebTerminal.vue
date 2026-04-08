@@ -7,7 +7,14 @@ import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { Button } from "@/components/ui/button";
 import { wsRpcCall } from "@/composables/useWsRpc";
 import { useFullscreen } from "@vueuse/core";
-import { Maximize, Minimize, Maximize2, Minimize2 } from "lucide-vue-next";
+import {
+  Maximize,
+  Minimize,
+  Maximize2,
+  Minimize2,
+  PanelRightClose,
+  FileTerminal,
+} from "lucide-vue-next";
 
 const props = withDefaults(
   defineProps<{
@@ -365,12 +372,29 @@ defineExpose({
   disconnect,
   fit,
 });
+
+// Scripts
+import { useScripts } from "@/composables/useScripts";
+const { scripts, loading } = useScripts();
+import Switch from "./ui/switch/Switch.vue";
+import Badge from "./ui/badge/Badge.vue";
+
+const scriptShow = ref(false);
+
+const autoRun = ref(false);
+const codeIn = (code: string) => {
+  if (autoRun.value) {
+    terminal?.input(code + "\r");
+  } else {
+    terminal?.input(code);
+  }
+};
 </script>
 
 <template>
   <div
     ref="wrapperRef"
-    class="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden flex flex-col box-border"
+    class="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden flex flex-col box-border relative"
     :class="{
       'fixed inset-0 z-50 w-screen h-screen rounded-none border-0':
         isWindowFull,
@@ -383,6 +407,14 @@ defineExpose({
         Status: <span class="font-mono">{{ statusText }}</span>
       </div>
       <div class="flex items-center gap-2">
+        <Button
+          size="icon"
+          variant="ghost"
+          @click="scriptShow = true"
+          :title="$t('webterminal.scripts')"
+        >
+          <FileTerminal class="w-4 h-4" />
+        </Button>
         <Button
           size="icon"
           variant="ghost"
@@ -409,7 +441,50 @@ defineExpose({
     <div
       ref="containerRef"
       class="w-full bg-black"
-      :class="isFullscreen || isWindowFull ? 'flex-1 h-0' : 'h-[560px]'"
+      :class="isFullscreen || isWindowFull ? 'flex-1 h-0' : 'h-full'"
     />
+
+    <div
+      class="flex flex-col p-4 h-full border border-gray-200 rounded-tl-lg rounded-bl-lg shadow-sm absolute top-0 right-0 bg-white dark:bg-gray-800 w-[300px] transition-all duration-300 overflow-hidden"
+      :class="scriptShow ? 'translate-x-0' : 'translate-x-full'"
+    >
+      <div
+        class="text-lg font-semibold text-gray-800 mb-3 dark:text-white items-end gap-2 justify-between flex"
+      >
+        <div class="flex">
+          <PanelRightClose
+            @click="scriptShow = false"
+            class="mr-2 cursor-pointer"
+          />
+          脚本片段
+        </div>
+        <Switch v-model="autoRun" label="自动回车"></Switch>
+      </div>
+      <div v-if="loading" class="text-gray-500">加载中...</div>
+      <div v-else class="flex flex-wrap gap-2 flex-1 overflow-auto min-h-0">
+        <Button
+          variant="outline"
+          class="w-full flex flex-col gap-1 items-start h-auto border"
+          v-for="script in scripts"
+          @click="codeIn(script.content)"
+        >
+          <div class="flex flex-row gap-1 items-start w-full">
+            <div class="text-base font-blod max-w-[80%] truncate">
+              {{ script.name }}
+            </div>
+            <div>
+              <Badge class="text-xs font-mono" variant="outline">
+                {{ script.lang }}
+              </Badge>
+            </div>
+          </div>
+          <div class="flex flex-col gap-1 items-start w-full text-left">
+            <div class="truncate text-xs opacity-80 break-words w-full">
+              {{ script.content }}
+            </div>
+          </div>
+        </Button>
+      </div>
+    </div>
   </div>
 </template>
