@@ -144,6 +144,8 @@ export default {
         title: "Token 管理",
         description: "管理你的Token",
         searchPlaceholder: "请输入Token Key搜索",
+        usernamePlaceholder: "请输入用户名",
+        tokenKeyPlaceholder: "请输入 Token Key",
         resetButton: "重置",
         searchButton: "搜索",
         searchingButton: "搜索中...",

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
+import { refDebounced } from "@vueuse/core";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { Input } from "@/components/ui/input";
@@ -8,7 +9,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -19,7 +19,6 @@ import {
   DialogContent,
   DialogDescription,
   DialogFooter,
-  DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
@@ -28,9 +27,7 @@ import {
   Pagination,
   PaginationContent,
   PaginationEllipsis,
-  PaginationFirst,
   PaginationItem,
-  PaginationLast,
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
@@ -46,6 +43,10 @@ const fetchLoading = ref(false);
 const deleteLoading = ref(false);
 const page = ref(1);
 const pageSize = 10;
+const usernameKeyword = ref("");
+const tokenKeyKeyword = ref("");
+const debouncedUsernameKeyword = refDebounced(usernameKeyword, 300);
+const debouncedTokenKeyKeyword = refDebounced(tokenKeyKeyword, 300);
 // 控制重置token弹窗显隐
 const resetTokenOpen = ref(false);
 // 控制重置token loading
@@ -53,10 +54,29 @@ const resetTokenLoading = ref(false);
 // 控制是否显示重置Token结果
 const showResetTokenResult = ref(false);
 
-const total = computed(() => tokensList.value.length);
+const normalizeSearchText = (value: string | null | undefined) =>
+  String(value ?? "")
+    .trim()
+    .toLowerCase();
+
+const filteredTokens = computed(() => {
+  const username = normalizeSearchText(debouncedUsernameKeyword.value);
+  const tokenKey = normalizeSearchText(debouncedTokenKeyKeyword.value);
+
+  return tokensList.value.filter((token) => {
+    const matchesUsername =
+      !username || normalizeSearchText(token.username).includes(username);
+    const matchesTokenKey =
+      !tokenKey || normalizeSearchText(token.token_key).includes(tokenKey);
+
+    return matchesUsername && matchesTokenKey;
+  });
+});
+
+const total = computed(() => filteredTokens.value.length);
 const pagedTokens = computed(() => {
   const start = (page.value - 1) * pageSize;
-  return tokensList.value.slice(start, start + pageSize);
+  return filteredTokens.value.slice(start, start + pageSize);
 });
 
 const pageLabel = computed(() => {
@@ -64,6 +84,10 @@ const pageLabel = computed(() => {
   const start = (page.value - 1) * pageSize + 1;
   const end = Math.min(page.value * pageSize, total.value);
   return `${start} - ${end}`;
+});
+
+watch([debouncedUsernameKeyword, debouncedTokenKeyKeyword], () => {
+  page.value = 1;
 });
 
 onMounted(() => {
@@ -92,6 +116,12 @@ const handleGetTokenList = () => {
     .finally(() => {
       fetchLoading.value = false;
     });
+};
+
+const handleResetFilters = () => {
+  usernameKeyword.value = "";
+  tokenKeyKeyword.value = "";
+  page.value = 1;
 };
 
 const toCreateToken = () => {
@@ -152,11 +182,18 @@ const handleConfirmResetToken = (token: Token) => {};
     <div
       class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
     >
-      <div class="w-full lg:max-w-sm">
-        <Input :placeholder="t('dashboard.token.list.searchPlaceholder')" />
+      <div class="grid w-full gap-3 md:grid-cols-2 lg:max-w-2xl">
+        <Input
+          v-model="usernameKeyword"
+          :placeholder="t('dashboard.token.list.usernamePlaceholder')"
+        />
+        <Input
+          v-model="tokenKeyKeyword"
+          :placeholder="t('dashboard.token.list.tokenKeyPlaceholder')"
+        />
       </div>
       <div class="flex flex-wrap items-center gap-2 lg:justify-end">
-        <Button type="button" @click="handleGetTokenList" variant="outline">
+        <Button type="button" @click="handleResetFilters" variant="outline">
           <span class="inline-flex items-center justify-center">{{
             t("dashboard.token.list.resetButton")
           }}</span>
@@ -166,8 +203,8 @@ const handleConfirmResetToken = (token: Token) => {};
             <Spinner v-if="fetchLoading" />
             {{
               fetchLoading
-                ? t("dashboard.token.list.searchingButton")
-                : t("dashboard.token.list.searchButton")
+                ? t("dashboard.token.refreshing")
+                : t("dashboard.token.refresh")
             }}
           </span>
         </Button>

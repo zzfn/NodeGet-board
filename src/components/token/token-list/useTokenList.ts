@@ -23,7 +23,7 @@ export type Token = {
   timestamp_from: null | number;
   timestamp_to: null | number;
   token_limit: TokenLimit[];
-  username: string;
+  username: string | null;
 };
 
 export const useTokenListHook = () => {
