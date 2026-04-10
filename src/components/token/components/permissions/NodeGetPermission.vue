@@ -1,0 +1,74 @@
+﻿<script setup lang="ts">
+import { ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
+import type { PermissionEntry } from "../../type";
+import { Button } from "@/components/ui/button";
+import { arePermissionEntriesEqual } from "./permissionsState";
+
+const props = defineProps<{ modelValue: PermissionEntry[] }>();
+const emits = defineEmits<{
+  (e: "update:modelValue", value: PermissionEntry[]): void;
+}>();
+const { t } = useI18n();
+
+const listAllAgentUuid = ref(false);
+const hydrating = ref(false);
+
+const build = (): PermissionEntry[] =>
+  listAllAgentUuid.value ? [{ node_get: "list_all_agent_uuid" }] : [];
+
+const hydrate = (entries: PermissionEntry[]) => {
+  listAllAgentUuid.value = entries.some(
+    (entry) =>
+      entry?.node_get === "list_all_agent_uuid" ||
+      entry?.nodeget === "list_all_agent_uuid",
+  );
+};
+
+watch(
+  () => props.modelValue,
+  (value) => {
+    const nextEntries = Array.isArray(value) ? value : [];
+    if (arePermissionEntriesEqual(nextEntries, build())) return;
+
+    hydrating.value = true;
+    hydrate(nextEntries);
+    hydrating.value = false;
+  },
+  { immediate: true, deep: true },
+);
+
+watch(listAllAgentUuid, () => {
+  if (hydrating.value) return;
+  const nextEntries = build();
+  if (arePermissionEntriesEqual(nextEntries, props.modelValue)) return;
+  emits("update:modelValue", nextEntries);
+});
+</script>
+
+<template>
+  <details class="rounded-md border p-3" open>
+    <summary class="cursor-pointer select-none text-sm font-medium">
+      NodeGet
+      {{
+        t(
+          "dashboard.token.permissionsConfig.limitItem.permissionCard.nodeGet.title",
+        )
+      }}
+    </summary>
+    <div class="mt-3 flex flex-wrap gap-2">
+      <Button
+        type="button"
+        size="sm"
+        :variant="listAllAgentUuid ? 'default' : 'outline'"
+        @click="listAllAgentUuid = !listAllAgentUuid"
+      >
+        {{
+          t(
+            "dashboard.token.permissionsConfig.limitItem.permissionCard.nodeGet.listAllAgentUuid",
+          )
+        }}
+      </Button>
+    </div>
+  </details>
+</template>
