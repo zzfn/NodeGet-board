@@ -1,6 +1,5 @@
 import type { ScopeTabValue } from "./scopeUi";
 import type { PermissionEntry, TokenLimitEntry, TokenLimitScope } from "./type";
-import { arePermissionEntriesEqual } from "./components/permissions/permissionsState";
 import { DEFAULT_SCOPE } from "./scopeCodec";
 
 export type TokenPermissionTemplateValue = "agent" | "visitor" | "custom";
@@ -33,9 +32,55 @@ const AGENT_PERMISSIONS: PermissionEntry[] = [
 const VISITOR_PERMISSIONS: PermissionEntry[] = [
   { static_monitoring: { read: "cpu" } },
   { static_monitoring: { read: "system" } },
+  { static_monitoring: { read: "gpu" } },
+  { static_monitoring: "write" },
+  { static_monitoring: "delete" },
   { dynamic_monitoring: { read: "cpu" } },
+  { dynamic_monitoring: { read: "ram" } },
+  { dynamic_monitoring: { read: "load" } },
   { dynamic_monitoring: { read: "system" } },
+  { dynamic_monitoring: { read: "disk" } },
+  { dynamic_monitoring: { read: "network" } },
+  { dynamic_monitoring: { read: "gpu" } },
+  { dynamic_monitoring: "write" },
+  { dynamic_monitoring: "delete" },
+  {
+    kv: {
+      read: "metadata_*",
+    },
+  },
 ];
+
+const normalizePermissionValue = (value: unknown): string => {
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => normalizePermissionValue(item)).join(",")}]`;
+  }
+
+  if (value && typeof value === "object") {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
+      .map(
+        ([key, nestedValue]) =>
+          `${key}:${normalizePermissionValue(nestedValue)}`,
+      )
+      .join(",")}}`;
+  }
+
+  return JSON.stringify(value);
+};
+
+const arePermissionSetsEqual = (
+  left: PermissionEntry[] | undefined,
+  right: PermissionEntry[] | undefined,
+) => {
+  const normalizeEntries = (entries: PermissionEntry[] | undefined) =>
+    (entries ?? []).map(normalizePermissionValue).sort();
+
+  return (
+    JSON.stringify(normalizeEntries(left)) ===
+    JSON.stringify(normalizeEntries(right))
+  );
+};
 
 const normalizeAgentTemplateScopes = (
   scopes: TokenLimitScope,
@@ -87,7 +132,7 @@ const TEMPLATE_CONFIGS: Record<
     buildPermissions: () => AGENT_PERMISSIONS.map((item) => ({ ...item })),
     matches: (tokenLimit, currentScopeTab) => {
       if (currentScopeTab !== "Global") return false;
-      return arePermissionEntriesEqual(
+      return arePermissionSetsEqual(
         tokenLimit.permissions ?? [],
         AGENT_PERMISSIONS,
       );
@@ -106,7 +151,7 @@ const TEMPLATE_CONFIGS: Record<
     buildPermissions: () => VISITOR_PERMISSIONS.map((item) => ({ ...item })),
     matches: (tokenLimit, currentScopeTab) => {
       if (currentScopeTab !== "AgentUuid") return false;
-      return arePermissionEntriesEqual(
+      return arePermissionSetsEqual(
         tokenLimit.permissions ?? [],
         VISITOR_PERMISSIONS,
       );

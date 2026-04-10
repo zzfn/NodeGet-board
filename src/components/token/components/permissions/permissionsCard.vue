@@ -36,13 +36,7 @@ const currentScopeTab = computed(
 
 const isGlobalScope = computed(() => currentScopeTab.value === "Global");
 
-const isKvNamespaceScope = computed(
-  () => currentScopeTab.value === "KvNamespace",
-);
-
-const canShowKvPermission = computed(
-  () => isGlobalScope.value || isKvNamespaceScope.value,
-);
+const canShowKvPermission = computed(() => true);
 const canShowCrontabResultPermission = computed(() => isGlobalScope.value);
 
 const updateBucket = (key: PermissionBucketKey, value: PermissionEntry[]) => {
@@ -145,7 +139,7 @@ watch(
         v-if="canShowCrontabResultPermission"
         v-model="crontabResultPermissions"
       />
-      <KvPermission v-if="canShowKvPermission" v-model="kvPermissions" />
+      <KvPermission v-model="kvPermissions" />
       <TerminalPermission v-model="terminalPermissions" />
       <NodeGetPermission v-model="nodeGetPermissions" />
     </CardContent>
