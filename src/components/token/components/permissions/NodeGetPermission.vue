@@ -27,7 +27,7 @@ const build = (): PermissionEntry[] => {
   }
 
   if (getRtPool.value) {
-    entries.push({ node_get: "GetRtPool" });
+    entries.push({ node_get: "get_rt_pool" });
   }
 
   return entries;
@@ -41,7 +41,7 @@ const hydrate = (entries: PermissionEntry[]) => {
   );
   getRtPool.value = entries.some(
     (entry) =>
-      entry?.node_get === "GetRtPool" || entry?.nodeget === "GetRtPool",
+      entry?.node_get === "get_rt_pool" || entry?.nodeget === "get_rt_pool",
   );
 };
 

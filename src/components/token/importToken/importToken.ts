@@ -2,6 +2,7 @@ import {
   DEFAULT_SCOPE,
   createDefaultToken,
   normalizePermissions,
+  normalizeScopes,
 } from "../scopeCodec";
 import type { PermissionEntry, Token } from "../type";
 
@@ -26,7 +27,7 @@ const TASK_TYPES = new Set([
   "edit_config",
 ]);
 const CRONTAB_TYPES = new Set(["read", "write", "delete"]);
-const NODE_GET_TYPES = new Set(["list_all_agent_uuid", "GetRtPool"]);
+const NODE_GET_TYPES = new Set(["list_all_agent_uuid", "get_rt_pool"]);
 const JS_WORKER_TYPES = new Set([
   "list_all_js_worker",
   "create",
@@ -43,6 +44,11 @@ const ensureFiniteNumber = (value: unknown, fieldName: string) => {
   }
 
   return value;
+};
+
+const ensureOptionalFiniteNumber = (value: unknown, fieldName: string) => {
+  if (value === undefined || value === null) return 0;
+  return ensureFiniteNumber(value, fieldName);
 };
 
 const ensureOptionalString = (value: unknown, fieldName: string) => {
@@ -241,7 +247,7 @@ const ensureTokenLimit = (value: unknown) => {
     });
 
     return {
-      scopes: [...DEFAULT_SCOPE],
+      scopes: normalizeScopes(entry.scopes),
       permissions,
     };
   });
@@ -256,7 +262,7 @@ const resetImportedScopes = (token: Token): Token => {
   return {
     ...token,
     token_limit: token.token_limit.map((item) => ({
-      scopes: [...DEFAULT_SCOPE],
+      scopes: normalizeScopes(item.scopes),
       permissions: normalizePermissions(item.permissions),
     })),
   };
@@ -277,8 +283,14 @@ export const mapImportedTokenToForm = (payload: unknown): Token => {
       ensureOptionalString(source.username, "username"),
     ),
     password: ensureOptionalString(source.password, "password"),
-    timestamp_from: ensureFiniteNumber(source.timestamp_from, "timestamp_from"),
-    timestamp_to: ensureFiniteNumber(source.timestamp_to, "timestamp_to"),
+    timestamp_from: ensureOptionalFiniteNumber(
+      source.timestamp_from,
+      "timestamp_from",
+    ),
+    timestamp_to: ensureOptionalFiniteNumber(
+      source.timestamp_to,
+      "timestamp_to",
+    ),
     token_limit: ensureTokenLimit(source.token_limit),
   };
 
