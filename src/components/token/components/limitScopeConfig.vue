@@ -10,11 +10,19 @@ import Button from "@/components/ui/button/Button.vue";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import Spinner from "@/components/ui/spinner/Spinner.vue";
-import type { CheckboxCheckedState } from "reka-ui";
+import type { AcceptableInputValue, CheckboxCheckedState } from "reka-ui";
+import {
+  TagsInput,
+  TagsInputInput,
+  TagsInputItem,
+  TagsInputItemDelete,
+  TagsInputItemText,
+} from "@/components/ui/tags-input";
 import { DEFAULT_SCOPE } from "../scopeCodec";
 import {
   detectScopeTab,
   getSelectedAgentUuids,
+  getSelectedJsWorkers,
   getSelectedKvNamespaces,
   type ScopeTabValue,
 } from "../scopeUi";
@@ -41,6 +49,7 @@ const agentUuidLoaded = ref(false);
 const kvNamespaceList = ref<string[]>([]);
 const kvNamespaceLoading = ref(false);
 const kvNamespaceLoaded = ref(false);
+const jsWorkerScopes = ref<string[]>([]);
 const checkboxIdPrefix = useId();
 
 watch(
@@ -48,6 +57,7 @@ watch(
   (value) => {
     localScope.value = value;
     activeTab.value = detectScopeTab(value, activeTab.value);
+    jsWorkerScopes.value = getSelectedJsWorkers(value ?? []);
   },
   { immediate: true },
 );
@@ -149,6 +159,10 @@ const selectedKvNamespaces = computed(() =>
   getSelectedKvNamespaces(localScope.value),
 );
 
+const dedupeTargets = (targets: string[]) => {
+  return [...new Set(targets.map((item) => item.trim()).filter(Boolean))];
+};
+
 const isAgentUuidChecked = (value: string) =>
   selectedAgentUuids.value.includes(value);
 
@@ -189,6 +203,22 @@ const toggleKvNamespace = (value: string, isChecked: boolean) => {
   );
 };
 
+const normalizeTargets = (targets: AcceptableInputValue[]) => {
+  return targets.filter(
+    (target): target is string => typeof target === "string",
+  );
+};
+
+const updateJsWorkerScopes = (value: AcceptableInputValue[]) => {
+  if (activeTab.value !== "JsWorker") {
+    return;
+  }
+
+  const next = dedupeTargets(normalizeTargets(value));
+  jsWorkerScopes.value = next;
+  localScope.value = next.map((item) => ({ js_worker: item }));
+};
+
 const getCheckboxId = (value: string) => `${checkboxIdPrefix}-${value}`;
 </script>
 
@@ -215,6 +245,11 @@ const getCheckboxId = (value: string) => `${checkboxIdPrefix}-${value}`;
           </TabsTrigger>
           <TabsTrigger value="KvNamespace">
             {{ t("dashboard.token.permissionsConfig.limitItem.scope.kv") }}
+          </TabsTrigger>
+          <TabsTrigger value="JsWorker">
+            {{
+              t("dashboard.token.permissionsConfig.limitItem.scope.jsWorker")
+            }}
           </TabsTrigger>
         </TabsList>
         <TabsContent value="Global">
@@ -279,6 +314,40 @@ const getCheckboxId = (value: string) => `${checkboxIdPrefix}-${value}`;
               <Label :for="getCheckboxId(item)">{{ item }}</Label>
             </div>
           </div>
+        </TabsContent>
+        <TabsContent value="JsWorker" class="space-y-3">
+          <div class="text-sm text-muted-foreground">
+            {{
+              t(
+                "dashboard.token.permissionsConfig.limitItem.scope.jsWorkerDescription",
+              )
+            }}
+          </div>
+          <TagsInput
+            :model-value="jsWorkerScopes"
+            class="flex-col items-stretch"
+            :convert-value="(value) => value.trim()"
+            @update:model-value="updateJsWorkerScopes($event)"
+          >
+            <div class="flex flex-wrap gap-2">
+              <TagsInputItem
+                v-for="item in jsWorkerScopes"
+                :key="`js-worker-${item}`"
+                :value="item"
+              >
+                <TagsInputItemText />
+                <TagsInputItemDelete />
+              </TagsInputItem>
+            </div>
+            <TagsInputInput
+              :placeholder="
+                t(
+                  'dashboard.token.permissionsConfig.limitItem.scope.jsWorkerPlaceholder',
+                )
+              "
+              class="w-full px-0 pt-2"
+            />
+          </TagsInput>
         </TabsContent>
       </Tabs>
     </CardContent>

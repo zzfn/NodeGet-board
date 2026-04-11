@@ -12,6 +12,8 @@ import CrontabResultPermission from "./CrontabResultPermission.vue";
 import KvPermission from "./KvPermission.vue";
 import TerminalPermission from "./TerminalPermission.vue";
 import NodeGetPermission from "./NodeGetPermission.vue";
+import JsWorkerPermission from "./JsWorkerPermission.vue";
+import JsResultPermission from "./JsResultPermission.vue";
 import {
   arePermissionEntriesEqual,
   createPermissionBuckets,
@@ -99,6 +101,16 @@ const nodeGetPermissions = computed({
   set: (value: PermissionEntry[]) => updateBucket("nodeGetPermissions", value),
 });
 
+const jsWorkerPermissions = computed({
+  get: () => buckets.value.jsWorkerPermissions,
+  set: (value: PermissionEntry[]) => updateBucket("jsWorkerPermissions", value),
+});
+
+const jsResultPermissions = computed({
+  get: () => buckets.value.jsResultPermissions,
+  set: (value: PermissionEntry[]) => updateBucket("jsResultPermissions", value),
+});
+
 watch(
   [
     () => props.permissions,
@@ -142,6 +154,8 @@ watch(
       <KvPermission v-model="kvPermissions" />
       <TerminalPermission v-model="terminalPermissions" />
       <NodeGetPermission v-model="nodeGetPermissions" />
+      <JsWorkerPermission v-model="jsWorkerPermissions" />
+      <JsResultPermission v-model="jsResultPermissions" />
     </CardContent>
   </Card>
 </template>

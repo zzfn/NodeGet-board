@@ -93,6 +93,11 @@ const formatScopeLabels = (limit: TokenLimitEntry) => {
         value: item.kv_namespace,
       });
     }
+    if ("js_worker" in item) {
+      return t("dashboard.token.detail.preview.jsWorkerScope", {
+        value: item.js_worker,
+      });
+    }
     return t("dashboard.token.detail.preview.unknownScope");
   });
 };
@@ -149,6 +154,14 @@ const buildPermissionSections = (permissions: PermissionEntry[]) => {
     {
       title: t("dashboard.token.detail.preview.nodeGetTitle"),
       entries: buckets.nodeGetPermissions,
+    },
+    {
+      title: t("dashboard.token.detail.preview.jsWorkerTitle"),
+      entries: buckets.jsWorkerPermissions,
+    },
+    {
+      title: t("dashboard.token.detail.preview.jsResultTitle"),
+      entries: buckets.jsResultPermissions,
     },
     {
       title: t("dashboard.token.detail.preview.unknownPermissions"),

@@ -9,6 +9,8 @@ export type PermissionBucketKey =
   | "kvPermissions"
   | "terminalPermissions"
   | "nodeGetPermissions"
+  | "jsWorkerPermissions"
+  | "jsResultPermissions"
   | "unknownPermissions";
 
 export type PermissionBuckets = Record<PermissionBucketKey, PermissionEntry[]>;
@@ -22,6 +24,8 @@ export const createEmptyPermissionBuckets = (): PermissionBuckets => ({
   kvPermissions: [],
   terminalPermissions: [],
   nodeGetPermissions: [],
+  jsWorkerPermissions: [],
+  jsResultPermissions: [],
   unknownPermissions: [],
 });
 
@@ -63,6 +67,14 @@ export const createPermissionBuckets = (
       buckets.nodeGetPermissions.push(entry);
       continue;
     }
+    if ("js_worker" in entry) {
+      buckets.jsWorkerPermissions.push(entry);
+      continue;
+    }
+    if ("js_result" in entry) {
+      buckets.jsResultPermissions.push(entry);
+      continue;
+    }
     buckets.unknownPermissions.push(entry);
   }
 
@@ -83,6 +95,8 @@ export const mergePermissionBuckets = (
     ...(canShowKvPermission ? buckets.kvPermissions : []),
     ...buckets.terminalPermissions,
     ...buckets.nodeGetPermissions,
+    ...buckets.jsWorkerPermissions,
+    ...buckets.jsResultPermissions,
     ...buckets.unknownPermissions,
   ];
 };

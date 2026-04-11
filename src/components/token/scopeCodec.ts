@@ -50,6 +50,10 @@ const toScopeItemFromString = (value: string): TokenLimitScopeItem => {
     return { kv_namespace: value.slice("kv_namespace:".length) };
   }
 
+  if (value.startsWith("js_worker:")) {
+    return { js_worker: value.slice("js_worker:".length) };
+  }
+
   return { agent_uuid: value };
 };
 
@@ -73,6 +77,11 @@ export const normalizeScopeItem = (item: unknown): TokenLimitScopeItem[] => {
     source.KvNamespace ?? source.kv_namespace,
   ).map((value) => ({ kv_namespace: value }) satisfies TokenLimitScopeItem);
   if (kvScopes.length > 0) return kvScopes;
+
+  const jsWorkerScopes = normalizeStringList(
+    source.JsWorker ?? source.js_worker,
+  ).map((value) => ({ js_worker: value }) satisfies TokenLimitScopeItem);
+  if (jsWorkerScopes.length > 0) return jsWorkerScopes;
 
   return [];
 };
@@ -119,6 +128,7 @@ export const serializeScopeItem = (item: TokenLimitScopeItem) => {
   if ("global" in item) return "global";
   if ("agent_uuid" in item) return { agent_uuid: item.agent_uuid };
   if ("kv_namespace" in item) return { kv_namespace: item.kv_namespace };
+  if ("js_worker" in item) return { js_worker: item.js_worker };
   return "global";
 };
 

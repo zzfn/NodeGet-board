@@ -27,6 +27,15 @@ const TASK_TYPES = new Set([
 ]);
 const CRONTAB_TYPES = new Set(["read", "write", "delete"]);
 const NODE_GET_TYPES = new Set(["list_all_agent_uuid", "GetRtPool"]);
+const JS_WORKER_TYPES = new Set([
+  "list_all_js_worker",
+  "create",
+  "read",
+  "write",
+  "delete",
+  "run_defined_js_worker",
+  "run_raw_js_worker",
+]);
 
 const ensureFiniteNumber = (value: unknown, fieldName: string) => {
   if (typeof value !== "number" || !Number.isFinite(value)) {
@@ -180,6 +189,24 @@ const validatePermissionEntry = (entry: PermissionEntry, index: number) => {
     const rawValue = "node_get" in entry ? entry.node_get : entry.nodeget;
     const value = ensureNonEmptyString(rawValue, `node_get_${index}`);
     ensureAllowedValue(value, NODE_GET_TYPES, `node_get_${index}`);
+    return;
+  }
+
+  if ("js_worker" in entry) {
+    const value = ensureNonEmptyString(entry.js_worker, `js_worker_${index}`);
+    ensureAllowedValue(value, JS_WORKER_TYPES, `js_worker_${index}`);
+    return;
+  }
+
+  if ("js_result" in entry) {
+    const [action, target] = ensureSingleKeyObject(
+      entry.js_result,
+      `js_result_${index}`,
+    );
+    if (action !== "read" && action !== "delete") {
+      throw new Error(`invalid_js_result_${index}`);
+    }
+    ensureNonEmptyString(target, `js_result_${index}`);
     return;
   }
 
