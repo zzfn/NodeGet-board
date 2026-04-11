@@ -33,8 +33,8 @@ const VISITOR_PERMISSIONS: PermissionEntry[] = [
   { static_monitoring: { read: "cpu" } },
   { static_monitoring: { read: "system" } },
   { static_monitoring: { read: "gpu" } },
-  { static_monitoring: "write" },
-  { static_monitoring: "delete" },
+  //   { static_monitoring: "write" },
+  //   { static_monitoring: "delete" },
   { dynamic_monitoring: { read: "cpu" } },
   { dynamic_monitoring: { read: "ram" } },
   { dynamic_monitoring: { read: "load" } },
@@ -42,8 +42,8 @@ const VISITOR_PERMISSIONS: PermissionEntry[] = [
   { dynamic_monitoring: { read: "disk" } },
   { dynamic_monitoring: { read: "network" } },
   { dynamic_monitoring: { read: "gpu" } },
-  { dynamic_monitoring: "write" },
-  { dynamic_monitoring: "delete" },
+  //   { dynamic_monitoring: "write" },
+  //   { dynamic_monitoring: "delete" },
   {
     kv: {
       read: "metadata_*",
