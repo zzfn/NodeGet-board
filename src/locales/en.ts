@@ -747,7 +747,7 @@ export default {
         save: "Save Code",
         saveEnv: "Code + Env",
         params: "Params (JSON)",
-        env: "Env (Temporary)",
+        env: "Env",
         result: "Result",
         placeholder: "Enter code here...",
         run: "Execute",

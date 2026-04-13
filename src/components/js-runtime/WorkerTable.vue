@@ -51,7 +51,6 @@ const isDeleting = (name: string) => props.deletingIds.includes(name);
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>{{ t("dashboard.jsRuntime.id") }}</TableHead>
           <TableHead>{{ t("dashboard.jsRuntime.name") }}</TableHead>
           <TableHead>{{ t("dashboard.jsRuntime.route") }}</TableHead>
           <TableHead>{{ t("dashboard.jsRuntime.createdAt") }}</TableHead>
@@ -63,7 +62,7 @@ const isDeleting = (name: string) => props.deletingIds.includes(name);
       </TableHeader>
       <TableBody>
         <TableRow v-if="loading && !workers.length">
-          <TableCell colspan="6" class="h-32 text-center text-muted-foreground">
+          <TableCell colspan="5" class="h-32 text-center text-muted-foreground">
             <div class="flex flex-col items-center justify-center space-y-3">
               <Loader2 class="w-6 h-6 animate-spin text-muted-foreground/50" />
               <span class="text-sm font-medium">{{ t("common.loading") }}</span>
@@ -72,14 +71,13 @@ const isDeleting = (name: string) => props.deletingIds.includes(name);
         </TableRow>
         <TableRow v-else-if="!workers.length">
           <TableCell
-            colspan="6"
+            colspan="5"
             class="text-center text-muted-foreground py-12"
           >
             {{ t("common.noData") }}
           </TableCell>
         </TableRow>
         <TableRow v-for="worker in workers" :key="worker.id">
-          <TableCell class="font-mono text-xs">{{ worker.id }}</TableCell>
           <TableCell class="font-medium">{{ worker.name }}</TableCell>
           <TableCell class="font-mono text-sm">{{
             worker.route || "-"

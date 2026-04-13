@@ -737,7 +737,7 @@ export default {
         save: "保存代码",
         saveEnv: "代码 + 环境",
         params: "参数 (JSON)",
-        env: "环境变量 (临时)",
+        env: "环境变量",
         result: "执行结果",
         placeholder: "请输入代码...",
         run: "执行",

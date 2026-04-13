@@ -100,8 +100,97 @@ const runResult = ref<any>(null);
 const runLoading = ref(false);
 const saveLoading = ref(false);
 const isPreviewMode = ref(false);
-const activeEditorTab = ref("params");
+const activeEditorTab = ref("env");
 const iframeKey = ref(0);
+
+const parsedHttpResult = computed(() => {
+  if (
+    !runResult.value ||
+    activeRunMode.value !== "http" ||
+    !runResult.value.result
+  )
+    return null;
+  let res = runResult.value.result;
+
+  // Unwrap nested backend response if needed
+  if (Array.isArray(res) && res.length > 0) res = res[0];
+  if (res && res.result) res = res.result;
+
+  if (typeof res !== "object" || Array.isArray(res)) return null;
+
+  // 1. Get Content-Type from headers
+  let contentType = "text/plain";
+  if (res.headers) {
+    const list = Array.isArray(res.headers)
+      ? res.headers
+      : Object.entries(res.headers).map(([k, v]) => ({ name: k, value: v }));
+    const ctHeader = list.find(
+      (h: any) => h.name?.toLowerCase() === "content-type",
+    )?.value;
+    if (ctHeader) contentType = String(ctHeader).toLowerCase();
+  }
+
+  // 2. Identify data source (prioritize binary)
+  let rawBody =
+    res.body_bytes !== undefined
+      ? res.body_bytes
+      : res.body !== undefined
+        ? res.body
+        : res.data;
+  if (rawBody === undefined) return null;
+
+  // 3. Process based on content type
+  const isImage = contentType.includes("image/");
+  const isHtml = contentType.includes("text/html");
+  const isJson = contentType.includes("application/json");
+
+  // If it's a binary array (Uint8Array or number array from JSON)
+  if (Array.isArray(rawBody) || rawBody instanceof Uint8Array) {
+    const uint8Body =
+      rawBody instanceof Uint8Array ? rawBody : new Uint8Array(rawBody);
+
+    if (isImage) {
+      try {
+        const blob = new Blob([uint8Body], { type: contentType.split(";")[0] });
+        return { isImage: true, url: URL.createObjectURL(blob) };
+      } catch {
+        return { isText: true, content: "[Image Decode Error]" };
+      }
+    }
+
+    // Default to text decoding for non-binary types
+    try {
+      const decodedText = new TextDecoder().decode(uint8Body);
+
+      if (isHtml) return { isHtml: true, content: decodedText };
+
+      if (isJson) {
+        try {
+          // Format JSON if possible
+          return {
+            isText: true,
+            content: JSON.stringify(JSON.parse(decodedText), null, 2),
+          };
+        } catch {
+          return { isText: true, content: decodedText };
+        }
+      }
+
+      return { isText: true, content: decodedText };
+    } catch (e) {
+      return {
+        isText: true,
+        content: `[Binary Data ${uint8Body.length} bytes]`,
+      };
+    }
+  }
+
+  // Fallback for non-array body (already a string or object)
+  const content =
+    typeof rawBody === "string" ? rawBody : JSON.stringify(rawBody, null, 2);
+  if (isHtml) return { isHtml: true, content };
+  return { isText: true, content };
+});
 
 const activeRunMode = ref<"call" | "cron" | "http" | "preview">("call");
 const httpSimulation = ref({
@@ -153,6 +242,21 @@ const wsHost = computed(() => {
   } catch {
     return "WS_HOST";
   }
+});
+
+const httpBaseUrl = computed(() => {
+  let url = runtime.backendUrl.value || "";
+  url = url.replace(/^ws/, "http");
+  if (url.endsWith("/ws")) url = url.slice(0, -3);
+  if (url.endsWith("/ws/")) url = url.slice(0, -4);
+  return url;
+});
+
+const wsBaseUrl = computed(() => {
+  let url = runtime.backendUrl.value || "";
+  if (url.endsWith("/ws")) url = url.slice(0, -3);
+  if (url.endsWith("/ws/")) url = url.slice(0, -4);
+  return url;
 });
 
 // Settings Tab State
@@ -770,9 +874,6 @@ const formatTime = (ts: number | null) => {
                       <div class="flex items-center justify-between group">
                         <div class="flex-1">
                           <TabsList class="grid w-full grid-cols-2">
-                            <TabsTrigger value="params">
-                              {{ t("dashboard.jsRuntime.editor.params") }}
-                            </TabsTrigger>
                             <TabsTrigger value="env" class="relative">
                               {{ t("dashboard.jsRuntime.editor.env") }}
                               <span
@@ -780,6 +881,9 @@ const formatTime = (ts: number | null) => {
                                 class="absolute -top-1 -right-1 text-orange-500 font-bold"
                                 >*</span
                               >
+                            </TabsTrigger>
+                            <TabsTrigger value="params">
+                              {{ t("dashboard.jsRuntime.editor.params") }}
                             </TabsTrigger>
                           </TabsList>
                         </div>
@@ -869,33 +973,41 @@ const formatTime = (ts: number | null) => {
 
                 <!-- Http Mode UI -->
                 <template v-else-if="activeRunMode === 'http'">
-                  <div class="space-y-4">
+                  <div class="space-y-2">
                     <!-- URL Display -->
                     <div
-                      class="p-3 bg-muted/40 rounded-lg flex items-center gap-2 text-[13px] font-mono overflow-hidden"
+                      class="p-2 bg-muted/40 rounded-lg flex items-center gap-2 text-[13px] font-mono overflow-hidden"
                     >
                       <Select v-model="httpSimulation.method">
                         <SelectTrigger
-                          class="h-7 w-[90px] text-xs font-mono shrink-0 bg-background"
+                          class="h-6 w-auto px-1.5 py-0 gap-0.5 [&>svg]:ml-0 [&>svg]:h-3 [&>svg]:w-3 text-[10px] font-mono shrink-0 bg-background border-muted"
                         >
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="GET">GET</SelectItem>
-                          <SelectItem value="POST">POST</SelectItem>
-                          <SelectItem value="PUT">PUT</SelectItem>
-                          <SelectItem value="DELETE">DELETE</SelectItem>
+                          <SelectItem value="GET" class="text-[10px]"
+                            >GET</SelectItem
+                          >
+                          <SelectItem value="POST" class="text-[10px]"
+                            >POST</SelectItem
+                          >
+                          <SelectItem value="PUT" class="text-[10px]"
+                            >PUT</SelectItem
+                          >
+                          <SelectItem value="DELETE" class="text-[10px]"
+                            >DELETE</SelectItem
+                          >
                         </SelectContent>
                       </Select>
-                      <span class="truncate text-muted-foreground ml-1"
-                        >https://{{ wsHost }}/worker-route/{{
+                      <span class="flex-1 truncate text-muted-foreground mx-1"
+                        >{{ httpBaseUrl }}/worker-route/{{
                           worker?.route || "{ROUTE}"
                         }}/</span
                       >
                       <Input
                         v-model="httpSimulation.suffix"
                         placeholder="path suffix"
-                        class="h-7 px-2 font-mono text-[13px] min-w-[80px]"
+                        class="h-7 px-2 font-mono text-[12px] w-[130px] shrink-0"
                       />
                     </div>
                     <p
@@ -906,7 +1018,7 @@ const formatTime = (ts: number | null) => {
                     </p>
 
                     <div
-                      class="w-full space-y-4 border rounded-md p-3 bg-card shadow-sm mt-2"
+                      class="w-full space-y-3 border rounded-md p-3 bg-card shadow-sm mt-0"
                     >
                       <!-- Headers Section -->
                       <div class="space-y-2">
@@ -979,15 +1091,15 @@ const formatTime = (ts: number | null) => {
                       <Globe
                         class="h-3.5 w-3.5 shrink-0 text-muted-foreground"
                       />
-                      <span class="truncate"
-                        >https://{{ wsHost }}/worker-route/{{
+                      <span class="flex-1 truncate text-muted-foreground mx-1"
+                        >{{ wsBaseUrl }}/worker-route/{{
                           worker?.route || "{ROUTE}"
                         }}/</span
                       >
                       <Input
                         v-model="httpSimulation.suffix"
                         placeholder="path suffix"
-                        class="h-7 px-2 font-mono text-[13px] min-w-[80px]"
+                        class="h-7 px-2 font-mono text-[12px] w-[130px] shrink-0"
                       />
                       <Button
                         variant="ghost"
@@ -1031,7 +1143,7 @@ const formatTime = (ts: number | null) => {
                       <iframe
                         v-else-if="iframeKey > 0"
                         :key="iframeKey"
-                        :src="`/worker-route/${worker?.route}/${httpSimulation.suffix}`"
+                        :src="`${httpBaseUrl}/worker-route/${worker?.route}/${httpSimulation.suffix}`"
                         sandbox="allow-scripts allow-same-origin"
                         class="w-full h-full border-0"
                       ></iframe>
@@ -1060,6 +1172,7 @@ const formatTime = (ts: number | null) => {
                       </Button>
                       <Button
                         size="sm"
+                        variant="outline"
                         @click="runWorkerFun(false)"
                         :disabled="runLoading"
                       >
@@ -1068,7 +1181,7 @@ const formatTime = (ts: number | null) => {
                       </Button>
                       <Button
                         size="sm"
-                        variant="outline"
+                        variant="default"
                         @click="runWorkerFun(true)"
                         :disabled="runLoading"
                       >
@@ -1095,8 +1208,34 @@ const formatTime = (ts: number | null) => {
                         force-mount
                         class="data-[state=closed]:h-0 overflow-hidden transition-all"
                       >
-                        <div class="h-[200px]">
+                        <div class="h-[200px] relative p-1">
+                          <template v-if="parsedHttpResult">
+                            <div
+                              v-if="parsedHttpResult.isImage"
+                              class="w-full h-full flex items-center justify-center bg-muted/20 border rounded-sm overflow-hidden"
+                            >
+                              <img
+                                :src="parsedHttpResult.url"
+                                class="max-h-full max-w-full object-contain shadow-sm"
+                              />
+                            </div>
+                            <iframe
+                              v-else-if="parsedHttpResult.isHtml"
+                              :srcdoc="parsedHttpResult.content"
+                              class="w-full h-full border rounded-sm bg-white"
+                              sandbox="allow-scripts allow-same-origin"
+                            ></iframe>
+                            <Codemirror
+                              v-else-if="parsedHttpResult.isText"
+                              :model-value="parsedHttpResult.content"
+                              :extensions="jsonExtensions"
+                              class="h-full text-[12px]"
+                              :style="{ height: '100%' }"
+                              disabled
+                            />
+                          </template>
                           <Codemirror
+                            v-else
                             :model-value="
                               runResult
                                 ? JSON.stringify(runResult, null, 2)
