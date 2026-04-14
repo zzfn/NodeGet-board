@@ -79,9 +79,21 @@ const isDeleting = (name: string) => props.deletingIds.includes(name);
         </TableRow>
         <TableRow v-for="worker in workers" :key="worker.id">
           <TableCell class="font-medium">{{ worker.name }}</TableCell>
-          <TableCell class="font-mono text-sm">{{
-            worker.route || "-"
-          }}</TableCell>
+          <TableCell class="font-mono text-sm py-0">
+            <Button
+              v-if="worker.route"
+              variant="link"
+              class="h-auto p-0 h-8 font-mono text-primary hover:underline"
+              @click="
+                router.push(
+                  `/dashboard/worker-route-preview?route=${worker.route}`,
+                )
+              "
+            >
+              {{ worker.route }}
+            </Button>
+            <span v-else class="text-muted-foreground">-</span>
+          </TableCell>
           <TableCell class="text-sm text-muted-foreground">{{
             formatTime(worker.created_at)
           }}</TableCell>

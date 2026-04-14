@@ -17,6 +17,7 @@ export default {
     collapseSidebar: "Collapse Sidebar",
     previous: "Previous",
     next: "Next",
+    openInNewWindow: "Open in New Window",
   },
   home: {
     waitingData: "Waiting for server data...",
@@ -750,6 +751,7 @@ export default {
       title: "JS Runtime",
       desc: "Manage and execute JavaScript extension scripts.",
       addWorker: "Add Worker",
+      refresh: "Refresh",
       editWorker: "Edit Worker",
       name: "Name",
       id: "ID",
@@ -820,6 +822,8 @@ export default {
         view: "View",
         detailTitle: "Log Detail",
       },
+      previewTitle: "Route Preview",
+      previewBack: "Back to List",
     },
     batchExec: {
       cmd: "Command:",

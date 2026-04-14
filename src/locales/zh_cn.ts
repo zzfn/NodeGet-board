@@ -26,6 +26,7 @@ export default {
     delete: "删除",
     none: "无",
     noData: "暂无数据",
+    openInNewWindow: "在新窗口打开",
   },
   home: {
     waitingData: "等待服务器数据...",
@@ -739,6 +740,7 @@ export default {
       title: "JS 扩展",
       desc: "管理并执行 JavaScript 扩展脚本。",
       addWorker: "添加 Worker",
+      refresh: "刷新",
       editWorker: "编辑 Worker",
       name: "名称",
       id: "ID",
@@ -816,6 +818,8 @@ export default {
         deleteConfirm: "确定要删除这条日志吗？",
         deleteSuccess: "日志已删除",
       },
+      previewTitle: "路由预览",
+      previewBack: "返回列表",
     },
     batchExec: {
       cmd: "代码解释器:",

@@ -3,7 +3,7 @@ import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { toast } from "vue-sonner";
-import { Braces, Plus } from "lucide-vue-next";
+import { Braces, Plus, RotateCcw } from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
 import WorkerTable from "@/components/js-runtime/WorkerTable.vue";
 import WorkerFormDialog from "@/components/js-runtime/WorkerFormDialog.vue";
@@ -91,10 +91,23 @@ const deleteWorkerFun = async (name: string) => {
           {{ t("dashboard.jsRuntime.desc") }}
         </p>
       </div>
-      <Button @click="dialogOpen = true">
-        <Plus class="mr-2 h-4 w-4" />
-        {{ t("dashboard.jsRuntime.addWorker") }}
-      </Button>
+      <div class="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="icon"
+          :disabled="runtime.loading.value"
+          @click="listAllWorkersFun"
+        >
+          <RotateCcw
+            class="h-4 w-4"
+            :class="{ 'animate-spin': runtime.loading.value }"
+          />
+        </Button>
+        <Button @click="dialogOpen = true">
+          <Plus class="mr-2 h-4 w-4" />
+          {{ t("dashboard.jsRuntime.addWorker") }}
+        </Button>
+      </div>
     </div>
 
     <WorkerTable

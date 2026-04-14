@@ -88,6 +88,7 @@ declare module 'vue-router/auto-routes' {
       | '/dashboard/tokenDetail'
       | '/dashboard/tokenEdit'
       | '/dashboard/tokenImport'
+      | '/dashboard/worker-route-preview'
     >,
     '/dashboard/about': RouteRecordInfo<
       '/dashboard/about',
@@ -480,6 +481,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/dashboard/worker-route-preview': RouteRecordInfo<
+      '/dashboard/worker-route-preview',
+      '/dashboard/worker-route-preview',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/server-detail': RouteRecordInfo<
       '/server-detail',
       '/s/:uuid',
@@ -562,6 +570,7 @@ declare module 'vue-router/auto-routes' {
         | '/dashboard/tokenDetail'
         | '/dashboard/tokenEdit'
         | '/dashboard/tokenImport'
+        | '/dashboard/worker-route-preview'
       views:
         | 'default'
     }
@@ -905,6 +914,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/dashboard/tokenImport.vue': {
       routes:
         | '/dashboard/tokenImport'
+      views:
+        | never
+    }
+    'src/pages/dashboard/worker-route-preview.vue': {
+      routes:
+        | '/dashboard/worker-route-preview'
       views:
         | never
     }

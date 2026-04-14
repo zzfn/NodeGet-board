@@ -813,7 +813,7 @@ const formatTime = (ts: number | null) => {
                   <span class="text-muted-foreground shrink-0"
                     >{{ t("dashboard.jsRuntime.overview.route") }}:</span
                   >
-                  <span class="text-emerald-500 font-mono break-all">{{
+                  <span class="text-muted-foreground/80 font-mono break-all">{{
                     worker?.route || t("common.none")
                   }}</span>
                 </div>
