@@ -78,7 +78,12 @@ const isDeleting = (name: string) => props.deletingIds.includes(name);
           </TableCell>
         </TableRow>
         <TableRow v-for="worker in workers" :key="worker.id">
-          <TableCell class="font-medium">{{ worker.name }}</TableCell>
+          <TableCell
+            class="font-medium hover:underline cursor-pointer text-primary"
+            @click="openDetail(worker)"
+          >
+            {{ worker.name }}
+          </TableCell>
           <TableCell class="font-mono text-sm py-0">
             <Button
               v-if="worker.route"
