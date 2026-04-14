@@ -4,6 +4,7 @@ import { useI18n } from "vue-i18n";
 import type { PermissionEntry } from "../../type";
 import { Button } from "@/components/ui/button";
 import { arePermissionEntriesEqual } from "./permissionsState";
+import { usePermissionModuleOpen } from "./usePermissionModuleOpen";
 
 const props = defineProps<{ modelValue: PermissionEntry[] }>();
 const emits = defineEmits<{
@@ -12,16 +13,35 @@ const emits = defineEmits<{
 const { t } = useI18n();
 
 const listAllAgentUuid = ref(false);
+const getRtPool = ref(false);
 const hydrating = ref(false);
+const { isOpen, handleToggle } = usePermissionModuleOpen(
+  () => props.modelValue,
+);
 
-const build = (): PermissionEntry[] =>
-  listAllAgentUuid.value ? [{ node_get: "list_all_agent_uuid" }] : [];
+const build = (): PermissionEntry[] => {
+  const entries: PermissionEntry[] = [];
+
+  if (listAllAgentUuid.value) {
+    entries.push({ node_get: "list_all_agent_uuid" });
+  }
+
+  if (getRtPool.value) {
+    entries.push({ node_get: "get_rt_pool" });
+  }
+
+  return entries;
+};
 
 const hydrate = (entries: PermissionEntry[]) => {
   listAllAgentUuid.value = entries.some(
     (entry) =>
       entry?.node_get === "list_all_agent_uuid" ||
       entry?.nodeget === "list_all_agent_uuid",
+  );
+  getRtPool.value = entries.some(
+    (entry) =>
+      entry?.node_get === "get_rt_pool" || entry?.nodeget === "get_rt_pool",
   );
 };
 
@@ -38,7 +58,7 @@ watch(
   { immediate: true, deep: true },
 );
 
-watch(listAllAgentUuid, () => {
+watch([listAllAgentUuid, getRtPool], () => {
   if (hydrating.value) return;
   const nextEntries = build();
   if (arePermissionEntriesEqual(nextEntries, props.modelValue)) return;
@@ -47,7 +67,7 @@ watch(listAllAgentUuid, () => {
 </script>
 
 <template>
-  <details class="rounded-md border p-3" open>
+  <details class="rounded-md border p-3" :open="isOpen" @toggle="handleToggle">
     <summary class="cursor-pointer select-none text-sm font-medium">
       NodeGet
       {{
@@ -66,6 +86,18 @@ watch(listAllAgentUuid, () => {
         {{
           t(
             "dashboard.token.permissionsConfig.limitItem.permissionCard.nodeGet.listAllAgentUuid",
+          )
+        }}
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        :variant="getRtPool ? 'default' : 'outline'"
+        @click="getRtPool = !getRtPool"
+      >
+        {{
+          t(
+            "dashboard.token.permissionsConfig.limitItem.permissionCard.nodeGet.getRtPool",
           )
         }}
       </Button>

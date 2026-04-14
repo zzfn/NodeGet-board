@@ -50,6 +50,10 @@ const toScopeItemFromString = (value: string): TokenLimitScopeItem => {
     return { kv_namespace: value.slice("kv_namespace:".length) };
   }
 
+  if (value.startsWith("js_worker:")) {
+    return { js_worker: value.slice("js_worker:".length) };
+  }
+
   return { agent_uuid: value };
 };
 
@@ -73,6 +77,11 @@ export const normalizeScopeItem = (item: unknown): TokenLimitScopeItem[] => {
     source.KvNamespace ?? source.kv_namespace,
   ).map((value) => ({ kv_namespace: value }) satisfies TokenLimitScopeItem);
   if (kvScopes.length > 0) return kvScopes;
+
+  const jsWorkerScopes = normalizeStringList(
+    source.JsWorker ?? source.js_worker,
+  ).map((value) => ({ js_worker: value }) satisfies TokenLimitScopeItem);
+  if (jsWorkerScopes.length > 0) return jsWorkerScopes;
 
   return [];
 };
@@ -119,6 +128,7 @@ export const serializeScopeItem = (item: TokenLimitScopeItem) => {
   if ("global" in item) return "global";
   if ("agent_uuid" in item) return { agent_uuid: item.agent_uuid };
   if ("kv_namespace" in item) return { kv_namespace: item.kv_namespace };
+  if ("js_worker" in item) return { js_worker: item.js_worker };
   return "global";
 };
 
@@ -129,28 +139,56 @@ export const buildLimitPayload = (token: Token) => {
   }));
 };
 
+export const generateUuid = () => {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
+    return crypto.randomUUID();
+  }
+
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (char) => {
+    const random = (Math.random() * 16) | 0;
+    return (char === "x" ? random : (random & 0x3) | 0x8).toString(16);
+  });
+};
+
 export const buildCredentialPayload = (
   source: Pick<Token, "username" | "password">,
 ) => {
   const username = source.username.trim();
   const password = source.password.trim();
 
-  if (!username && !password) {
-    return {};
-  }
-
-  if (username && !password) {
-    return {
-      username,
-      password: crypto.randomUUID(),
-    };
-  }
-
   return {
-    username,
-    password,
+    ...(username ? { username } : {}),
+    ...(password ? { password } : {}),
   };
 };
+
+const toOptionalTimestamp = (value: number) =>
+  Number.isFinite(value) && value > 0 ? value : undefined;
+
+export const buildOptionalFieldPayload = (
+  token: Pick<
+    Token,
+    "username" | "password" | "timestamp_from" | "timestamp_to"
+  >,
+) => {
+  const timestampFrom = toOptionalTimestamp(token.timestamp_from);
+  const timestampTo = toOptionalTimestamp(token.timestamp_to);
+
+  return {
+    ...buildCredentialPayload(token),
+    ...(timestampFrom !== undefined ? { timestamp_from: timestampFrom } : {}),
+    ...(timestampTo !== undefined ? { timestamp_to: timestampTo } : {}),
+  };
+};
+
+export const serializeTokenPayload = (token: Token) => ({
+  version: token.version ?? 1,
+  token_limit: buildLimitPayload(token),
+  ...buildOptionalFieldPayload(token),
+});
 
 export const mapTokenDetailToForm = (detail: TokenDetail | null): Token => {
   if (!detail) return createDefaultToken();

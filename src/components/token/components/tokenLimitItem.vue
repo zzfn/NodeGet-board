@@ -24,6 +24,7 @@ const props = defineProps<{
   tokenLimit: TokenLimitEntry;
   index: number;
   limitLength: number;
+  defaultOpen?: boolean;
 }>();
 const emits = defineEmits<{
   (e: "update:tokenLimit", tokenLimit: TokenLimitEntry): void;
@@ -51,6 +52,16 @@ watch(
     syncSelectedTemplate();
   },
   { immediate: true, deep: true },
+);
+
+watch(
+  () => props.defaultOpen,
+  (value) => {
+    if (value) {
+      isOpen.value = true;
+    }
+  },
+  { immediate: true },
 );
 
 watch(

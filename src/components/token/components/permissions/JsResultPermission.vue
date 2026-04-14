@@ -25,31 +25,31 @@ const { isOpen, handleToggle } = usePermissionModuleOpen(
   () => props.modelValue,
 );
 
-type CrontabResultKind = "read" | "delete";
+type JsResultKind = "read" | "delete";
 
 const dedupeTargets = (targets: string[]) => {
   return [...new Set(targets.map((item) => item.trim()).filter(Boolean))];
 };
 
-// 构建数据用于上层组件消费
 const build = (): PermissionEntry[] => {
   const result: PermissionEntry[] = [];
+
   for (const target of dedupeTargets(readTargets.value)) {
-    result.push({ crontab_result: { read: target } });
+    result.push({ js_result: { read: target } });
   }
   for (const target of dedupeTargets(deleteTargets.value)) {
-    result.push({ crontab_result: { delete: target } });
+    result.push({ js_result: { delete: target } });
   }
+
   return result;
 };
 
-// 解析上层组件的数据用于本地消费
 const hydrate = (entries: PermissionEntry[]) => {
   const reads: string[] = [];
   const deletes: string[] = [];
 
   for (const entry of entries || []) {
-    const value = entry?.crontab_result;
+    const value = entry?.js_result;
     if (!value || typeof value !== "object" || Array.isArray(value)) continue;
 
     const obj = value as Record<string, unknown>;
@@ -61,16 +61,12 @@ const hydrate = (entries: PermissionEntry[]) => {
   deleteTargets.value = dedupeTargets(deletes);
 };
 
-const isSameState = (entries: PermissionEntry[]) => {
-  return JSON.stringify(hydrateToPayload(entries)) === JSON.stringify(build());
-};
-
 const hydrateToPayload = (entries: PermissionEntry[]) => {
   const reads: string[] = [];
   const deletes: string[] = [];
 
   for (const entry of entries || []) {
-    const value = entry?.crontab_result;
+    const value = entry?.js_result;
     if (!value || typeof value !== "object" || Array.isArray(value)) continue;
 
     const obj = value as Record<string, unknown>;
@@ -80,15 +76,20 @@ const hydrateToPayload = (entries: PermissionEntry[]) => {
 
   const result: PermissionEntry[] = [];
   for (const target of dedupeTargets(reads)) {
-    result.push({ crontab_result: { read: target } });
+    result.push({ js_result: { read: target } });
   }
   for (const target of dedupeTargets(deletes)) {
-    result.push({ crontab_result: { delete: target } });
+    result.push({ js_result: { delete: target } });
   }
+
   return result;
 };
 
-const getTargetsRef = (kind: CrontabResultKind) => {
+const isSameState = (entries: PermissionEntry[]) => {
+  return JSON.stringify(hydrateToPayload(entries)) === JSON.stringify(build());
+};
+
+const getTargetsRef = (kind: JsResultKind) => {
   return kind === "read" ? readTargets : deleteTargets;
 };
 
@@ -98,10 +99,7 @@ const normalizeTargets = (targets: AcceptableInputValue[]) => {
   );
 };
 
-const updateTargets = (
-  kind: CrontabResultKind,
-  value: AcceptableInputValue[],
-) => {
+const updateTargets = (kind: JsResultKind, value: AcceptableInputValue[]) => {
   const targets = getTargetsRef(kind);
   targets.value = dedupeTargets(normalizeTargets(value));
 };
@@ -134,7 +132,7 @@ watch(
     <summary class="cursor-pointer select-none text-sm font-medium">
       {{
         t(
-          "dashboard.token.permissionsConfig.limitItem.permissionCard.crontabReault.title",
+          "dashboard.token.permissionsConfig.limitItem.permissionCard.jsResult.title",
         )
       }}
     </summary>
@@ -143,7 +141,7 @@ watch(
         <div class="text-xs text-muted-foreground">
           {{
             t(
-              "dashboard.token.permissionsConfig.limitItem.permissionCard.crontabReault.readTarget",
+              "dashboard.token.permissionsConfig.limitItem.permissionCard.jsResult.readTarget",
             )
           }}
         </div>
@@ -163,7 +161,7 @@ watch(
               <TagsInputItemDelete />
             </TagsInputItem>
           </div>
-          <TagsInputInput placeholder="history_*" class="w-full px-0 pt-2" />
+          <TagsInputInput placeholder="demo_*" class="w-full px-0 pt-2" />
         </TagsInput>
       </div>
 
@@ -171,7 +169,7 @@ watch(
         <div class="text-xs text-muted-foreground">
           {{
             t(
-              "dashboard.token.permissionsConfig.limitItem.permissionCard.crontabReault.deleteTarget",
+              "dashboard.token.permissionsConfig.limitItem.permissionCard.jsResult.deleteTarget",
             )
           }}
         </div>
@@ -191,7 +189,7 @@ watch(
               <TagsInputItemDelete />
             </TagsInputItem>
           </div>
-          <TagsInputInput placeholder="temp_*" class="w-full px-0 pt-2" />
+          <TagsInputInput placeholder="demo_*" class="w-full px-0 pt-2" />
         </TagsInput>
       </div>
     </div>

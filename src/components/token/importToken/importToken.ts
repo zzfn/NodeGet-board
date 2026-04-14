@@ -2,6 +2,7 @@ import {
   DEFAULT_SCOPE,
   createDefaultToken,
   normalizePermissions,
+  normalizeScopes,
 } from "../scopeCodec";
 import type { PermissionEntry, Token } from "../type";
 
@@ -26,6 +27,16 @@ const TASK_TYPES = new Set([
   "edit_config",
 ]);
 const CRONTAB_TYPES = new Set(["read", "write", "delete"]);
+const NODE_GET_TYPES = new Set(["list_all_agent_uuid", "get_rt_pool"]);
+const JS_WORKER_TYPES = new Set([
+  "list_all_js_worker",
+  "create",
+  "read",
+  "write",
+  "delete",
+  "run_defined_js_worker",
+  "run_raw_js_worker",
+]);
 
 const ensureFiniteNumber = (value: unknown, fieldName: string) => {
   if (typeof value !== "number" || !Number.isFinite(value)) {
@@ -33,6 +44,11 @@ const ensureFiniteNumber = (value: unknown, fieldName: string) => {
   }
 
   return value;
+};
+
+const ensureOptionalFiniteNumber = (value: unknown, fieldName: string) => {
+  if (value === undefined || value === null) return 0;
+  return ensureFiniteNumber(value, fieldName);
 };
 
 const ensureOptionalString = (value: unknown, fieldName: string) => {
@@ -178,9 +194,25 @@ const validatePermissionEntry = (entry: PermissionEntry, index: number) => {
   if ("node_get" in entry || "nodeget" in entry) {
     const rawValue = "node_get" in entry ? entry.node_get : entry.nodeget;
     const value = ensureNonEmptyString(rawValue, `node_get_${index}`);
-    if (value !== "list_all_agent_uuid") {
-      throw new Error(`invalid_node_get_${index}`);
+    ensureAllowedValue(value, NODE_GET_TYPES, `node_get_${index}`);
+    return;
+  }
+
+  if ("js_worker" in entry) {
+    const value = ensureNonEmptyString(entry.js_worker, `js_worker_${index}`);
+    ensureAllowedValue(value, JS_WORKER_TYPES, `js_worker_${index}`);
+    return;
+  }
+
+  if ("js_result" in entry) {
+    const [action, target] = ensureSingleKeyObject(
+      entry.js_result,
+      `js_result_${index}`,
+    );
+    if (action !== "read" && action !== "delete") {
+      throw new Error(`invalid_js_result_${index}`);
     }
+    ensureNonEmptyString(target, `js_result_${index}`);
     return;
   }
 
@@ -215,7 +247,7 @@ const ensureTokenLimit = (value: unknown) => {
     });
 
     return {
-      scopes: [...DEFAULT_SCOPE],
+      scopes: normalizeScopes(entry.scopes),
       permissions,
     };
   });
@@ -230,7 +262,7 @@ const resetImportedScopes = (token: Token): Token => {
   return {
     ...token,
     token_limit: token.token_limit.map((item) => ({
-      scopes: [...DEFAULT_SCOPE],
+      scopes: normalizeScopes(item.scopes),
       permissions: normalizePermissions(item.permissions),
     })),
   };
@@ -251,8 +283,14 @@ export const mapImportedTokenToForm = (payload: unknown): Token => {
       ensureOptionalString(source.username, "username"),
     ),
     password: ensureOptionalString(source.password, "password"),
-    timestamp_from: ensureFiniteNumber(source.timestamp_from, "timestamp_from"),
-    timestamp_to: ensureFiniteNumber(source.timestamp_to, "timestamp_to"),
+    timestamp_from: ensureOptionalFiniteNumber(
+      source.timestamp_from,
+      "timestamp_from",
+    ),
+    timestamp_to: ensureOptionalFiniteNumber(
+      source.timestamp_to,
+      "timestamp_to",
+    ),
     token_limit: ensureTokenLimit(source.token_limit),
   };
 

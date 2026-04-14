@@ -40,6 +40,8 @@ declare module 'vue-router/auto-routes' {
       | '/dashboard/agents'
       | '/dashboard/app'
       | '/dashboard/app-panel'
+      | '/dashboard/app-panel/[id]'
+      | '/dashboard/app-panel/list'
       | '/dashboard/app/[extensionRoute]'
       | '/dashboard/app/docker'
       | '/dashboard/app/files'
@@ -56,6 +58,7 @@ declare module 'vue-router/auto-routes' {
       | '/dashboard/loadbalance'
       | '/dashboard/logs'
       | '/dashboard/map'
+      | '/dashboard/node-manage'
       | '/dashboard/node/[uuid]'
       | '/dashboard/node/[uuid]/LatencyView'
       | '/dashboard/node/[uuid]/[extensionRoute]'
@@ -156,6 +159,21 @@ declare module 'vue-router/auto-routes' {
     '/dashboard/app-panel': RouteRecordInfo<
       '/dashboard/app-panel',
       '/dashboard/app-panel',
+      Record<never, never>,
+      Record<never, never>,
+      | '/dashboard/app-panel/[id]'
+      | '/dashboard/app-panel/list'
+    >,
+    '/dashboard/app-panel/[id]': RouteRecordInfo<
+      '/dashboard/app-panel/[id]',
+      '/dashboard/app-panel/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/dashboard/app-panel/list': RouteRecordInfo<
+      '/dashboard/app-panel/list',
+      '/dashboard/app-panel/list',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -347,6 +365,13 @@ declare module 'vue-router/auto-routes' {
       { uuid: ParamValue<false> },
       | never
     >,
+    '/dashboard/node-manage': RouteRecordInfo<
+      '/dashboard/node-manage',
+      '/dashboard/node-manage',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/dashboard/overview': RouteRecordInfo<
       '/dashboard/overview',
       '/dashboard/overview',
@@ -489,6 +514,8 @@ declare module 'vue-router/auto-routes' {
         | '/dashboard/agents'
         | '/dashboard/app'
         | '/dashboard/app-panel'
+        | '/dashboard/app-panel/[id]'
+        | '/dashboard/app-panel/list'
         | '/dashboard/app/[extensionRoute]'
         | '/dashboard/app/docker'
         | '/dashboard/app/files'
@@ -505,6 +532,7 @@ declare module 'vue-router/auto-routes' {
         | '/dashboard/loadbalance'
         | '/dashboard/logs'
         | '/dashboard/map'
+        | '/dashboard/node-manage'
         | '/dashboard/node/[uuid]'
         | '/dashboard/node/[uuid]/LatencyView'
         | '/dashboard/node/[uuid]/[extensionRoute]'
@@ -599,6 +627,20 @@ declare module 'vue-router/auto-routes' {
     'src/pages/dashboard/app-panel.vue': {
       routes:
         | '/dashboard/app-panel'
+        | '/dashboard/app-panel/[id]'
+        | '/dashboard/app-panel/list'
+      views:
+        | 'default'
+    }
+    'src/pages/dashboard/app-panel/[id].vue': {
+      routes:
+        | '/dashboard/app-panel/[id]'
+      views:
+        | never
+    }
+    'src/pages/dashboard/app-panel/list.vue': {
+      routes:
+        | '/dashboard/app-panel/list'
       views:
         | never
     }
@@ -763,6 +805,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/dashboard/node/[uuid]/webshell.vue': {
       routes:
         | '/dashboard/node/[uuid]/webshell'
+      views:
+        | never
+    }
+    'src/pages/dashboard/node-manage.vue': {
+      routes:
+        | '/dashboard/node-manage'
       views:
         | never
     }

@@ -25,6 +25,9 @@ export type TokenLimitScopeItem =
     }
   | {
       kv_namespace: string;
+    }
+  | {
+      js_worker: string;
     };
 
 export type PermissionEntry = Record<string, unknown>;
