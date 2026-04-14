@@ -88,7 +88,7 @@ const isDeleting = (name: string) => props.deletingIds.includes(name);
             <Button
               v-if="worker.route"
               variant="link"
-              class="h-auto p-0 h-8 font-mono text-primary hover:underline"
+              class="h-auto p-0 font-mono text-primary hover:underline"
               @click="
                 router.push(
                   `/dashboard/worker-route-preview?route=${worker.route}`,
