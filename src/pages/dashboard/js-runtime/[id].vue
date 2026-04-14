@@ -769,61 +769,43 @@ const formatTime = (ts: number | null) => {
 
       <div class="flex-1 mt-4 min-h-0 overflow-auto">
         <TabsContent value="overview" class="m-0">
-          <Card>
-            <CardHeader class="pb-2">
-              <CardTitle class="text-base leading-none">{{
-                t("dashboard.jsRuntime.tabs.overview")
-              }}</CardTitle>
-            </CardHeader>
-            <CardContent class="pt-2 pb-4">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-2">
-                <div class="flex items-center gap-2 text-sm">
-                  <span class="text-muted-foreground shrink-0"
-                    >{{ t("dashboard.jsRuntime.overview.name") }}:</span
-                  >
-                  <span class="text-muted-foreground/80 truncate">{{
-                    worker?.name
-                  }}</span>
-                </div>
-                <div class="flex items-center gap-2 text-sm">
-                  <span class="text-muted-foreground shrink-0"
-                    >{{ t("dashboard.jsRuntime.overview.id") }}:</span
-                  >
-                  <span class="font-mono text-muted-foreground">{{
-                    worker?.id
-                  }}</span>
-                </div>
-                <div class="flex items-center gap-2 text-sm">
-                  <span class="text-muted-foreground shrink-0"
-                    >{{ t("dashboard.jsRuntime.overview.createdAt") }}:</span
-                  >
-                  <span class="text-muted-foreground/80">{{
-                    formatTime(worker?.created_at || null)
-                  }}</span>
-                </div>
-                <div class="flex items-center gap-2 text-sm">
-                  <span class="text-muted-foreground shrink-0"
-                    >{{ t("dashboard.jsRuntime.overview.updatedAt") }}:</span
-                  >
-                  <span class="text-muted-foreground/80">{{
-                    formatTime(worker?.updated_at || null)
-                  }}</span>
-                </div>
-                <div class="flex items-start gap-2 text-sm col-span-full">
-                  <span class="text-muted-foreground shrink-0"
-                    >{{ t("dashboard.jsRuntime.overview.route") }}:</span
-                  >
-                  <span class="text-muted-foreground/80 font-mono break-all">{{
-                    worker?.route || t("common.none")
-                  }}</span>
-                </div>
+          <div class="px-1 pb-4">
+            <div
+              class="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-muted-foreground/60 font-mono"
+            >
+              <div class="flex items-center gap-1.5">
+                <span class="shrink-0"
+                  >{{ t("dashboard.jsRuntime.overview.createdAt") }}:</span
+                >
+                <span class="">{{
+                  formatTime(worker?.created_at || null)
+                }}</span>
               </div>
-            </CardContent>
-          </Card>
+              <div class="flex items-center gap-1.5">
+                <span class="shrink-0"
+                  >{{ t("dashboard.jsRuntime.overview.updatedAt") }}:</span
+                >
+                <span class="">{{
+                  formatTime(worker?.updated_at || null)
+                }}</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="shrink-0"
+                  >{{ t("dashboard.jsRuntime.overview.route") }}:</span
+                >
+                <span class="break-all">{{
+                  worker?.route || t("common.none")
+                }}</span>
+              </div>
+            </div>
+          </div>
 
           <Card class="mt-4">
             <CardHeader class="flex flex-row items-center justify-between pb-2">
-              <CardTitle class="text-base leading-none">脚本描述</CardTitle>
+              <CardTitle
+                class="text-[13px] font-medium text-muted-foreground/50 uppercase tracking-wider"
+                >README</CardTitle
+              >
               <Button
                 size="sm"
                 variant="outline"
