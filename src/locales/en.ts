@@ -758,6 +758,8 @@ export default {
         header: "Header",
         body: "Body",
         addHeader: "Add Header",
+        responseHeaders: "Response Headers",
+        responseStatus: "Status",
       },
       settings: {
         envVars: "Environment Variables",
