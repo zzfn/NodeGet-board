@@ -98,10 +98,20 @@ const runParams = ref("{}");
 const runEnv = ref("{}");
 const runResult = ref<any>(null);
 const runLoading = ref(false);
-const saveLoading = ref(false);
+const saveOnlyLoading = ref(false);
+const saveAndRunLoading = ref(false);
 const isPreviewMode = ref(false);
 const activeEditorTab = ref("env");
 const iframeKey = ref(0);
+const settingsLoading = ref(false);
+const isActionPending = computed(
+  () =>
+    saveOnlyLoading.value ||
+    saveAndRunLoading.value ||
+    runLoading.value ||
+    settingsLoading.value ||
+    loading.value,
+);
 
 const parsedHttpResult = computed(() => {
   if (
@@ -118,12 +128,18 @@ const parsedHttpResult = computed(() => {
 
   if (typeof res !== "object" || Array.isArray(res)) return null;
 
-  // 1. Get Content-Type from headers
+  // 1. Get Status and Headers
+  const status = res.status || null;
+  let headersText = "";
   let contentType = "text/plain";
+
   if (res.headers) {
     const list = Array.isArray(res.headers)
       ? res.headers
       : Object.entries(res.headers).map(([k, v]) => ({ name: k, value: v }));
+
+    headersText = list.map((h: any) => `${h.name}: ${h.value}`).join("\n");
+
     const ctHeader = list.find(
       (h: any) => h.name?.toLowerCase() === "content-type",
     )?.value;
@@ -137,15 +153,17 @@ const parsedHttpResult = computed(() => {
       : res.body !== undefined
         ? res.body
         : res.data;
-  if (rawBody === undefined) return null;
 
-  // 3. Process based on content type
+  // 3. Process Body based on content type
   const isImage = contentType.includes("image/");
   const isHtml = contentType.includes("text/html");
   const isJson = contentType.includes("application/json");
 
-  // If it's a binary array (Uint8Array or number array from JSON)
-  if (Array.isArray(rawBody) || rawBody instanceof Uint8Array) {
+  let body: any = null;
+
+  if (rawBody === undefined) {
+    body = { isText: true, content: "" };
+  } else if (Array.isArray(rawBody) || rawBody instanceof Uint8Array) {
     const uint8Body =
       rawBody instanceof Uint8Array ? rawBody : new Uint8Array(rawBody);
 
@@ -154,44 +172,49 @@ const parsedHttpResult = computed(() => {
         const blob = new Blob([uint8Body as any], {
           type: contentType.split(";")[0],
         });
-        return { isImage: true, url: URL.createObjectURL(blob) };
+        body = { isImage: true, url: URL.createObjectURL(blob) };
       } catch {
-        return { isText: true, content: "[Image Decode Error]" };
+        body = { isText: true, content: "[Image Decode Error]" };
+      }
+    } else {
+      try {
+        const decodedText = new TextDecoder().decode(uint8Body);
+        if (isHtml) {
+          body = { isHtml: true, content: decodedText };
+        } else if (isJson) {
+          try {
+            body = {
+              isText: true,
+              content: JSON.stringify(JSON.parse(decodedText), null, 2),
+            };
+          } catch {
+            body = { isText: true, content: decodedText };
+          }
+        } else {
+          body = { isText: true, content: decodedText };
+        }
+      } catch (e) {
+        body = {
+          isText: true,
+          content: `[Binary Data ${uint8Body.length} bytes]`,
+        };
       }
     }
-
-    // Default to text decoding for non-binary types
-    try {
-      const decodedText = new TextDecoder().decode(uint8Body);
-
-      if (isHtml) return { isHtml: true, content: decodedText };
-
-      if (isJson) {
-        try {
-          // Format JSON if possible
-          return {
-            isText: true,
-            content: JSON.stringify(JSON.parse(decodedText), null, 2),
-          };
-        } catch {
-          return { isText: true, content: decodedText };
-        }
-      }
-
-      return { isText: true, content: decodedText };
-    } catch (e) {
-      return {
-        isText: true,
-        content: `[Binary Data ${uint8Body.length} bytes]`,
-      };
+  } else {
+    const content =
+      typeof rawBody === "string" ? rawBody : JSON.stringify(rawBody, null, 2);
+    if (isHtml) {
+      body = { isHtml: true, content };
+    } else {
+      body = { isText: true, content };
     }
   }
 
-  // Fallback for non-array body (already a string or object)
-  const content =
-    typeof rawBody === "string" ? rawBody : JSON.stringify(rawBody, null, 2);
-  if (isHtml) return { isHtml: true, content };
-  return { isText: true, content };
+  return {
+    status,
+    headersText,
+    body,
+  };
 });
 
 const activeRunMode = ref<"call" | "cron" | "http" | "preview">("call");
@@ -202,6 +225,7 @@ const httpSimulation = ref({
   body: "",
 });
 const httpResultOpen = ref(true);
+const httpHeadersOpen = ref(true);
 const activeHttpTab = ref("headers");
 
 const tempEnvVars = ref<{ key: string; value: string }[]>([]);
@@ -444,9 +468,12 @@ const syncLatestWorkerState = async (): Promise<JsWorker> => {
   return data;
 };
 
-const updateWorkerContentFun = async (withEnv = false) => {
+const updateWorkerContentFun = async (
+  withEnv = false,
+  loadingRef = saveOnlyLoading,
+) => {
   if (!worker.value) return;
-  saveLoading.value = true;
+  loadingRef.value = true;
   try {
     const latest = await syncLatestWorkerState();
     let envObj: Record<string, any> = latest.env || {};
@@ -485,7 +512,7 @@ const updateWorkerContentFun = async (withEnv = false) => {
   } catch (e: any) {
     toast.error(e.message || "Save failed");
   } finally {
-    saveLoading.value = false;
+    loadingRef.value = false;
   }
 };
 
@@ -499,9 +526,16 @@ const runWorkerFun = async (saveFirst = false) => {
   if (!worker.value) return;
 
   if (saveFirst) {
-    await updateWorkerContentFun(
-      activeRunMode.value === "call" || activeRunMode.value === "cron",
-    );
+    saveAndRunLoading.value = true;
+    try {
+      await updateWorkerContentFun(
+        activeRunMode.value === "call" || activeRunMode.value === "cron",
+        saveAndRunLoading,
+      );
+    } catch {
+      saveAndRunLoading.value = false;
+      return;
+    }
   } else if (activeRunMode.value === "call" || activeRunMode.value === "cron") {
     // If not saving first, we still want to use the temp env for execution
     const envObj: Record<string, string> = {};
@@ -634,7 +668,7 @@ watch(activeRunMode, (newMode) => {
 const openPreviewNewWindowFun = () => {
   if (!worker.value?.route) return;
   const suffix = httpSimulation.value.suffix;
-  const path = `/worker-route/${worker.value.route}/${suffix}`;
+  const path = `${httpBaseUrl.value}/worker-route/${worker.value.route}/${suffix}`;
   window.open(path, "_blank");
 };
 
@@ -647,7 +681,7 @@ const updateWorkerSettingsFun = async () => {
     }
   });
 
-  saveLoading.value = true;
+  settingsLoading.value = true;
   try {
     const latest = await syncLatestWorkerState();
 
@@ -663,7 +697,7 @@ const updateWorkerSettingsFun = async () => {
   } catch (e: any) {
     toast.error(e.message || "Update failed");
   } finally {
-    saveLoading.value = false;
+    settingsLoading.value = false;
   }
 };
 
@@ -736,44 +770,52 @@ const formatTime = (ts: number | null) => {
       <div class="flex-1 mt-4 min-h-0 overflow-auto">
         <TabsContent value="overview" class="m-0">
           <Card>
-            <CardHeader>
-              <CardTitle>{{
+            <CardHeader class="pb-2">
+              <CardTitle class="text-base leading-none">{{
                 t("dashboard.jsRuntime.tabs.overview")
               }}</CardTitle>
             </CardHeader>
-            <CardContent class="space-y-4">
-              <div class="grid grid-cols-2 gap-4">
-                <div class="space-y-1">
-                  <p class="text-sm font-medium text-muted-foreground">
-                    {{ t("dashboard.jsRuntime.overview.name") }}
-                  </p>
-                  <p>{{ worker?.name }}</p>
+            <CardContent class="pt-2 pb-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-2">
+                <div class="flex items-center gap-2 text-sm">
+                  <span class="text-muted-foreground shrink-0"
+                    >{{ t("dashboard.jsRuntime.overview.name") }}:</span
+                  >
+                  <span class="text-muted-foreground/80 truncate">{{
+                    worker?.name
+                  }}</span>
                 </div>
-                <div class="space-y-1">
-                  <p class="text-sm font-medium text-muted-foreground">
-                    {{ t("dashboard.jsRuntime.overview.id") }}
-                  </p>
-                  <p class="font-mono">{{ worker?.id }}</p>
+                <div class="flex items-center gap-2 text-sm">
+                  <span class="text-muted-foreground shrink-0"
+                    >{{ t("dashboard.jsRuntime.overview.id") }}:</span
+                  >
+                  <span class="font-mono text-muted-foreground">{{
+                    worker?.id
+                  }}</span>
                 </div>
-                <div class="space-y-1">
-                  <p class="text-sm font-medium text-muted-foreground">
-                    {{ t("dashboard.jsRuntime.overview.createdAt") }}
-                  </p>
-                  <p>{{ formatTime(worker?.created_at || null) }}</p>
+                <div class="flex items-center gap-2 text-sm">
+                  <span class="text-muted-foreground shrink-0"
+                    >{{ t("dashboard.jsRuntime.overview.createdAt") }}:</span
+                  >
+                  <span class="text-muted-foreground/80">{{
+                    formatTime(worker?.created_at || null)
+                  }}</span>
                 </div>
-                <div class="space-y-1">
-                  <p class="text-sm font-medium text-muted-foreground">
-                    {{ t("dashboard.jsRuntime.overview.updatedAt") }}
-                  </p>
-                  <p>{{ formatTime(worker?.updated_at || null) }}</p>
+                <div class="flex items-center gap-2 text-sm">
+                  <span class="text-muted-foreground shrink-0"
+                    >{{ t("dashboard.jsRuntime.overview.updatedAt") }}:</span
+                  >
+                  <span class="text-muted-foreground/80">{{
+                    formatTime(worker?.updated_at || null)
+                  }}</span>
                 </div>
-                <div class="space-y-1 col-span-2">
-                  <p class="text-sm font-medium text-muted-foreground">
-                    {{ t("dashboard.jsRuntime.overview.route") }}
-                  </p>
-                  <p class="text-emerald-500 font-mono">
-                    {{ worker?.route || t("common.none") }}
-                  </p>
+                <div class="flex items-start gap-2 text-sm col-span-full">
+                  <span class="text-muted-foreground shrink-0"
+                    >{{ t("dashboard.jsRuntime.overview.route") }}:</span
+                  >
+                  <span class="text-emerald-500 font-mono break-all">{{
+                    worker?.route || t("common.none")
+                  }}</span>
                 </div>
               </div>
             </CardContent>
@@ -781,7 +823,7 @@ const formatTime = (ts: number | null) => {
 
           <Card class="mt-4">
             <CardHeader class="flex flex-row items-center justify-between pb-2">
-              <CardTitle class="text-lg">脚本描述</CardTitle>
+              <CardTitle class="text-base leading-none">脚本描述</CardTitle>
               <Button
                 size="sm"
                 variant="outline"
@@ -791,7 +833,7 @@ const formatTime = (ts: number | null) => {
                 编辑描述
               </Button>
             </CardHeader>
-            <CardContent>
+            <CardContent class="pt-2 pb-4">
               <div
                 v-if="worker?.description"
                 class="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed"
@@ -808,7 +850,15 @@ const formatTime = (ts: number | null) => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="content" class="m-0 h-full flex flex-col min-h-0">
+        <TabsContent
+          value="content"
+          class="m-0 h-full flex flex-col min-h-0 relative"
+        >
+          <div
+            v-if="activeTab === 'content' && isActionPending"
+            class="absolute inset-0 z-[100] cursor-wait bg-background/5"
+          ></div>
+
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full min-h-0">
             <!-- Left: Editor -->
             <div
@@ -851,10 +901,10 @@ const formatTime = (ts: number | null) => {
                     variant="default"
                     class="h-8 shadow-sm"
                     @click="updateWorkerContentFun(true)"
-                    :disabled="saveLoading"
+                    :disabled="isActionPending"
                   >
                     <Loader2
-                      v-if="saveLoading"
+                      v-if="saveOnlyLoading"
                       class="mr-2 h-3 w-3 animate-spin"
                     />
                     <Save v-else class="mr-2 h-3 w-3" />
@@ -1001,11 +1051,16 @@ const formatTime = (ts: number | null) => {
                           >
                         </SelectContent>
                       </Select>
-                      <span class="flex-1 truncate text-muted-foreground mx-1"
-                        >{{ httpBaseUrl }}/worker-route/{{
-                          worker?.route || "{ROUTE}"
-                        }}/</span
+                      <div
+                        class="flex-1 flex min-w-0 overflow-hidden text-muted-foreground mx-1"
                       >
+                        <span class="truncate opacity-70 shrink min-w-[40px]">{{
+                          httpBaseUrl
+                        }}</span>
+                        <span class="shrink-0"
+                          >/worker-route/{{ worker?.route || "{ROUTE}" }}/</span
+                        >
+                      </div>
                       <Input
                         v-model="httpSimulation.suffix"
                         placeholder="path suffix"
@@ -1093,11 +1148,16 @@ const formatTime = (ts: number | null) => {
                       <Globe
                         class="h-3.5 w-3.5 shrink-0 text-muted-foreground"
                       />
-                      <span class="flex-1 truncate text-muted-foreground mx-1"
-                        >{{ wsBaseUrl }}/worker-route/{{
-                          worker?.route || "{ROUTE}"
-                        }}/</span
+                      <div
+                        class="flex-1 flex min-w-0 overflow-hidden text-muted-foreground mx-1"
                       >
+                        <span class="truncate opacity-70 shrink min-w-[40px]">{{
+                          wsBaseUrl
+                        }}</span>
+                        <span class="shrink-0"
+                          >/worker-route/{{ worker?.route || "{ROUTE}" }}/</span
+                        >
+                      </div>
                       <Input
                         v-model="httpSimulation.suffix"
                         placeholder="path suffix"
@@ -1117,17 +1177,29 @@ const formatTime = (ts: number | null) => {
                     <div class="flex items-center justify-between px-1 mt-2">
                       <h3 class="text-sm font-semibold">预览 (Preview)</h3>
                       <div class="flex items-center gap-2 shrink-0">
-                        <Button size="sm" @click="runWorkerFun(false)">
-                          <Eye class="mr-2 h-3 w-3" />
+                        <Button
+                          size="sm"
+                          @click="runWorkerFun(false)"
+                          :disabled="isActionPending"
+                        >
+                          <Loader2
+                            v-if="runLoading"
+                            class="mr-2 h-3 w-3 animate-spin"
+                          />
+                          <Eye v-else class="mr-2 h-3 w-3" />
                           {{ t("dashboard.jsRuntime.editor.preview") }}
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
                           @click="runWorkerFun(true)"
-                          :disabled="runLoading"
+                          :disabled="isActionPending"
                         >
-                          <Save class="mr-2 h-3 w-3" />
+                          <Loader2
+                            v-if="saveAndRunLoading"
+                            class="mr-2 h-3 w-3 animate-spin"
+                          />
+                          <Save v-else class="mr-2 h-3 w-3" />
                           {{ t("dashboard.jsRuntime.editor.saveAndPreview") }}
                         </Button>
                       </div>
@@ -1176,18 +1248,26 @@ const formatTime = (ts: number | null) => {
                         size="sm"
                         variant="outline"
                         @click="runWorkerFun(false)"
-                        :disabled="runLoading"
+                        :disabled="isActionPending"
                       >
-                        <Play class="mr-2 h-3 w-3" />
+                        <Loader2
+                          v-if="runLoading"
+                          class="mr-2 h-3 w-3 animate-spin"
+                        />
+                        <Play v-else class="mr-2 h-3 w-3" />
                         {{ t("dashboard.jsRuntime.editor.run") }}
                       </Button>
                       <Button
                         size="sm"
                         variant="default"
                         @click="runWorkerFun(true)"
-                        :disabled="runLoading"
+                        :disabled="isActionPending"
                       >
-                        <Save class="mr-2 h-3 w-3" />
+                        <Loader2
+                          v-if="saveAndRunLoading"
+                          class="mr-2 h-3 w-3 animate-spin"
+                        />
+                        <Save v-else class="mr-2 h-3 w-3" />
                         {{ t("dashboard.jsRuntime.editor.saveAndRun") }}
                       </Button>
                     </div>
@@ -1210,34 +1290,88 @@ const formatTime = (ts: number | null) => {
                         force-mount
                         class="data-[state=closed]:h-0 overflow-hidden transition-all"
                       >
-                        <div class="h-[200px] relative p-1">
-                          <template v-if="parsedHttpResult">
+                        <template v-if="parsedHttpResult">
+                          <!-- Part 1: Status Code -->
+                          <div
+                            class="flex items-center gap-2 px-3 py-2 border-b bg-muted/5"
+                          >
                             <div
-                              v-if="parsedHttpResult.isImage"
+                              :class="[
+                                'w-2 h-2 rounded-full',
+                                parsedHttpResult.status >= 200 &&
+                                parsedHttpResult.status < 300
+                                  ? 'bg-green-500'
+                                  : 'bg-orange-500',
+                              ]"
+                            ></div>
+                            <span class="text-sm font-mono font-bold">{{
+                              parsedHttpResult.status
+                            }}</span>
+                          </div>
+
+                          <!-- Part 2: Response Headers (Collapsible) -->
+                          <div class="border-b">
+                            <button
+                              @click="httpHeadersOpen = !httpHeadersOpen"
+                              class="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-bold text-muted-foreground hover:bg-muted/30 transition-colors uppercase tracking-tight"
+                            >
+                              <span>{{
+                                t("dashboard.jsRuntime.editor.responseHeaders")
+                              }}</span>
+                              <ChevronDown
+                                :class="[
+                                  'h-3 w-3 transition-transform duration-200',
+                                  httpHeadersOpen ? '' : '-rotate-90',
+                                ]"
+                              />
+                            </button>
+                            <div
+                              v-show="httpHeadersOpen"
+                              class="px-3 py-2 bg-muted/10 border-t border-dashed"
+                            >
+                              <pre
+                                class="text-[11px] font-mono whitespace-pre-wrap break-all text-foreground/80 leading-relaxed"
+                                >{{ parsedHttpResult.headersText }}</pre
+                              >
+                            </div>
+                          </div>
+
+                          <!-- Part 3: Response Body -->
+                          <div
+                            class="relative p-1 overflow-hidden"
+                            :class="
+                              parsedHttpResult.body.isImage ||
+                              parsedHttpResult.body.isHtml
+                                ? 'h-[300px]'
+                                : 'min-h-[100px]'
+                            "
+                          >
+                            <div
+                              v-if="parsedHttpResult.body.isImage"
                               class="w-full h-full flex items-center justify-center bg-muted/20 border rounded-sm overflow-hidden"
                             >
                               <img
-                                :src="parsedHttpResult.url"
+                                :src="parsedHttpResult.body.url"
                                 class="max-h-full max-w-full object-contain shadow-sm"
                               />
                             </div>
                             <iframe
-                              v-else-if="parsedHttpResult.isHtml"
-                              :srcdoc="parsedHttpResult.content"
+                              v-else-if="parsedHttpResult.body.isHtml"
+                              :srcdoc="parsedHttpResult.body.content"
                               class="w-full h-full border rounded-sm bg-white"
                               sandbox="allow-scripts allow-same-origin"
                             ></iframe>
                             <Codemirror
-                              v-else-if="parsedHttpResult.isText"
-                              :model-value="parsedHttpResult.content"
+                              v-else-if="parsedHttpResult.body.isText"
+                              :model-value="parsedHttpResult.body.content"
                               :extensions="jsonExtensions"
-                              class="h-full text-[12px]"
-                              :style="{ height: '100%' }"
+                              class="text-[12px] w-full h-full"
                               disabled
                             />
-                          </template>
+                          </div>
+                        </template>
+                        <div v-else class="h-[200px] p-1">
                           <Codemirror
-                            v-else
                             :model-value="
                               runResult
                                 ? JSON.stringify(runResult, null, 2)
@@ -1652,8 +1786,14 @@ const formatTime = (ts: number | null) => {
             </Card>
 
             <div class="flex justify-end">
-              <Button @click="updateWorkerSettingsFun" :disabled="saveLoading">
-                <Loader2 v-if="saveLoading" class="mr-2 h-4 w-4 animate-spin" />
+              <Button
+                @click="updateWorkerSettingsFun"
+                :disabled="isActionPending"
+              >
+                <Loader2
+                  v-if="settingsLoading"
+                  class="mr-2 h-4 w-4 animate-spin"
+                />
                 {{ t("dashboard.jsRuntime.settings.confirm") }}
               </Button>
             </div>

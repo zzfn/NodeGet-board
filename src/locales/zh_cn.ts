@@ -748,6 +748,8 @@ export default {
         header: "Header",
         body: "Body",
         addHeader: "添加 Header",
+        responseHeaders: "响应头",
+        responseStatus: "状态",
       },
       settings: {
         envVars: "环境变量",
