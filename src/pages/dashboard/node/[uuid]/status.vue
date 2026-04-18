@@ -114,17 +114,6 @@ onMounted(() => {
   connectStatic();
 });
 
-// Wait for WebSocket connected before fetching avg data
-watch(
-  dynamicStatus,
-  (status) => {
-    if (status === "connected") {
-      loadAvgData();
-    }
-  },
-  { immediate: true },
-);
-
 const loadAvgData = async () => {
   avgLoading.value = true;
   try {
@@ -146,6 +135,17 @@ const loadAvgData = async () => {
     avgLoading.value = false;
   }
 };
+
+// Wait for WebSocket connected before fetching avg data
+watch(
+  dynamicStatus,
+  (status) => {
+    if (status === "connected") {
+      loadAvgData();
+    }
+  },
+  { immediate: true },
+);
 
 // CPU chart data from avg
 const cpuAvgTimestamps = computed(() =>
