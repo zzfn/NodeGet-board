@@ -17,55 +17,26 @@ import {
 } from "@/components/ui/table";
 import { useBackendStore, type Backend } from "@/composables/useBackendStore";
 import BackendSwitcher from "@/components/BackendSwitcher.vue";
-import { getWsConnection } from "@/composables/useWsConnection";
+import { useBackendExtra } from "@/composables/useBackendExtra";
 
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
-const { backends, currentBackend, selectBackend, removeBackend, addBackend } =
+const { backends, selectBackend, removeBackend, addBackend } =
   useBackendStore();
+const { refreshAll, isActive, serverInfo, serverInfoLoading } =
+  useBackendExtra();
 
 const addOpen = ref(false);
-
-interface ServerVersionInfo {
-  cargo_version: string;
-  git_commit_sha: string;
-  binary_type: string;
-}
-
-interface ServerInfo {
-  uuid: string | null;
-  version: string | null;
-}
-
-const serverInfo = ref<Record<string, ServerInfo>>({});
-
-const fetchServerInfo = (backend: Backend) => {
-  const conn = getWsConnection(backend.url);
-  Promise.all([
-    conn.call<string>("nodeget-server_uuid", []),
-    conn.call<ServerVersionInfo>("nodeget-server_version", []),
-  ])
-    .then(([uuid, ver]) => {
-      serverInfo.value[backend.url] = {
-        uuid,
-        version: `${ver.cargo_version}-${ver.git_commit_sha}`,
-      };
-    })
-    .catch(() => {
-      serverInfo.value[backend.url] = { uuid: null, version: null };
-    });
-};
-
-const refreshAll = () => {
-  backends.value.forEach(fetchServerInfo);
-};
-
-watch(backends, (list) => list.forEach(fetchServerInfo), { immediate: true });
-
-const isActive = (backend: Backend) =>
-  currentBackend.value?.url === backend.url &&
-  currentBackend.value?.token === backend.token;
+const initForm = ref<{
+  newName: string;
+  newUrl: string;
+  newToken: string;
+}>({
+  newName: "",
+  newUrl: "",
+  newToken: "",
+});
 
 const handleManage = (backend: Backend) => {
   router.push(
@@ -73,11 +44,15 @@ const handleManage = (backend: Backend) => {
   );
 };
 
-// 修复: 用 watch 替代 onMounted，支持路由内动态修改 query
 watch(
-  () => route.query.add,
+  () => route.query.fill,
   (raw) => {
     if (!raw || typeof raw !== "string") return;
+
+    if (raw === "empty") {
+      addOpen.value = true;
+      return;
+    }
 
     try {
       const decoded = JSON.parse(atob(raw)) as Backend;
@@ -87,29 +62,27 @@ watch(
         (b) => b.url === decoded.url && b.token === decoded.token,
       );
       if (!exists) {
-        addBackend(decoded);
-        if (backends.value.length === 1) {
-          selectBackend(decoded);
-        }
+        initForm.value.newName = decoded.name;
+        initForm.value.newUrl = decoded.url;
+        initForm.value.newToken = decoded.token;
+        addOpen.value = true;
       }
     } catch {
       // 解码或解析失败时静默忽略
     }
-
-    router.replace({ query: { ...route.query, add: undefined } });
   },
   { immediate: true },
 );
-
-defineExpose({ refreshAll });
 </script>
 
 <template>
   <div class="space-y-4">
     <div class="flex items-center justify-end gap-2">
       <Button variant="outline" size="sm" @click="refreshAll">
-        <RefreshCw class="h-4 w-4 mr-1.5" />
-        {{ t("common.refresh") }}
+        <RefreshCw
+          class="h-4 w-4"
+          :class="{ 'animate-spin': serverInfoLoading }"
+        />
       </Button>
       <Button size="sm" @click="addOpen = true">
         <Plus class="h-4 w-4 mr-1.5" />
@@ -194,6 +167,10 @@ defineExpose({ refreshAll });
       </Table>
     </div>
 
-    <BackendSwitcher v-model:open="addOpen" :show-list="false" />
+    <BackendSwitcher
+      v-model:open="addOpen"
+      :init-form="initForm"
+      :show-list="false"
+    />
   </div>
 </template>
