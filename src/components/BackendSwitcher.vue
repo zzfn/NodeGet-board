@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import {
   Dialog,
   DialogContent,
@@ -11,17 +11,30 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useBackendStore, type Backend } from "@/composables/useBackendStore";
-import { Trash2 } from "lucide-vue-next";
+import { Trash2, Loader2 } from "lucide-vue-next";
 import { RainbowButton } from "@/components/ui/rainbow-button";
 import { useI18n } from "vue-i18n";
+import { useLifecycle } from "@/composables/useLifecycle";
 
 const props = withDefaults(
   defineProps<{
     open?: boolean;
     showList?: boolean;
+    initForm?: {
+      newName: string;
+      newUrl: string;
+      newToken: string;
+    };
   }>(),
   {
     showList: true,
+    initForm() {
+      return {
+        newName: "",
+        newUrl: "",
+        newToken: "",
+      };
+    },
   },
 );
 
@@ -29,6 +42,7 @@ const emit = defineEmits<{
   (e: "update:open", value: boolean): void;
 }>();
 
+const { afterServerCreate } = useLifecycle();
 const { t } = useI18n();
 
 const isOpen = computed({
@@ -39,29 +53,56 @@ const isOpen = computed({
 const { backends, currentBackend, addBackend, removeBackend, selectBackend } =
   useBackendStore();
 
-const newName = ref("");
-const newUrl = ref("");
-const newToken = ref("");
+const newName = ref(props.initForm.newName);
+const newUrl = ref(props.initForm.newUrl);
+const newToken = ref(props.initForm.newToken);
+const isLoading = ref(false);
 
 const resetForm = () => {
-  newName.value = "";
-  newUrl.value = "";
-  newToken.value = "";
+  newName.value = props.initForm.newName;
+  newUrl.value = props.initForm.newUrl;
+  newToken.value = props.initForm.newToken;
 };
 
-const handleAdd = () => {
+const handleAdd = async () => {
   if (!newName.value || !newUrl.value || !newToken.value) return;
-  addBackend({
-    name: newName.value,
-    url: newUrl.value,
-    token: newToken.value,
-  });
-  resetForm();
-  if (props.showList === false) isOpen.value = false;
+  if (isLoading.value) return;
+
+  isLoading.value = true;
+  try {
+    const backend = {
+      name: newName.value,
+      url: newUrl.value,
+      token: newToken.value,
+    };
+    addBackend(backend);
+    await afterServerCreate(backend);
+    resetForm();
+    if (props.showList === false) isOpen.value = false;
+
+    isLoading.value = false;
+    // 防止出现有未预料到的未更新的内存变量
+    location.reload();
+  } catch (e) {
+    console.error("Failed to add backend:", e);
+    isLoading.value = false;
+    // 自动解锁：3秒后恢复正常操作
+    setTimeout(() => {
+      isLoading.value = false;
+    }, 3000);
+  }
 };
 
 const handleRemove = (b: Backend) => removeBackend(b);
 const handleSelect = (b: Backend) => selectBackend(b);
+
+watch(
+  () => JSON.stringify(props.initForm),
+  () => {
+    resetForm();
+  },
+  { immediate: true },
+);
 </script>
 
 <template>
@@ -74,7 +115,10 @@ const handleSelect = (b: Backend) => selectBackend(b);
         </DialogDescription>
       </DialogHeader>
 
-      <div class="grid gap-4 py-4">
+      <div
+        class="grid gap-4 py-4"
+        :class="{ 'opacity-50 pointer-events-none': isLoading }"
+      >
         <!-- 主控列表：仅在 showList !== false 时显示 -->
         <template v-if="showList !== false">
           <div class="flex flex-col gap-2 max-h-[300px] overflow-y-auto">
@@ -171,9 +215,14 @@ const handleSelect = (b: Backend) => selectBackend(b);
           </div>
           <RainbowButton
             @click="handleAdd"
-            :disabled="!newName || !newUrl || !newToken"
+            :disabled="!newName || !newUrl || !newToken || isLoading"
           >
-            {{ t("dashboard.servers.addServer") }}
+            <Loader2 v-if="isLoading" class="h-4 w-4 mr-2 animate-spin" />
+            {{
+              isLoading
+                ? t("dashboard.common.loading")
+                : t("dashboard.servers.addServer")
+            }}
           </RainbowButton>
         </div>
       </div>
