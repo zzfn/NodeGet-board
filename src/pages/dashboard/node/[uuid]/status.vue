@@ -117,7 +117,7 @@ onMounted(() => {
 const loadAvgData = async () => {
   avgLoading.value = true;
   try {
-    const result = await fetchSummaryAvg(uuid.value, 100, [
+    const result = await fetchSummaryAvg(uuid.value, undefined, [
       "cpu_usage",
       "used_memory",
       "total_memory",
