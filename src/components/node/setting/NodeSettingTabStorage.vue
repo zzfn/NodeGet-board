@@ -14,19 +14,41 @@ import {
 } from "@/components/ui/card";
 import { useKv } from "@/composables/useKv";
 import { useI18n } from "vue-i18n";
+import { useCron, taskToCronType } from "@/composables/useCron";
 
 const props = defineProps<{ uuid: string }>();
 
 const { t } = useI18n();
 const kv = useKv();
+const cron = useCron();
 
 const loading = ref(false);
 const saveLoading = ref(false);
 const cleanLoading = ref(false);
 
-const storageStatic = ref<number | undefined>(undefined);
+const storageDynamicSummary = ref<number | undefined>(undefined);
 const storageDynamic = ref<number | undefined>(undefined);
+const storageStatic = ref<number | undefined>(undefined);
 const storageAgentTask = ref<number | undefined>(undefined);
+
+let cleanCronName = "periodic-cleanup";
+
+const oneMinute = 60 * 1000;
+function tsToMinute(value: unknown) {
+  if (typeof value === "number") {
+    return value / oneMinute;
+  }
+  if (typeof value === "string" && /^\d+$/.test(value)) {
+    return parseInt(value) / oneMinute;
+  }
+}
+const minute2Ts = (t: typeof storageAgentTask.value) => {
+  const oneMinute = 60 * 1000; // ms
+  if (typeof t == "undefined") {
+    return undefined;
+  }
+  return t * oneMinute;
+};
 
 onMounted(async () => {
   loading.value = true;
@@ -37,12 +59,18 @@ onMounted(async () => {
     ]);
     const get = (key: string) => results.find((r) => r.key === key)?.value;
 
-    if (get("database_limit_static_monitoring") !== undefined)
-      storageStatic.value = Number(get("database_limit_static_monitoring"));
+    if (get("database_limit_dynamic_monitoring_summary") !== undefined)
+      storageDynamicSummary.value = tsToMinute(
+        get("database_limit_dynamic_monitoring_summary"),
+      );
     if (get("database_limit_dynamic_monitoring") !== undefined)
-      storageDynamic.value = Number(get("database_limit_dynamic_monitoring"));
-    if (get("database_limit_agent_task") !== undefined)
-      storageAgentTask.value = Number(get("database_limit_agent_task"));
+      storageDynamic.value = tsToMinute(
+        get("database_limit_dynamic_monitoring"),
+      );
+    if (get("database_limit_static_monitoring") !== undefined)
+      storageStatic.value = tsToMinute(get("database_limit_static_monitoring"));
+    if (get("database_limit_task") !== undefined)
+      storageAgentTask.value = tsToMinute(get("database_limit_task"));
   } catch {
     // ignore
   } finally {
@@ -56,20 +84,25 @@ async function handleSave() {
     kv.namespace.value = props.uuid;
     const items: { key: string; value: unknown }[] = [];
 
-    if (storageStatic.value !== undefined)
+    if (storageDynamicSummary.value !== undefined)
       items.push({
-        key: "database_limit_static_monitoring",
-        value: storageStatic.value,
+        key: "database_limit_dynamic_monitoring_summary",
+        value: minute2Ts(storageDynamicSummary.value),
       });
     if (storageDynamic.value !== undefined)
       items.push({
         key: "database_limit_dynamic_monitoring",
-        value: storageDynamic.value,
+        value: minute2Ts(storageDynamic.value),
+      });
+    if (storageStatic.value !== undefined)
+      items.push({
+        key: "database_limit_static_monitoring",
+        value: minute2Ts(storageStatic.value),
       });
     if (storageAgentTask.value !== undefined)
       items.push({
-        key: "database_limit_agent_task",
-        value: storageAgentTask.value,
+        key: "database_limit_task",
+        value: minute2Ts(storageAgentTask.value),
       });
 
     if (items.length === 0) {
@@ -90,6 +123,26 @@ async function handleSave() {
   }
 }
 
+async function cleanExpiredData() {
+  try {
+    cleanLoading.value = true;
+    const tempName = crypto.randomUUID();
+    await cron.create({
+      name: tempName, // temp name
+      cron_expression: "* * * * * *",
+      cron_type: {
+        server: "clean_up_database",
+      },
+    });
+    await new Promise((r) => setTimeout(r, 2000));
+    await cron.remove(tempName);
+    toast.success(t("dashboard.node.storage.cleanSuccess"));
+  } catch (error) {
+    if (error instanceof Error) toast.error(error.toString());
+  } finally {
+    cleanLoading.value = false;
+  }
+}
 async function handleCleanData() {
   cleanLoading.value = true;
   try {
@@ -158,14 +211,14 @@ async function handleCleanData() {
         <div v-else class="space-y-3">
           <div class="flex items-center justify-between gap-4">
             <span class="text-sm">{{
-              $t("dashboard.agents.staticMonitoring")
+              $t("dashboard.agents.dynamicMonitoringSummary")
             }}</span>
             <div class="flex items-center gap-1.5">
               <NumberField
-                :model-value="storageStatic"
+                :model-value="storageDynamicSummary"
                 :min="0"
                 class="w-36"
-                @update:model-value="storageStatic = $event"
+                @update:model-value="storageDynamicSummary = $event"
               />
               <span class="text-sm text-muted-foreground whitespace-nowrap">
                 {{ $t("dashboard.agents.minuteUnit") }}
@@ -182,6 +235,24 @@ async function handleCleanData() {
                 :min="0"
                 class="w-36"
                 @update:model-value="storageDynamic = $event"
+              />
+              <span class="text-sm text-muted-foreground whitespace-nowrap">
+                {{ $t("dashboard.agents.minuteUnit") }}
+              </span>
+            </div>
+          </div>
+
+          <!-- no need to change -->
+          <div class="flex items-center justify-between gap-4" v-if="false">
+            <span class="text-sm">{{
+              $t("dashboard.agents.staticMonitoring")
+            }}</span>
+            <div class="flex items-center gap-1.5">
+              <NumberField
+                :model-value="storageStatic"
+                :min="0"
+                class="w-36"
+                @update:model-value="storageStatic = $event"
               />
               <span class="text-sm text-muted-foreground whitespace-nowrap">
                 {{ $t("dashboard.agents.minuteUnit") }}
@@ -229,7 +300,7 @@ async function handleCleanData() {
           :confirm-text="$t('dashboard.node.storage.cleanConfirm')"
           :cancel-text="$t('dashboard.node.storage.cleanCancel')"
           :loading="cleanLoading"
-          @confirm="handleCleanData"
+          @confirm="cleanExpiredData"
         >
           <Button variant="destructive" :disabled="cleanLoading">
             <Loader2 v-if="cleanLoading" class="h-4 w-4 animate-spin mr-2" />

@@ -2,7 +2,13 @@
 import { ref, computed, watch, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { Loader2, CircleCheckBig, RefreshCw } from "lucide-vue-next";
+import {
+  Loader2,
+  CircleCheckBig,
+  RefreshCw,
+  Copy,
+  Check,
+} from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -25,6 +31,8 @@ import { useBackendStore } from "@/composables/useBackendStore";
 import { getWsConnection } from "@/composables/useWsConnection";
 import { wsRpcCall } from "@/composables/useWsRpc";
 import { useCron, type BackendCron } from "@/composables/useCron";
+import { useBackendExtra } from "@/composables/useBackendExtra";
+import { useLifecycle } from "@/composables/useLifecycle";
 
 const open = defineModel<boolean>("open", { required: true });
 const emit = defineEmits<{
@@ -34,14 +42,15 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const router = useRouter();
 const themeStore = useThemeStore();
-const { currentBackend } = useBackendStore();
+const { currentBackendInfo } = useBackendExtra();
 const { list: listCrons } = useCron();
+const { afterAgentCreate } = useLifecycle();
 
 const step = ref(1);
 
 // Step 1: 基础信息
 const nodeName = ref("");
-const nodeUuid = ref("");
+const nodeUuid = ref(crypto.randomUUID());
 
 const generateUuid = () => {
   nodeUuid.value = crypto.randomUUID();
@@ -53,26 +62,30 @@ const generatedToken = ref("");
 const resetForm = () => {
   step.value = 1;
   nodeName.value = "";
-  nodeUuid.value = "";
+  nodeUuid.value = crypto.randomUUID();
   generatedToken.value = "";
   selectedCronIds.value = new Set();
-  staticRetention.value = undefined;
-  dynamicRetention.value = undefined;
-  agentTaskRetention.value = undefined;
+  staticRetention.value = 60 * 24 * 365; // minute
+  dynamicRetention.value = 60 * 6; // minute
+  dynamicSummaryRetention.value = 60 * 24 * 30; // minute
+  agentTaskRetention.value = 60 * 6; // minute
   isOnline.value = false;
 };
 
 // Step 2: 预配置
 const cronList = ref<BackendCron[]>([]);
 const selectedCronIds = ref<Set<number>>(new Set());
-const staticRetention = ref<number | undefined>();
-const dynamicRetention = ref<number | undefined>();
-const agentTaskRetention = ref<number | undefined>();
+const staticRetention = ref<number>(60 * 24 * 365);
+const dynamicRetention = ref<number>(60 * 6);
+const dynamicSummaryRetention = ref<number>(60 * 24 * 30);
+const agentTaskRetention = ref<number>(60 * 6);
 
 const loadCrons = async () => {
-  if (!currentBackend.value) return;
+  if (!currentBackendInfo.value) return;
   try {
-    cronList.value = await listCrons();
+    cronList.value = await listCrons().then((r) =>
+      r.filter((c) => "agent" in c.cron_type),
+    );
   } catch {
     cronList.value = [];
   }
@@ -80,19 +93,42 @@ const loadCrons = async () => {
 
 // Step 3: 安装
 const isOnline = ref(false);
+const isCopied = ref(false);
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 
 const checkOnline = async () => {
-  if (!currentBackend.value) return;
+  if (!currentBackendInfo.value) return;
   try {
-    const conn = getWsConnection(currentBackend.value.url);
+    const conn = getWsConnection(currentBackendInfo.value.url);
     const result = await conn.call<{ uuids: string[] }>(
       "nodeget-server_list_all_agent_uuid",
-      { token: currentBackend.value.token },
+      { token: currentBackendInfo.value.token },
     );
     if (result?.uuids?.includes(nodeUuid.value)) {
       isOnline.value = true;
+      const formatMinute = (t: typeof dynamicRetention) => {
+        const oneMinute = 60 * 1000; // ms
+        if (typeof t.value == "undefined") {
+          return undefined;
+        }
+        return t.value * oneMinute;
+      };
+      await afterAgentCreate(nodeUuid.value, {
+        cronList: cronList.value.filter((v) => selectedCronIds.value.has(v.id)),
+        databaseLimit: {
+          database_limit_dynamic_monitoring_summary: formatMinute(
+            dynamicSummaryRetention,
+          ),
+          database_limit_dynamic_monitoring: formatMinute(dynamicRetention),
+          database_limit_static_monitoring: formatMinute(staticRetention),
+          database_limit_task: formatMinute(agentTaskRetention),
+        },
+        metadata: {
+          metadata_name: nodeName.value,
+        },
+      });
       stopPolling();
+      emit("added");
     }
   } catch {
     // ignore
@@ -113,17 +149,29 @@ const stopPolling = () => {
   }
 };
 
+const copyInstallScript = async () => {
+  try {
+    await navigator.clipboard.writeText(installScript.value);
+    isCopied.value = true;
+    setTimeout(() => {
+      isCopied.value = false;
+    }, 2000);
+  } catch (e) {
+    console.error("Failed to copy:", e);
+  }
+};
+
 onUnmounted(stopPolling);
 
 // 预生成 token
 const preGenerateToken = async () => {
-  if (!currentBackend.value) return;
+  if (!currentBackendInfo.value) return;
   try {
     const result = await wsRpcCall<{ key?: string; secret?: string }>(
-      currentBackend.value.url,
+      currentBackendInfo.value.url,
       "token_create",
       {
-        father_token: currentBackend.value.token,
+        father_token: currentBackendInfo.value.token,
         token_creation: {
           username: null,
           password: null,
@@ -132,11 +180,25 @@ const preGenerateToken = async () => {
           version: 1,
           token_limit: [
             {
-              scopes: [{ global: null }],
+              // scopes: [{ global: null }],
+              scopes: [
+                {
+                  agent_uuid: nodeUuid.value,
+                },
+              ],
               permissions: [
                 { static_monitoring: "write" },
                 { dynamic_monitoring: "write" },
+                { dynamic_monitoring_summary: "write" },
                 { task: "listen" },
+                { task: { write: "ping" } },
+                { task: { write: "tcp_ping" } },
+                { task: { write: "http_ping" } },
+                { task: { write: "web_shell" } },
+                { task: { write: "execute" } },
+                { task: { write: "edit_config" } },
+                { task: { write: "read_config" } },
+                { task: { write: "ip" } },
               ],
             },
           ],
@@ -155,12 +217,13 @@ const preGenerateToken = async () => {
 const installScript = computed(() => {
   const uuid = nodeUuid.value || "{AGENT_UUID}";
   const token = generatedToken.value || "{TOKEN}";
-  const serverWs = currentBackend.value?.url || "{Server_WS}";
-  const serverName = currentBackend.value?.name || "{Server_NAME}";
-  return `bash <(curl https://install.nodeget.com) \\
+  const serverWs = currentBackendInfo.value?.url || "{Server_WS}";
+  const serverName = currentBackendInfo.value?.name || "{Server_NAME}";
+  return `bash <(curl -sL ${import.meta.env.VITE_INSTALL_URL}) install-agent  \\
   --agent-id ${uuid} \\
   --token ${token} \\
   --server-ws ${serverWs} \\
+  --server-id ${currentBackendInfo.value?.uuid} \\
   --server-name ${serverName}`;
 });
 
@@ -224,6 +287,8 @@ watch(open, (value) => {
   }
 });
 
+resetForm();
+
 // 进度指示器
 const steps = [
   { key: 1, label: "step1" },
@@ -278,7 +343,7 @@ const steps = [
           <div class="space-y-2">
             <Label>{{ t("dashboard.agents.fieldServerUrl") }}</Label>
             <Input
-              :model-value="currentBackend?.url ?? '--'"
+              :model-value="currentBackendInfo?.url ?? '--'"
               readonly
               class="text-muted-foreground"
             />
@@ -286,7 +351,7 @@ const steps = [
           <div class="space-y-2">
             <Label>{{ t("dashboard.agents.fieldServerName") }}</Label>
             <Input
-              :model-value="currentBackend?.name ?? '--'"
+              :model-value="currentBackendInfo?.name ?? '--'"
               readonly
               class="text-muted-foreground"
             />
@@ -317,7 +382,7 @@ const steps = [
               v-if="cronList.length === 0"
               class="text-sm text-muted-foreground py-2"
             >
-              -- 暂无定时任务 --
+              -- 暂无Agent定时任务 --
             </div>
             <div v-else class="space-y-2 max-h-40 overflow-y-auto">
               <div
@@ -327,8 +392,8 @@ const steps = [
               >
                 <Checkbox
                   :checked="selectedCronIds.has(cron.id)"
-                  @update:checked="
-                    (v: boolean) => {
+                  @update:modelValue="
+                    (v: unknown) => {
                       if (v) selectedCronIds.add(cron.id);
                       else selectedCronIds.delete(cron.id);
                     }
@@ -346,16 +411,17 @@ const steps = [
             <Label class="text-base">{{
               t("dashboard.agents.storageSection")
             }}</Label>
+
             <div class="flex items-center justify-between gap-4">
               <span class="text-sm">
-                {{ t("dashboard.agents.staticMonitoring") }}
+                {{ t("dashboard.agents.dynamicMonitoringSummary") }}
               </span>
               <div class="flex items-center gap-1.5">
                 <NumberField
-                  :model-value="staticRetention"
+                  :model-value="dynamicSummaryRetention"
                   :min="0"
-                  class="w-28"
-                  @update:model-value="staticRetention = $event"
+                  class="w-38"
+                  @update:model-value="dynamicSummaryRetention = $event"
                 />
                 <span class="text-sm text-muted-foreground whitespace-nowrap">
                   {{ t("dashboard.agents.minuteUnit") }}
@@ -370,8 +436,25 @@ const steps = [
                 <NumberField
                   :model-value="dynamicRetention"
                   :min="0"
-                  class="w-28"
+                  class="w-38"
                   @update:model-value="dynamicRetention = $event"
+                />
+                <span class="text-sm text-muted-foreground whitespace-nowrap">
+                  {{ t("dashboard.agents.minuteUnit") }}
+                </span>
+              </div>
+            </div>
+            <!-- no need to change -->
+            <div class="flex items-center justify-between gap-4" v-if="false">
+              <span class="text-sm">
+                {{ t("dashboard.agents.staticMonitoring") }}
+              </span>
+              <div class="flex items-center gap-1.5">
+                <NumberField
+                  :model-value="staticRetention"
+                  :min="0"
+                  class="w-38"
+                  @update:model-value="staticRetention = $event"
                 />
                 <span class="text-sm text-muted-foreground whitespace-nowrap">
                   {{ t("dashboard.agents.minuteUnit") }}
@@ -386,7 +469,7 @@ const steps = [
                 <NumberField
                   :model-value="agentTaskRetention"
                   :min="0"
-                  class="w-28"
+                  class="w-38"
                   @update:model-value="agentTaskRetention = $event"
                 />
                 <span class="text-sm text-muted-foreground whitespace-nowrap">
@@ -411,7 +494,16 @@ const steps = [
               {{ t("dashboard.agents.installSubtitle") }}
             </p>
           </div>
-          <div class="rounded-md border overflow-hidden">
+          <div class="rounded-md border overflow-hidden relative">
+            <button
+              type="button"
+              @click="copyInstallScript"
+              class="absolute top-2 right-2 z-10 p-1.5 rounded-md bg-background/80 hover:bg-background border border-border/50 hover:border-border transition-colors"
+              :title="isCopied ? 'Copied!' : 'Copy to clipboard'"
+            >
+              <Check v-if="isCopied" class="h-4 w-4 text-green-500" />
+              <Copy v-else class="h-4 w-4 text-muted-foreground" />
+            </button>
             <Codemirror
               :model-value="installScript"
               :extensions="editorExtensions"
@@ -437,11 +529,13 @@ const steps = [
       </div>
 
       <DialogFooter class="px-6 pb-6 pt-2">
+        <!-- 基础信息 -->
         <template v-if="step === 1">
           <Button :disabled="!canNext" @click="handleNext">
             {{ t("dashboard.agents.next") }}
           </Button>
         </template>
+        <!-- 预配置 -->
         <template v-else-if="step === 2">
           <Button variant="outline" @click="handlePrev">
             {{ t("dashboard.agents.prev") }}
@@ -450,6 +544,7 @@ const steps = [
             {{ t("dashboard.agents.next") }}
           </Button>
         </template>
+        <!-- 安装 -->
         <template v-else-if="step === 3">
           <Button variant="outline" @click="handlePrev">
             {{ t("dashboard.agents.prev") }}
@@ -462,6 +557,7 @@ const steps = [
             {{ t("dashboard.agents.next") }}
           </Button>
         </template>
+        <!-- 完成 -->
         <template v-else-if="step === 4">
           <Button variant="outline" @click="handleContinueAdding">
             {{ t("dashboard.agents.continueAdding") }}
