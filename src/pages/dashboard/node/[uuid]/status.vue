@@ -18,6 +18,7 @@ import UPlotChart from "@/components/UPlotChart.vue";
 import type {
   DynamicSummaryResponseItem,
   SummaryField,
+  DynamicDetailData,
 } from "@/types/monitoring";
 
 definePage({
@@ -35,11 +36,54 @@ const {
   servers: dynamicServers,
   connect: connectDynamic,
   fetchSummaryAvg,
+  fetchDynamic,
 } = useDynamicData();
 
 const { servers: staticServers, connect: connectStatic } = useStaticData();
 
 const activeTab = ref("cpu");
+
+// Detail snapshot state
+const dynamicDetail = ref<DynamicDetailData | null>(null);
+const detailLoading = ref(false);
+
+// Memory tab reads from the `server` summary ref directly — no dynamic fetch needed
+const TAB_FIELDS: Record<string, string[]> = {
+  cpu: ["cpu"],
+  disk: ["disk"],
+  network: ["network"],
+};
+
+let fetchSeq = 0;
+
+const loadDetail = async () => {
+  const fields = TAB_FIELDS[activeTab.value];
+  if (!fields || !uuid.value) return;
+  const seq = ++fetchSeq;
+  if (!dynamicDetail.value) detailLoading.value = true;
+  const result = await fetchDynamic(uuid.value, fields);
+  if (seq !== fetchSeq) {
+    detailLoading.value = false;
+    return;
+  }
+  dynamicDetail.value = result;
+  detailLoading.value = false;
+};
+
+// Format MHz → GHz
+const formatMHz = (mhz: number): string => {
+  if (mhz >= 1000) return `${(mhz / 1000).toFixed(2)} GHz`;
+  return `${mhz} MHz`;
+};
+
+// Network detail speed bar normalization
+const maxNetDetailSpeed = computed(() => {
+  const ifaces = dynamicDetail.value?.network?.interfaces ?? [];
+  return Math.max(
+    ...ifaces.map((i) => Math.max(i.receive_speed, i.transmit_speed)),
+    1,
+  );
+});
 
 const notFound = computed(
   () =>
@@ -146,6 +190,28 @@ watch(
   },
   { immediate: true },
 );
+
+// Detail data: load on connect
+watch(
+  dynamicStatus,
+  (status) => {
+    if (status === "connected") loadDetail();
+  },
+  { immediate: true },
+);
+
+// Detail data: refresh when summary pushes new data
+watch(server, () => loadDetail());
+
+// Detail data: reload on tab switch
+watch(activeTab, () => {
+  if (dynamicStatus.value === "connected") loadDetail();
+});
+
+// Detail data: clear stale data on node switch
+watch(uuid, () => {
+  dynamicDetail.value = null;
+});
 
 // CPU chart data from avg
 const cpuAvgTimestamps = computed(() =>
@@ -304,6 +370,58 @@ const maxNetSpeed = computed(() =>
                 </div>
               </CardContent>
             </Card>
+
+            <!-- CPU Detail: per-core -->
+            <div class="flex items-center gap-3">
+              <div class="h-px flex-1 bg-border"></div>
+              <span
+                class="text-xs text-muted-foreground uppercase tracking-wider"
+                >Per Core</span
+              >
+              <div class="h-px flex-1 bg-border"></div>
+            </div>
+
+            <div
+              v-if="detailLoading"
+              class="grid grid-cols-4 gap-2 animate-pulse"
+            >
+              <div
+                v-for="i in 8"
+                :key="i"
+                class="h-16 bg-muted rounded-lg"
+              ></div>
+            </div>
+            <div
+              v-else-if="dynamicDetail?.cpu?.per_core?.length"
+              class="grid grid-cols-4 gap-2"
+            >
+              <div
+                v-for="core in dynamicDetail.cpu.per_core"
+                :key="core.id"
+                class="bg-muted/30 border border-border rounded-lg p-3 space-y-2"
+              >
+                <div class="text-xs text-muted-foreground font-mono">
+                  Core {{ core.id }}
+                </div>
+                <div class="h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div
+                    class="h-full rounded-full"
+                    :style="{
+                      width: `${core.cpu_usage}%`,
+                      backgroundColor: MAIN_COLOR,
+                    }"
+                  ></div>
+                </div>
+                <div class="flex justify-between text-xs font-mono">
+                  <span :style="{ color: MAIN_COLOR }"
+                    >{{ core.cpu_usage.toFixed(1) }}%</span
+                  >
+                  <span class="text-muted-foreground">{{
+                    formatMHz(core.frequency_mhz)
+                  }}</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Memory View -->
@@ -355,6 +473,136 @@ const maxNetSpeed = computed(() =>
                     :maxValue="100"
                     yLabel="%"
                   />
+                </div>
+              </CardContent>
+            </Card>
+
+            <!-- Memory Detail: breakdown -->
+            <div class="flex items-center gap-3">
+              <div class="h-px flex-1 bg-border"></div>
+              <span
+                class="text-xs text-muted-foreground uppercase tracking-wider"
+                >Breakdown</span
+              >
+              <div class="h-px flex-1 bg-border"></div>
+            </div>
+
+            <Card>
+              <CardContent class="pt-4 space-y-5">
+                <!-- RAM bar -->
+                <div class="space-y-1.5">
+                  <div
+                    class="flex justify-between text-xs text-muted-foreground font-mono"
+                  >
+                    <span>RAM</span>
+                    <span>{{ formatBytes(server.total_memory ?? 0) }}</span>
+                  </div>
+                  <div class="h-3 bg-muted rounded-full overflow-hidden flex">
+                    <div
+                      class="h-full rounded-full transition-all"
+                      :style="{
+                        width: `${showRamPercent(server)}%`,
+                        backgroundColor: MAIN_COLOR,
+                      }"
+                    ></div>
+                  </div>
+                  <div
+                    class="flex gap-4 text-xs font-mono text-muted-foreground"
+                  >
+                    <span class="flex items-center gap-1.5">
+                      <span
+                        class="w-2 h-2 rounded-sm"
+                        :style="{ backgroundColor: MAIN_COLOR }"
+                      ></span>
+                      Used {{ formatBytes(server.used_memory ?? 0) }}
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                      <span
+                        class="w-2 h-2 rounded-sm bg-muted border border-border"
+                      ></span>
+                      Available {{ formatBytes(server.available_memory ?? 0) }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Swap bar -->
+                <div class="space-y-1.5">
+                  <div
+                    class="flex justify-between text-xs text-muted-foreground font-mono"
+                  >
+                    <span>Swap</span>
+                    <span>{{ formatBytes(server.total_swap ?? 0) }}</span>
+                  </div>
+                  <div class="h-3 bg-muted rounded-full overflow-hidden flex">
+                    <div
+                      class="h-full rounded-full transition-all"
+                      :style="{
+                        width: server.total_swap
+                          ? `${((server.used_swap ?? 0) / server.total_swap) * 100}%`
+                          : '0%',
+                        backgroundColor: '#a855f7',
+                      }"
+                    ></div>
+                  </div>
+                  <div
+                    class="flex gap-4 text-xs font-mono text-muted-foreground"
+                  >
+                    <span class="flex items-center gap-1.5">
+                      <span
+                        class="w-2 h-2 rounded-sm"
+                        style="background-color: #a855f7"
+                      ></span>
+                      Used {{ formatBytes(server.used_swap ?? 0) }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Stat cards -->
+                <div class="grid grid-cols-3 gap-3">
+                  <div class="bg-muted/30 border border-border rounded-lg p-3">
+                    <div
+                      class="text-xs text-muted-foreground uppercase tracking-wider"
+                    >
+                      Total
+                    </div>
+                    <div class="text-base font-semibold font-mono mt-1">
+                      {{ formatBytes(server.total_memory ?? 0) }}
+                    </div>
+                    <div class="text-xs text-muted-foreground mt-0.5">
+                      Physical RAM
+                    </div>
+                  </div>
+                  <div class="bg-muted/30 border border-border rounded-lg p-3">
+                    <div
+                      class="text-xs text-muted-foreground uppercase tracking-wider"
+                    >
+                      Used
+                    </div>
+                    <div
+                      class="text-base font-semibold font-mono mt-1"
+                      :style="{ color: MAIN_COLOR }"
+                    >
+                      {{ formatBytes(server.used_memory ?? 0) }}
+                    </div>
+                    <div class="text-xs text-muted-foreground mt-0.5">
+                      {{ showRamPercent(server).toFixed(1) }}%
+                    </div>
+                  </div>
+                  <div class="bg-muted/30 border border-border rounded-lg p-3">
+                    <div
+                      class="text-xs text-muted-foreground uppercase tracking-wider"
+                    >
+                      Available
+                    </div>
+                    <div
+                      class="text-base font-semibold font-mono mt-1 text-green-500"
+                    >
+                      {{ formatBytes(server.available_memory ?? 0) }}
+                    </div>
+                    <div class="text-xs text-muted-foreground mt-0.5">
+                      {{ (100 - showRamPercent(server)).toFixed(1) }}%
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -418,6 +666,80 @@ const maxNetSpeed = computed(() =>
                 </div>
               </CardContent>
             </Card>
+
+            <!-- Disk Detail: per-disk -->
+            <div class="flex items-center gap-3">
+              <div class="h-px flex-1 bg-border"></div>
+              <span
+                class="text-xs text-muted-foreground uppercase tracking-wider"
+                >Disks</span
+              >
+              <div class="h-px flex-1 bg-border"></div>
+            </div>
+
+            <div v-if="detailLoading" class="space-y-2 animate-pulse">
+              <div class="h-20 bg-muted rounded-lg"></div>
+              <div class="h-20 bg-muted rounded-lg"></div>
+            </div>
+            <div v-else-if="dynamicDetail?.disk?.length" class="space-y-2">
+              <div
+                v-for="disk in dynamicDetail.disk"
+                :key="disk.name"
+                class="bg-muted/30 border border-border rounded-lg p-3 space-y-2"
+              >
+                <div class="flex items-center gap-2">
+                  <span
+                    :class="[
+                      'text-xs font-bold px-1.5 py-0.5 rounded border',
+                      disk.kind === 'SSD'
+                        ? 'bg-green-500/10 text-green-500 border-green-500/30'
+                        : disk.kind === 'HDD'
+                          ? 'bg-amber-500/10 text-amber-500 border-amber-500/30'
+                          : 'bg-muted text-muted-foreground border-border',
+                    ]"
+                    >{{ disk.kind }}</span
+                  >
+                  <span class="text-sm font-mono">{{ disk.name }}</span>
+                  <span
+                    class="ml-auto text-xs text-muted-foreground font-mono"
+                    >{{ disk.mount_point }}</span
+                  >
+                </div>
+                <div class="h-2 bg-muted rounded-full overflow-hidden">
+                  <div
+                    class="h-full rounded-full"
+                    :style="{
+                      width:
+                        disk.total_space > 0
+                          ? `${Math.min(((disk.total_space - disk.available_space) / disk.total_space) * 100, 100)}%`
+                          : '0%',
+                      backgroundColor: MAIN_COLOR,
+                    }"
+                  ></div>
+                </div>
+                <div class="flex items-center gap-4 text-xs font-mono">
+                  <span :style="{ color: MAIN_COLOR }"
+                    >↓ {{ formatBytes(disk.read_speed) }}/s</span
+                  >
+                  <span :style="{ color: SUB_COLOR }"
+                    >↑ {{ formatBytes(disk.write_speed) }}/s</span
+                  >
+                  <span class="ml-auto text-muted-foreground">
+                    {{ formatBytes(disk.total_space - disk.available_space) }} /
+                    {{ formatBytes(disk.total_space) }}
+                    ({{
+                      disk.total_space > 0
+                        ? Math.round(
+                            ((disk.total_space - disk.available_space) /
+                              disk.total_space) *
+                              100,
+                          )
+                        : 0
+                    }}%)
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Network View -->
@@ -511,6 +833,89 @@ const maxNetSpeed = computed(() =>
                 </div>
               </CardContent>
             </Card>
+
+            <!-- Network Detail: per-interface -->
+            <div class="flex items-center gap-3">
+              <div class="h-px flex-1 bg-border"></div>
+              <span
+                class="text-xs text-muted-foreground uppercase tracking-wider"
+                >Interfaces</span
+              >
+              <div class="h-px flex-1 bg-border"></div>
+            </div>
+
+            <div v-if="detailLoading" class="space-y-2 animate-pulse">
+              <div class="h-16 bg-muted rounded-lg"></div>
+              <div class="h-16 bg-muted rounded-lg"></div>
+            </div>
+            <div
+              v-else-if="dynamicDetail?.network?.interfaces?.length"
+              class="space-y-2"
+            >
+              <div
+                v-for="iface in dynamicDetail.network.interfaces"
+                :key="iface.interface_name"
+                class="bg-muted/30 border border-border rounded-lg p-3"
+              >
+                <div class="flex items-center gap-4">
+                  <span class="text-sm font-mono min-w-[80px]">{{
+                    iface.interface_name
+                  }}</span>
+                  <div class="flex-1 space-y-1.5">
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs w-3" :style="{ color: MAIN_COLOR }"
+                        >↓</span
+                      >
+                      <div
+                        class="flex-1 h-1.5 bg-muted rounded-full overflow-hidden"
+                      >
+                        <div
+                          class="h-full rounded-full"
+                          :style="{
+                            width: `${(iface.receive_speed / maxNetDetailSpeed) * 100}%`,
+                            backgroundColor: MAIN_COLOR,
+                          }"
+                        ></div>
+                      </div>
+                      <span
+                        class="text-xs font-mono min-w-[80px] text-right"
+                        :style="{ color: MAIN_COLOR }"
+                      >
+                        {{ formatBytes(iface.receive_speed) }}/s
+                      </span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs w-3" :style="{ color: SUB_COLOR }"
+                        >↑</span
+                      >
+                      <div
+                        class="flex-1 h-1.5 bg-muted rounded-full overflow-hidden"
+                      >
+                        <div
+                          class="h-full rounded-full"
+                          :style="{
+                            width: `${(iface.transmit_speed / maxNetDetailSpeed) * 100}%`,
+                            backgroundColor: SUB_COLOR,
+                          }"
+                        ></div>
+                      </div>
+                      <span
+                        class="text-xs font-mono min-w-[80px] text-right"
+                        :style="{ color: SUB_COLOR }"
+                      >
+                        {{ formatBytes(iface.transmit_speed) }}/s
+                      </span>
+                    </div>
+                  </div>
+                  <div
+                    class="text-xs font-mono text-muted-foreground text-right shrink-0"
+                  >
+                    <div>↓ {{ formatBytes(iface.total_received) }}</div>
+                    <div>↑ {{ formatBytes(iface.total_transmitted) }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </Transition>
       </div>
