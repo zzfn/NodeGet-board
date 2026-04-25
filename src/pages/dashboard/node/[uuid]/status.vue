@@ -13,11 +13,12 @@ import {
   HardDrive,
   Network,
   AlertCircle,
+  Container,
+  Fish,
 } from "lucide-vue-next";
 import UPlotChart from "@/components/UPlotChart.vue";
 import type {
   DynamicSummaryResponseItem,
-  SummaryField,
   DynamicDetailData,
 } from "@/types/monitoring";
 
@@ -47,6 +48,27 @@ const activeTab = ref("cpu");
 const dynamicDetail = ref<DynamicDetailData | null>(null);
 const detailLoading = ref(false);
 
+// Disk/Network snapshot accumulation (max 30)
+const diskSnapshots = ref<any[][]>([]);
+const netSnapshots = ref<any[][]>([]);
+const selectedDisk = ref("");
+const selectedIface = ref("all");
+
+// Detail polling control
+let detailInterval: ReturnType<typeof setInterval> | null = null;
+
+const startDetailPolling = () => {
+  stopDetailPolling();
+  detailInterval = setInterval(() => loadDetail(), 1000);
+};
+
+const stopDetailPolling = () => {
+  if (detailInterval) {
+    clearInterval(detailInterval);
+    detailInterval = null;
+  }
+};
+
 // Memory tab reads from the `server` summary ref directly — no dynamic fetch needed
 const TAB_FIELDS: Record<string, string[]> = {
   cpu: ["cpu"],
@@ -68,6 +90,19 @@ const loadDetail = async () => {
   }
   dynamicDetail.value = result;
   detailLoading.value = false;
+
+  // Accumulate snapshots for realtime charts
+  if (result?.disk) {
+    diskSnapshots.value.push([...result.disk]);
+    if (diskSnapshots.value.length > 30) diskSnapshots.value.shift();
+    if (!selectedDisk.value && result.disk.length > 0) {
+      selectedDisk.value = result.disk[0].name;
+    }
+  }
+  if (result?.network?.interfaces) {
+    netSnapshots.value.push([...result.network.interfaces]);
+    if (netSnapshots.value.length > 30) netSnapshots.value.shift();
+  }
 };
 
 // Format MHz → GHz
@@ -76,12 +111,103 @@ const formatMHz = (mhz: number): string => {
   return `${mhz} MHz`;
 };
 
-// Network detail speed bar normalization
-const maxNetDetailSpeed = computed(() => {
+// Disk snapshot filtering
+const getDiskSpeed = (
+  disks: any[],
+  type: "read" | "write",
+  name: string,
+): number => {
+  const disk = disks.find((d) => d.name === name);
+  return type === "read" ? (disk?.read_speed ?? 0) : (disk?.write_speed ?? 0);
+};
+
+const displayDiskReadData = computed(() =>
+  diskSnapshots.value.map((disks) =>
+    getDiskSpeed(disks, "read", selectedDisk.value),
+  ),
+);
+const displayDiskWriteData = computed(() =>
+  diskSnapshots.value.map((disks) =>
+    getDiskSpeed(disks, "write", selectedDisk.value),
+  ),
+);
+
+const currentDiskRead = computed(() =>
+  getDiskSpeed(dynamicDetail.value?.disk ?? [], "read", selectedDisk.value),
+);
+const currentDiskWrite = computed(() =>
+  getDiskSpeed(dynamicDetail.value?.disk ?? [], "write", selectedDisk.value),
+);
+const maxDiskChartSpeed = computed(() =>
+  Math.max(...displayDiskReadData.value, ...displayDiskWriteData.value, 1),
+);
+
+// Network snapshot filtering
+const getIfaceSpeed = (
+  ifaces: any[],
+  type: "rx" | "tx",
+  name: string,
+): number => {
+  if (name === "all") {
+    return ifaces
+      .filter((i) => i.interface_name !== "lo")
+      .reduce(
+        (s, i) =>
+          s + ((type === "rx" ? i.receive_speed : i.transmit_speed) || 0),
+        0,
+      );
+  }
+  const iface = ifaces.find((i) => i.interface_name === name);
+  return type === "rx"
+    ? (iface?.receive_speed ?? 0)
+    : (iface?.transmit_speed ?? 0);
+};
+
+const currentNetRx = computed(() =>
+  getIfaceSpeed(
+    dynamicDetail.value?.network?.interfaces ?? [],
+    "rx",
+    selectedIface.value,
+  ),
+);
+const currentNetTx = computed(() =>
+  getIfaceSpeed(
+    dynamicDetail.value?.network?.interfaces ?? [],
+    "tx",
+    selectedIface.value,
+  ),
+);
+
+const displayNetRxData = computed(() =>
+  netSnapshots.value.map((ifaces) =>
+    getIfaceSpeed(ifaces, "rx", selectedIface.value),
+  ),
+);
+const displayNetTxData = computed(() =>
+  netSnapshots.value.map((ifaces) =>
+    getIfaceSpeed(ifaces, "tx", selectedIface.value),
+  ),
+);
+
+const maxNetChartSpeed = computed(() =>
+  Math.max(...displayNetRxData.value, ...displayNetTxData.value, 1),
+);
+
+// Network interface sorting and icons
+const ifacePriority = (name: string): number => {
+  if (name === "lo") return -1;
+  if (name.includes("eth")) return 10;
+  if (name.includes("ens")) return 9;
+  if (name.includes("veth")) return 1;
+  if (name.includes("docker")) return 0;
+  if (name.includes("br")) return 0;
+  return 5;
+};
+
+const sortedInterfaces = computed(() => {
   const ifaces = dynamicDetail.value?.network?.interfaces ?? [];
-  return Math.max(
-    ...ifaces.map((i) => Math.max(i.receive_speed, i.transmit_speed)),
-    1,
+  return [...ifaces].sort(
+    (a, b) => ifacePriority(b.interface_name) - ifacePriority(a.interface_name),
   );
 });
 
@@ -134,6 +260,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (elapsedTimer) clearInterval(elapsedTimer);
+  stopDetailPolling();
 });
 
 const liveLabel = computed(() => {
@@ -180,37 +307,34 @@ const loadAvgData = async () => {
   }
 };
 
-// Wait for WebSocket connected before fetching avg data
+// On connect: fetch avg data + start detail polling
 watch(
   dynamicStatus,
   (status) => {
     if (status === "connected") {
       loadAvgData();
+      startDetailPolling();
+    } else {
+      stopDetailPolling();
     }
   },
   { immediate: true },
 );
 
-// Detail data: load on connect
-watch(
-  dynamicStatus,
-  (status) => {
-    if (status === "connected") loadDetail();
-  },
-  { immediate: true },
-);
-
-// Detail data: refresh when summary pushes new data
-watch(server, () => loadDetail());
-
-// Detail data: reload on tab switch
+// Tab switch: clear snapshots and reload
 watch(activeTab, () => {
+  diskSnapshots.value = [];
+  netSnapshots.value = [];
   if (dynamicStatus.value === "connected") loadDetail();
 });
 
-// Detail data: clear stale data on node switch
+// Node switch: clear all detail state
 watch(uuid, () => {
   dynamicDetail.value = null;
+  diskSnapshots.value = [];
+  netSnapshots.value = [];
+  selectedDisk.value = "";
+  selectedIface.value = "all";
 });
 
 // CPU chart data from avg
@@ -667,67 +791,67 @@ const maxNetSpeed = computed(() =>
               </CardContent>
             </Card>
 
-            <!-- Disk Detail: per-disk -->
+            <!-- Disk selector cards -->
             <div class="flex items-center gap-3">
               <div class="h-px flex-1 bg-border"></div>
               <span
                 class="text-xs text-muted-foreground uppercase tracking-wider"
-                >Disks</span
+                >Detail</span
               >
               <div class="h-px flex-1 bg-border"></div>
             </div>
 
-            <div v-if="detailLoading" class="space-y-2 animate-pulse">
-              <div class="h-20 bg-muted rounded-lg"></div>
-              <div class="h-20 bg-muted rounded-lg"></div>
-            </div>
-            <div v-else-if="dynamicDetail?.disk?.length" class="space-y-2">
-              <div
+            <div
+              v-if="dynamicDetail?.disk?.length"
+              class="flex gap-2 overflow-x-auto pb-1 scrollbar-none"
+            >
+              <button
                 v-for="disk in dynamicDetail.disk"
                 :key="disk.name"
-                class="bg-muted/30 border border-border rounded-lg p-3 space-y-2"
+                @click="selectedDisk = disk.name"
+                :class="[
+                  'flex flex-col items-start px-3 py-2.5 rounded-lg border text-xs whitespace-nowrap transition-all w-[300px] shrink-0',
+                  selectedDisk === disk.name
+                    ? 'border-[var(--status-main-color)] bg-[var(--status-main-color)]/10'
+                    : 'border-border bg-muted/30 hover:bg-muted/50',
+                ]"
               >
-                <div class="flex items-center gap-2">
-                  <span
-                    :class="[
-                      'text-xs font-bold px-1.5 py-0.5 rounded border',
-                      disk.kind === 'SSD'
-                        ? 'bg-green-500/10 text-green-500 border-green-500/30'
-                        : disk.kind === 'HDD'
-                          ? 'bg-amber-500/10 text-amber-500 border-amber-500/30'
-                          : 'bg-muted text-muted-foreground border-border',
-                    ]"
-                    >{{ disk.kind }}</span
-                  >
-                  <span class="text-sm font-mono">{{ disk.name }}</span>
-                  <span
-                    class="ml-auto text-xs text-muted-foreground font-mono"
-                    >{{ disk.mount_point }}</span
-                  >
-                </div>
-                <div class="h-2 bg-muted rounded-full overflow-hidden">
+                <span
+                  :class="
+                    selectedDisk === disk.name
+                      ? 'text-[var(--status-main-color)] font-medium'
+                      : 'text-foreground'
+                  "
+                  class="truncate w-full"
+                  >{{ disk.mount_point }}</span
+                >
+                <span
+                  class="text-muted-foreground text-[10px] mt-0.5 truncate w-full"
+                  >{{ disk.name }}</span
+                >
+                <div class="w-full mt-1.5">
                   <div
-                    class="h-full rounded-full"
-                    :style="{
-                      width:
-                        disk.total_space > 0
-                          ? `${Math.min(((disk.total_space - disk.available_space) / disk.total_space) * 100, 100)}%`
-                          : '0%',
-                      backgroundColor: MAIN_COLOR,
-                    }"
-                  ></div>
-                </div>
-                <div class="flex items-center gap-4 text-xs font-mono">
-                  <span :style="{ color: MAIN_COLOR }"
-                    >↓ {{ formatBytes(disk.read_speed) }}/s</span
+                    class="w-full h-1 bg-muted/50 rounded-full overflow-hidden"
                   >
-                  <span :style="{ color: SUB_COLOR }"
-                    >↑ {{ formatBytes(disk.write_speed) }}/s</span
-                  >
-                  <span class="ml-auto text-muted-foreground">
-                    {{ formatBytes(disk.total_space - disk.available_space) }} /
-                    {{ formatBytes(disk.total_space) }}
-                    ({{
+                    <div
+                      class="h-full rounded-full transition-all"
+                      :style="{
+                        width:
+                          disk.total_space > 0
+                            ? Math.min(
+                                ((disk.total_space - disk.available_space) /
+                                  disk.total_space) *
+                                  100,
+                                100,
+                              ).toFixed(0) + '%'
+                            : '0%',
+                        backgroundColor: MAIN_COLOR,
+                        opacity: selectedDisk === disk.name ? '1' : '0.5',
+                      }"
+                    ></div>
+                  </div>
+                  <span class="font-mono text-[10px] text-muted-foreground">
+                    {{
                       disk.total_space > 0
                         ? Math.round(
                             ((disk.total_space - disk.available_space) /
@@ -735,11 +859,60 @@ const maxNetSpeed = computed(() =>
                               100,
                           )
                         : 0
-                    }}%)
+                    }}% ·
+                    {{ formatBytes(disk.total_space - disk.available_space) }} /
+                    {{ formatBytes(disk.total_space) }}
                   </span>
                 </div>
-              </div>
+                <div class="flex gap-2 mt-1">
+                  <span
+                    class="font-mono text-[10px]"
+                    :style="{ color: MAIN_COLOR }"
+                    >↓ {{ formatBytes(disk.read_speed) }}/s</span
+                  >
+                  <span
+                    class="font-mono text-[10px]"
+                    :style="{ color: SUB_COLOR }"
+                    >↑ {{ formatBytes(disk.write_speed) }}/s</span
+                  >
+                </div>
+              </button>
             </div>
+
+            <!-- Per-Disk I/O Chart -->
+            <Card v-if="selectedDisk && diskSnapshots.length > 0">
+              <CardHeader>
+                <div class="flex items-center gap-4">
+                  <CardTitle class="text-sm font-medium text-muted-foreground">
+                    Disk I/O · {{ selectedDisk }}
+                  </CardTitle>
+                  <div class="flex items-center gap-3 text-xs font-mono">
+                    <span class="status-main-text"
+                      >↓ {{ formatBytes(currentDiskRead) }}/s</span
+                    >
+                    <span class="status-sub-text"
+                      >↑ {{ formatBytes(currentDiskWrite) }}/s</span
+                    >
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div
+                  class="h-[260px] w-full flex items-end p-0 relative overflow-hidden"
+                >
+                  <UPlotChart
+                    :data="displayDiskReadData"
+                    :data2="displayDiskWriteData"
+                    :color="MAIN_COLOR"
+                    :color2="SUB_COLOR"
+                    :maxValue="maxDiskChartSpeed"
+                    yLabel="B/s"
+                    label1="Read"
+                    label2="Write"
+                  />
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           <!-- Network View -->
@@ -834,88 +1007,227 @@ const maxNetSpeed = computed(() =>
               </CardContent>
             </Card>
 
-            <!-- Network Detail: per-interface -->
+            <!-- Network interface selector cards -->
             <div class="flex items-center gap-3">
               <div class="h-px flex-1 bg-border"></div>
               <span
                 class="text-xs text-muted-foreground uppercase tracking-wider"
-                >Interfaces</span
+                >Detail</span
               >
               <div class="h-px flex-1 bg-border"></div>
             </div>
 
-            <div v-if="detailLoading" class="space-y-2 animate-pulse">
-              <div class="h-16 bg-muted rounded-lg"></div>
-              <div class="h-16 bg-muted rounded-lg"></div>
-            </div>
             <div
-              v-else-if="dynamicDetail?.network?.interfaces?.length"
-              class="space-y-2"
+              v-if="dynamicDetail?.network?.interfaces?.length"
+              class="flex gap-2 overflow-x-auto pb-1 scrollbar-none"
             >
-              <div
-                v-for="iface in dynamicDetail.network.interfaces"
-                :key="iface.interface_name"
-                class="bg-muted/30 border border-border rounded-lg p-3"
+              <!-- All tab -->
+              <button
+                @click="selectedIface = 'all'"
+                :class="[
+                  'flex flex-col items-start px-3 py-2.5 rounded-lg border text-xs whitespace-nowrap transition-all w-[120px]',
+                  selectedIface === 'all'
+                    ? 'border-[var(--status-main-color)] bg-[var(--status-main-color)]/10'
+                    : 'border-border bg-muted/30 hover:bg-muted/50',
+                ]"
               >
+                <span
+                  :class="
+                    selectedIface === 'all'
+                      ? 'text-[var(--status-main-color)] font-medium'
+                      : 'text-foreground'
+                  "
+                  >All</span
+                >
+                <span
+                  class="font-mono text-[10px] mt-1"
+                  :style="{ color: MAIN_COLOR }"
+                  >↑
+                  {{
+                    formatBytes(
+                      (dynamicDetail?.network?.interfaces ?? [])
+                        .filter((i: any) => i.interface_name !== "lo")
+                        .reduce(
+                          (s: number, i: any) => s + (i.transmit_speed || 0),
+                          0,
+                        ),
+                    )
+                  }}/s</span
+                >
+                <span
+                  class="font-mono text-[10px]"
+                  :style="{ color: SUB_COLOR }"
+                  >↓
+                  {{
+                    formatBytes(
+                      (dynamicDetail?.network?.interfaces ?? [])
+                        .filter((i: any) => i.interface_name !== "lo")
+                        .reduce(
+                          (s: number, i: any) => s + (i.receive_speed || 0),
+                          0,
+                        ),
+                    )
+                  }}/s</span
+                >
+              </button>
+              <!-- Per-interface tabs -->
+              <button
+                v-for="iface in sortedInterfaces"
+                :key="iface.interface_name"
+                @click="selectedIface = iface.interface_name"
+                :class="[
+                  'flex flex-col items-start px-3 py-2.5 rounded-lg border text-xs whitespace-nowrap transition-all w-[120px]',
+                  selectedIface === iface.interface_name
+                    ? 'border-[var(--status-main-color)] bg-[var(--status-main-color)]/10'
+                    : 'border-border bg-muted/30 hover:bg-muted/50',
+                ]"
+              >
+                <span
+                  :class="
+                    selectedIface === iface.interface_name
+                      ? 'text-[var(--status-main-color)] font-medium'
+                      : 'text-foreground'
+                  "
+                  >{{ iface.interface_name }}</span
+                >
+                <span
+                  class="font-mono text-[10px] mt-1"
+                  :style="{ color: MAIN_COLOR }"
+                  >↑ {{ formatBytes(iface.transmit_speed) }}/s</span
+                >
+                <span
+                  class="font-mono text-[10px]"
+                  :style="{ color: SUB_COLOR }"
+                  >↓ {{ formatBytes(iface.receive_speed) }}/s</span
+                >
+              </button>
+            </div>
+
+            <!-- Per-NIC Chart -->
+            <Card v-if="netSnapshots.length > 0">
+              <CardHeader>
                 <div class="flex items-center gap-4">
-                  <span class="text-sm font-mono min-w-[80px]">{{
-                    iface.interface_name
-                  }}</span>
-                  <div class="flex-1 space-y-1.5">
-                    <div class="flex items-center gap-2">
-                      <span class="text-xs w-3" :style="{ color: MAIN_COLOR }"
-                        >↓</span
-                      >
-                      <div
-                        class="flex-1 h-1.5 bg-muted rounded-full overflow-hidden"
-                      >
-                        <div
-                          class="h-full rounded-full"
-                          :style="{
-                            width: `${(iface.receive_speed / maxNetDetailSpeed) * 100}%`,
-                            backgroundColor: MAIN_COLOR,
-                          }"
-                        ></div>
-                      </div>
-                      <span
-                        class="text-xs font-mono min-w-[80px] text-right"
-                        :style="{ color: MAIN_COLOR }"
-                      >
-                        {{ formatBytes(iface.receive_speed) }}/s
-                      </span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <span class="text-xs w-3" :style="{ color: SUB_COLOR }"
-                        >↑</span
-                      >
-                      <div
-                        class="flex-1 h-1.5 bg-muted rounded-full overflow-hidden"
-                      >
-                        <div
-                          class="h-full rounded-full"
-                          :style="{
-                            width: `${(iface.transmit_speed / maxNetDetailSpeed) * 100}%`,
-                            backgroundColor: SUB_COLOR,
-                          }"
-                        ></div>
-                      </div>
-                      <span
-                        class="text-xs font-mono min-w-[80px] text-right"
-                        :style="{ color: SUB_COLOR }"
-                      >
-                        {{ formatBytes(iface.transmit_speed) }}/s
-                      </span>
-                    </div>
-                  </div>
-                  <div
-                    class="text-xs font-mono text-muted-foreground text-right shrink-0"
-                  >
-                    <div>↓ {{ formatBytes(iface.total_received) }}</div>
-                    <div>↑ {{ formatBytes(iface.total_transmitted) }}</div>
+                  <CardTitle class="text-sm font-medium text-muted-foreground">
+                    {{
+                      selectedIface === "all"
+                        ? "Network Throughput"
+                        : selectedIface
+                    }}
+                  </CardTitle>
+                  <div class="flex items-center gap-3 text-xs font-mono">
+                    <span class="status-main-text"
+                      >↓ {{ formatBytes(currentNetRx) }}/s</span
+                    >
+                    <span class="status-sub-text"
+                      >↑ {{ formatBytes(currentNetTx) }}/s</span
+                    >
                   </div>
                 </div>
-              </div>
-            </div>
+              </CardHeader>
+              <CardContent>
+                <div
+                  class="h-[260px] w-full flex items-end p-0 relative overflow-hidden"
+                >
+                  <UPlotChart
+                    :data="displayNetRxData"
+                    :data2="displayNetTxData"
+                    :color="MAIN_COLOR"
+                    :color2="SUB_COLOR"
+                    :maxValue="maxNetChartSpeed"
+                    yLabel="B/s"
+                    label1="Download"
+                    label2="Upload"
+                  />
+                </div>
+                <!-- Legend -->
+                <div
+                  class="flex items-center gap-4 mt-2 text-xs font-mono text-muted-foreground"
+                >
+                  <span class="flex items-center gap-1">
+                    <span
+                      class="inline-block w-3 h-0.5"
+                      :style="{ backgroundColor: MAIN_COLOR }"
+                    ></span>
+                    Download (↓)
+                  </span>
+                  <span class="flex items-center gap-1">
+                    <span
+                      class="inline-block w-3 h-0.5"
+                      :style="{ backgroundColor: SUB_COLOR }"
+                    ></span>
+                    Upload (↑)
+                  </span>
+                  <span
+                    v-if="dynamicDetail?.network?.tcp_connections != null"
+                    class="ml-auto"
+                  >
+                    TCP {{ dynamicDetail.network.tcp_connections }} &nbsp; UDP
+                    {{ dynamicDetail.network.udp_connections }}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <!-- Network Interfaces List -->
+            <Card v-if="dynamicDetail?.network?.interfaces?.length">
+              <CardHeader>
+                <CardTitle class="text-sm font-medium"
+                  >Network Interfaces</CardTitle
+                >
+              </CardHeader>
+              <CardContent>
+                <div class="space-y-3">
+                  <div
+                    v-for="(iface, index) in sortedInterfaces"
+                    :key="index"
+                    @click="selectedIface = iface.interface_name"
+                    :class="[
+                      'flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all',
+                      selectedIface === iface.interface_name
+                        ? 'border-[var(--status-main-color)] bg-[var(--status-main-color)]/5'
+                        : 'bg-muted/30 hover:bg-muted/50',
+                    ]"
+                  >
+                    <div class="flex items-center gap-3">
+                      <div
+                        class="h-8 w-8 rounded bg-background flex items-center justify-center border"
+                      >
+                        <Fish
+                          v-if="iface.interface_name.startsWith('docker')"
+                          class="h-4 w-4 text-muted-foreground"
+                        />
+                        <Container
+                          v-else-if="iface.interface_name.startsWith('podman')"
+                          class="h-4 w-4 text-muted-foreground"
+                        />
+                        <Network v-else class="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <div class="font-medium text-sm">
+                          {{ iface.interface_name }}
+                        </div>
+                        <div
+                          class="text-[10px] text-muted-foreground font-mono space-x-2"
+                        >
+                          <span>↓ {{ formatBytes(iface.total_received) }}</span>
+                          <span
+                            >↑ {{ formatBytes(iface.total_transmitted) }}</span
+                          >
+                        </div>
+                      </div>
+                    </div>
+                    <div class="text-right text-xs font-mono space-y-1">
+                      <div :style="{ color: MAIN_COLOR }">
+                        ↓ {{ formatBytes(iface.receive_speed) }}/s
+                      </div>
+                      <div :style="{ color: SUB_COLOR }">
+                        ↑ {{ formatBytes(iface.transmit_speed) }}/s
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </Transition>
       </div>
