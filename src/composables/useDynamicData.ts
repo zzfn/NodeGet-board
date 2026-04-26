@@ -313,7 +313,7 @@ const fetchSummaryAvg = async (
     });
   }
 
-  condition.push({ limit: options?.limit ?? 200 });
+  if (options?.limit != null) condition.push({ limit: options.limit });
 
   return sendRequest("agent_query_dynamic_summary", [
     currentBackend.value.token,
