@@ -107,13 +107,15 @@ const sendQuery = async () => {
     if (e.message === "Request timed out") {
       // 忽略，interval 会继续下一次
     } else if (isTransientError(e)) {
-      dynamicError.value =
-        typeof e === "string" ? e : e.message || JSON.stringify(e);
+      const msg = typeof e === "string" ? e : e.message || JSON.stringify(e);
+      dynamicError.value = msg;
+      toast.error("数据查询失败", { description: msg });
       stopPolling();
       scheduleRetry();
     } else {
-      dynamicError.value =
-        typeof e === "string" ? e : e.message || JSON.stringify(e);
+      const msg = typeof e === "string" ? e : e.message || JSON.stringify(e);
+      dynamicError.value = msg;
+      toast.error("数据查询失败", { description: msg });
       stopPolling();
     }
   }
@@ -190,10 +192,12 @@ const connect = () => {
           stopPolling();
         } else if (msg.error) {
           console.error("[Dynamic] RPC Error:", msg.error);
-          dynamicError.value =
+          const errMsg =
             typeof msg.error === "string"
               ? msg.error
               : msg.error.message || JSON.stringify(msg.error);
+          dynamicError.value = errMsg;
+          toast.error("数据查询失败", { description: errMsg });
           stopPolling();
         }
       } catch (e) {
@@ -327,21 +331,34 @@ const fetchSummaryAvg = async (
 const fetchDynamic = async (
   serverUuid: string,
   fields: string[],
-): Promise<DynamicDetailData | null> => {
-  if (!currentBackend.value) return null;
+  options?: { timestamp_from?: number; timestamp_to?: number; limit?: number },
+): Promise<DynamicDetailData[]> => {
+  if (!currentBackend.value) return [];
   try {
+    const condition: Record<string, any>[] = [{ uuid: serverUuid }];
+
+    if (options?.timestamp_from != null && options?.timestamp_to != null) {
+      condition.push({
+        timestamp_from_to: [options.timestamp_from, options.timestamp_to],
+      });
+    } else {
+      condition.push({ last: null });
+    }
+
+    if (options?.limit != null) condition.push({ limit: options.limit });
+
     const result = await sendRequest("agent_query_dynamic", [
       currentBackend.value.token,
-      {
-        fields,
-        condition: [{ uuid: serverUuid }, { last: null }],
-      },
+      { fields, condition },
     ]);
-    if (Array.isArray(result) && result.length > 0) return result[0];
-    return null;
+    if (Array.isArray(result)) return result;
+    return [];
   } catch (e: any) {
     console.error("[Dynamic] fetchDynamic failed:", e);
-    return null;
+    toast.error("数据查询失败", {
+      description: typeof e === "string" ? e : e.message || JSON.stringify(e),
+    });
+    return [];
   }
 };
 
