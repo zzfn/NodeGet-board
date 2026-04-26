@@ -5,7 +5,6 @@ import { useStaticData } from "@/composables/useStaticData";
 import { formatBytes, formatLoad } from "@/utils/format";
 import { showCpuPercent, showRamPercent, showRamText } from "@/utils/show";
 import { useRoute } from "vue-router";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Cpu,
@@ -307,10 +306,10 @@ const TAB_FIELDS_AVG: Record<TabId, SummaryField[]> = {
   network: ["transmit_speed", "receive_speed"],
 };
 
-const fetchTabAvg = async (tab: TabId) => {
+const fetchTabAvg = async (tab: TabId, showLoading = true) => {
   const state = tabState.value[tab];
   if (!uuid.value) return;
-  state.loading = true;
+  if (showLoading) state.loading = true;
   const now = Date.now();
   const from = now - state.windowMs;
   try {
@@ -325,14 +324,17 @@ const fetchTabAvg = async (tab: TabId) => {
   } catch (e) {
     console.error(`[Status] Failed to fetch ${tab} avg data:`, e);
   } finally {
-    state.loading = false;
+    if (showLoading) state.loading = false;
   }
 };
 
 const startTabTimer = (tab: TabId) => {
   stopTabTimer(tab);
   const state = tabState.value[tab];
-  state.timer = setInterval(() => fetchTabAvg(tab), state.refreshInterval);
+  state.timer = setInterval(
+    () => fetchTabAvg(tab, false),
+    state.refreshInterval,
+  );
 };
 
 const stopTabTimer = (tab: TabId) => {
@@ -554,7 +556,6 @@ const maxNetSpeed = computed(() =>
                     tabState.cpu.windowMs = +(
                       $event.target as HTMLSelectElement
                     ).value;
-                    tabState.cpu.data = [];
                     fetchTabAvg('cpu');
                     startTabTimer('cpu');
                   "
@@ -590,53 +591,50 @@ const maxNetSpeed = computed(() =>
                 更新
               </span>
             </div>
-            <Card>
-              <CardHeader>
-                <CardTitle class="text-sm font-medium text-muted-foreground"
-                  >Total Utilization</CardTitle
+            <div>
+              <div
+                class="flex items-center gap-3 mb-3 text-xs font-mono flex-wrap"
+              >
+                <span class="text-sm font-medium text-muted-foreground mr-1"
+                  >Total Utilization</span
                 >
-                <div class="flex items-center gap-3 text-xs font-mono">
-                  <span class="status-main-text">
-                    {{ showCpuPercent(server).toFixed(1) }}%
-                  </span>
-                  <span class="text-muted-foreground/40">|</span>
-                  <span class="text-muted-foreground">
-                    Load
-                    <span class="text-foreground">{{
-                      formatLoad({
-                        load_one: server.load_one,
-                        load_five: server.load_five,
-                        load_fifteen: server.load_fifteen,
-                      })
-                    }}</span>
-                  </span>
-                  <span class="text-muted-foreground/40">|</span>
-                  <span class="text-muted-foreground">
-                    {{ server.process_count ?? "-" }} Processes
-                  </span>
-                  <span class="text-muted-foreground/40">|</span>
-                  <span
-                    class="text-muted-foreground truncate max-w-[280px]"
-                    :title="server?.cpu_static?.per_core?.[0]?.brand"
-                  >
-                    {{ server?.cpu_static?.per_core?.[0]?.brand || "Unknown" }}
-                  </span>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div
-                  class="h-[260px] w-full flex items-end p-0 relative overflow-hidden"
+                <span class="status-main-text">
+                  {{ showCpuPercent(server).toFixed(1) }}%
+                </span>
+                <span class="text-muted-foreground/40">|</span>
+                <span class="text-muted-foreground">
+                  Load
+                  <span class="text-foreground">{{
+                    formatLoad({
+                      load_one: server.load_one,
+                      load_five: server.load_five,
+                      load_fifteen: server.load_fifteen,
+                    })
+                  }}</span>
+                </span>
+                <span class="text-muted-foreground/40">|</span>
+                <span class="text-muted-foreground">
+                  {{ server.process_count ?? "-" }} Processes
+                </span>
+                <span class="text-muted-foreground/40">|</span>
+                <span
+                  class="text-muted-foreground truncate max-w-[280px]"
+                  :title="server?.cpu_static?.per_core?.[0]?.brand"
                 >
-                  <UPlotChart
-                    :data="cpuAvgValues"
-                    :timestamps="cpuAvgTimestamps"
-                    :color="MAIN_COLOR"
-                    :maxValue="100"
-                    yLabel="%"
-                  />
-                </div>
-              </CardContent>
-            </Card>
+                  {{ server?.cpu_static?.per_core?.[0]?.brand || "Unknown" }}
+                </span>
+              </div>
+              <div class="h-[340px] w-full relative overflow-hidden">
+                <UPlotChart
+                  :data="cpuAvgValues"
+                  :timestamps="cpuAvgTimestamps"
+                  :color="MAIN_COLOR"
+                  :maxValue="100"
+                  yLabel="%"
+                  :loading="tabState.cpu.loading"
+                />
+              </div>
+            </div>
 
             <!-- CPU Detail: per-core -->
             <div class="flex items-center gap-3">
@@ -708,7 +706,6 @@ const maxNetSpeed = computed(() =>
                     tabState.memory.windowMs = +(
                       $event.target as HTMLSelectElement
                     ).value;
-                    tabState.memory.data = [];
                     fetchTabAvg('memory');
                     startTabTimer('memory');
                   "
@@ -744,52 +741,47 @@ const maxNetSpeed = computed(() =>
                 更新
               </span>
             </div>
-            <Card>
-              <CardHeader>
-                <div class="flex items-center gap-4">
-                  <CardTitle class="text-sm font-medium text-muted-foreground"
-                    >Memory Usage</CardTitle
-                  >
-                  <div class="flex items-center gap-3 text-xs font-mono">
-                    <span class="status-main-text">
-                      RAM {{ showRamPercent(server).toFixed(1) }}%
-                      <span class="text-muted-foreground ml-1">{{
-                        showRamText(server)
-                      }}</span>
-                    </span>
-                    <span class="text-muted-foreground/40">|</span>
-                    <span class="text-muted-foreground">
-                      Swap
-                      {{
-                        server.total_swap
-                          ? (
-                              ((server.used_swap ?? 0) / server.total_swap) *
-                              100
-                            ).toFixed(1)
-                          : "0.0"
-                      }}%
-                      <span class="ml-1">
-                        {{ formatBytes(server.used_swap || 0) }} /
-                        {{ formatBytes(server.total_swap || 0) }}
-                      </span>
-                    </span>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div
-                  class="h-[260px] w-full flex items-end relative overflow-hidden"
+            <div>
+              <div
+                class="flex items-center gap-3 mb-3 text-xs font-mono flex-wrap"
+              >
+                <span class="text-sm font-medium text-muted-foreground mr-1"
+                  >Memory Usage</span
                 >
-                  <UPlotChart
-                    :data="ramAvgValues"
-                    :timestamps="ramAvgTimestamps"
-                    :color="MAIN_COLOR"
-                    :maxValue="100"
-                    yLabel="%"
-                  />
-                </div>
-              </CardContent>
-            </Card>
+                <span class="status-main-text">
+                  RAM {{ showRamPercent(server).toFixed(1) }}%
+                  <span class="text-muted-foreground ml-1">{{
+                    showRamText(server)
+                  }}</span>
+                </span>
+                <span class="text-muted-foreground/40">|</span>
+                <span class="text-muted-foreground">
+                  Swap
+                  {{
+                    server.total_swap
+                      ? (
+                          ((server.used_swap ?? 0) / server.total_swap) *
+                          100
+                        ).toFixed(1)
+                      : "0.0"
+                  }}%
+                  <span class="ml-1">
+                    {{ formatBytes(server.used_swap || 0) }} /
+                    {{ formatBytes(server.total_swap || 0) }}
+                  </span>
+                </span>
+              </div>
+              <div class="h-[340px] w-full relative overflow-hidden">
+                <UPlotChart
+                  :data="ramAvgValues"
+                  :timestamps="ramAvgTimestamps"
+                  :color="MAIN_COLOR"
+                  :maxValue="100"
+                  yLabel="%"
+                  :loading="tabState.memory.loading"
+                />
+              </div>
+            </div>
 
             <!-- Memory Detail: breakdown -->
             <div class="flex items-center gap-3">
@@ -801,125 +793,121 @@ const maxNetSpeed = computed(() =>
               <div class="h-px flex-1 bg-border"></div>
             </div>
 
-            <Card>
-              <CardContent class="pt-4 space-y-5">
-                <!-- RAM bar -->
-                <div class="space-y-1.5">
-                  <div
-                    class="flex justify-between text-xs text-muted-foreground font-mono"
-                  >
-                    <span>RAM</span>
-                    <span>{{ formatBytes(server.total_memory ?? 0) }}</span>
-                  </div>
-                  <div class="h-3 bg-muted rounded-full overflow-hidden flex">
-                    <div
-                      class="h-full rounded-full transition-all"
-                      :style="{
-                        width: `${showRamPercent(server)}%`,
-                        backgroundColor: MAIN_COLOR,
-                      }"
-                    ></div>
-                  </div>
-                  <div
-                    class="flex gap-4 text-xs font-mono text-muted-foreground"
-                  >
-                    <span class="flex items-center gap-1.5">
-                      <span
-                        class="w-2 h-2 rounded-sm"
-                        :style="{ backgroundColor: MAIN_COLOR }"
-                      ></span>
-                      Used {{ formatBytes(server.used_memory ?? 0) }}
-                    </span>
-                    <span class="flex items-center gap-1.5">
-                      <span
-                        class="w-2 h-2 rounded-sm bg-muted border border-border"
-                      ></span>
-                      Available {{ formatBytes(server.available_memory ?? 0) }}
-                    </span>
-                  </div>
+            <div class="space-y-5">
+              <!-- RAM bar -->
+              <div class="space-y-1.5">
+                <div
+                  class="flex justify-between text-xs text-muted-foreground font-mono"
+                >
+                  <span>RAM</span>
+                  <span>{{ formatBytes(server.total_memory ?? 0) }}</span>
                 </div>
+                <div class="h-3 bg-muted rounded-full overflow-hidden flex">
+                  <div
+                    class="h-full rounded-full transition-all"
+                    :style="{
+                      width: `${showRamPercent(server)}%`,
+                      backgroundColor: MAIN_COLOR,
+                    }"
+                  ></div>
+                </div>
+                <div class="flex gap-4 text-xs font-mono text-muted-foreground">
+                  <span class="flex items-center gap-1.5">
+                    <span
+                      class="w-2 h-2 rounded-sm"
+                      :style="{ backgroundColor: MAIN_COLOR }"
+                    ></span>
+                    Used {{ formatBytes(server.used_memory ?? 0) }}
+                  </span>
+                  <span class="flex items-center gap-1.5">
+                    <span
+                      class="w-2 h-2 rounded-sm bg-muted border border-border"
+                    ></span>
+                    Available {{ formatBytes(server.available_memory ?? 0) }}
+                  </span>
+                </div>
+              </div>
 
-                <!-- Swap bar -->
-                <div class="space-y-1.5">
-                  <div
-                    class="flex justify-between text-xs text-muted-foreground font-mono"
-                  >
-                    <span>Swap</span>
-                    <span>{{ formatBytes(server.total_swap ?? 0) }}</span>
-                  </div>
-                  <div class="h-3 bg-muted rounded-full overflow-hidden flex">
-                    <div
-                      class="h-full rounded-full transition-all"
-                      :style="{
-                        width: server.total_swap
-                          ? `${((server.used_swap ?? 0) / server.total_swap) * 100}%`
-                          : '0%',
-                        backgroundColor: '#a855f7',
-                      }"
-                    ></div>
-                  </div>
-                  <div
-                    class="flex gap-4 text-xs font-mono text-muted-foreground"
-                  >
-                    <span class="flex items-center gap-1.5">
-                      <span
-                        class="w-2 h-2 rounded-sm"
-                        style="background-color: #a855f7"
-                      ></span>
-                      Used {{ formatBytes(server.used_swap ?? 0) }}
-                    </span>
-                  </div>
-                </div>
+              <div class="h-px bg-border"></div>
 
-                <!-- Stat cards -->
-                <div class="grid grid-cols-3 gap-3">
-                  <div class="bg-muted/30 border border-border rounded-lg p-3">
-                    <div
-                      class="text-xs text-muted-foreground uppercase tracking-wider"
-                    >
-                      Total
-                    </div>
-                    <div class="text-base font-semibold font-mono mt-1">
-                      {{ formatBytes(server.total_memory ?? 0) }}
-                    </div>
-                    <div class="text-xs text-muted-foreground mt-0.5">
-                      Physical RAM
-                    </div>
+              <!-- Swap bar -->
+              <div class="space-y-1.5">
+                <div
+                  class="flex justify-between text-xs text-muted-foreground font-mono"
+                >
+                  <span>Swap</span>
+                  <span>{{ formatBytes(server.total_swap ?? 0) }}</span>
+                </div>
+                <div class="h-3 bg-muted rounded-full overflow-hidden flex">
+                  <div
+                    class="h-full rounded-full transition-all"
+                    :style="{
+                      width: server.total_swap
+                        ? `${((server.used_swap ?? 0) / server.total_swap) * 100}%`
+                        : '0%',
+                      backgroundColor: '#a855f7',
+                    }"
+                  ></div>
+                </div>
+                <div class="flex gap-4 text-xs font-mono text-muted-foreground">
+                  <span class="flex items-center gap-1.5">
+                    <span
+                      class="w-2 h-2 rounded-sm"
+                      style="background-color: #a855f7"
+                    ></span>
+                    Used {{ formatBytes(server.used_swap ?? 0) }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="h-px bg-border"></div>
+
+              <!-- Stat row -->
+              <div class="grid grid-cols-3 gap-6 text-sm font-mono">
+                <div>
+                  <div
+                    class="text-xs text-muted-foreground uppercase tracking-wider"
+                  >
+                    Total
                   </div>
-                  <div class="bg-muted/30 border border-border rounded-lg p-3">
-                    <div
-                      class="text-xs text-muted-foreground uppercase tracking-wider"
-                    >
-                      Used
-                    </div>
-                    <div
-                      class="text-base font-semibold font-mono mt-1"
-                      :style="{ color: MAIN_COLOR }"
-                    >
-                      {{ formatBytes(server.used_memory ?? 0) }}
-                    </div>
-                    <div class="text-xs text-muted-foreground mt-0.5">
-                      {{ showRamPercent(server).toFixed(1) }}%
-                    </div>
+                  <div class="text-base font-semibold mt-1">
+                    {{ formatBytes(server.total_memory ?? 0) }}
                   </div>
-                  <div class="bg-muted/30 border border-border rounded-lg p-3">
-                    <div
-                      class="text-xs text-muted-foreground uppercase tracking-wider"
-                    >
-                      Available
-                    </div>
-                    <div
-                      class="text-base font-semibold font-mono mt-1 text-green-500"
-                    >
-                      {{ formatBytes(server.available_memory ?? 0) }}
-                    </div>
-                    <div class="text-xs text-muted-foreground mt-0.5">
-                      {{ (100 - showRamPercent(server)).toFixed(1) }}%
-                    </div>
+                  <div class="text-xs text-muted-foreground mt-0.5">
+                    Physical RAM
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+                <div>
+                  <div
+                    class="text-xs text-muted-foreground uppercase tracking-wider"
+                  >
+                    Used
+                  </div>
+                  <div
+                    class="text-base font-semibold mt-1"
+                    :style="{ color: MAIN_COLOR }"
+                  >
+                    {{ formatBytes(server.used_memory ?? 0) }}
+                  </div>
+                  <div class="text-xs text-muted-foreground mt-0.5">
+                    {{ showRamPercent(server).toFixed(1) }}%
+                  </div>
+                </div>
+                <div>
+                  <div
+                    class="text-xs text-muted-foreground uppercase tracking-wider"
+                  >
+                    Available
+                  </div>
+                  <div class="text-base font-semibold mt-1 text-green-500">
+                    {{ formatBytes(server.available_memory ?? 0) }}
+                  </div>
+                  <div class="text-xs text-muted-foreground mt-0.5">
+                    {{ (100 - showRamPercent(server)).toFixed(1) }}%
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Disk View -->
@@ -935,7 +923,6 @@ const maxNetSpeed = computed(() =>
                     tabState.disk.windowMs = +(
                       $event.target as HTMLSelectElement
                     ).value;
-                    tabState.disk.data = [];
                     fetchTabAvg('disk');
                     startTabTimer('disk');
                   "
@@ -971,62 +958,57 @@ const maxNetSpeed = computed(() =>
                 更新
               </span>
             </div>
-            <Card>
-              <CardHeader>
-                <div class="flex items-center gap-4">
-                  <CardTitle class="text-sm font-medium text-muted-foreground">
-                    Disk I/O
-                  </CardTitle>
-                  <div class="flex items-center gap-3 text-xs font-mono">
-                    <span class="status-main-text"
-                      >↓ {{ formatBytes(server.read_speed ?? 0) }}/s</span
-                    >
-                    <span class="status-sub-text"
-                      >↑ {{ formatBytes(server.write_speed ?? 0) }}/s</span
-                    >
-                  </div>
-                  <div
-                    v-if="server.total_space"
-                    class="ml-auto flex items-center gap-2 text-xs text-muted-foreground"
-                  >
-                    <HardDrive class="h-3 w-3" />
-                    {{
-                      (
-                        ((server.total_space - (server.available_space ?? 0)) /
-                          server.total_space) *
-                        100
-                      ).toFixed(0)
-                    }}%
-                    <span class="font-mono">
-                      {{
-                        formatBytes(
-                          server.total_space - (server.available_space ?? 0),
-                        )
-                      }}
-                      /
-                      {{ formatBytes(server.total_space) }}
-                    </span>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div
-                  class="h-[260px] w-full flex items-end p-0 relative overflow-hidden"
+            <div>
+              <div
+                class="flex items-center gap-3 mb-3 text-xs font-mono flex-wrap"
+              >
+                <span class="text-sm font-medium text-muted-foreground mr-1"
+                  >Disk I/O</span
                 >
-                  <UPlotChart
-                    :data="diskReadAvgValues"
-                    :data2="diskWriteAvgValues"
-                    :timestamps="diskAvgTimestamps"
-                    :color="MAIN_COLOR"
-                    :color2="SUB_COLOR"
-                    :maxValue="maxDiskSpeed"
-                    yLabel="B/s"
-                    label1="Read"
-                    label2="Write"
-                  />
+                <span class="status-main-text"
+                  >↓ {{ formatBytes(server.read_speed ?? 0) }}/s</span
+                >
+                <span class="status-sub-text"
+                  >↑ {{ formatBytes(server.write_speed ?? 0) }}/s</span
+                >
+                <div
+                  v-if="server.total_space"
+                  class="ml-auto flex items-center gap-2 text-muted-foreground"
+                >
+                  <HardDrive class="h-3 w-3" />
+                  {{
+                    (
+                      ((server.total_space - (server.available_space ?? 0)) /
+                        server.total_space) *
+                      100
+                    ).toFixed(0)
+                  }}%
+                  <span class="font-mono">
+                    {{
+                      formatBytes(
+                        server.total_space - (server.available_space ?? 0),
+                      )
+                    }}
+                    /
+                    {{ formatBytes(server.total_space) }}
+                  </span>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+              <div class="h-[340px] w-full relative overflow-hidden">
+                <UPlotChart
+                  :data="diskReadAvgValues"
+                  :data2="diskWriteAvgValues"
+                  :timestamps="diskAvgTimestamps"
+                  :color="MAIN_COLOR"
+                  :color2="SUB_COLOR"
+                  :maxValue="maxDiskSpeed"
+                  yLabel="B/s"
+                  label1="Read"
+                  label2="Write"
+                  :loading="tabState.disk.loading"
+                />
+              </div>
+            </div>
 
             <!-- Disk selector cards -->
             <div class="flex items-center gap-3">
@@ -1117,40 +1099,33 @@ const maxNetSpeed = computed(() =>
             </div>
 
             <!-- Per-Disk I/O Chart -->
-            <Card v-if="selectedDisk && diskSnapshots.length > 0">
-              <CardHeader>
-                <div class="flex items-center gap-4">
-                  <CardTitle class="text-sm font-medium text-muted-foreground">
-                    Disk I/O · {{ selectedDisk }}
-                  </CardTitle>
-                  <div class="flex items-center gap-3 text-xs font-mono">
-                    <span class="status-main-text"
-                      >↓ {{ formatBytes(currentDiskRead) }}/s</span
-                    >
-                    <span class="status-sub-text"
-                      >↑ {{ formatBytes(currentDiskWrite) }}/s</span
-                    >
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div
-                  class="h-[260px] w-full flex items-end p-0 relative overflow-hidden"
+            <div v-if="selectedDisk && diskSnapshots.length > 0">
+              <div class="h-px bg-border mb-4"></div>
+              <div class="flex items-center gap-3 mb-3 text-xs font-mono">
+                <span class="text-sm font-medium text-muted-foreground mr-1"
+                  >Disk I/O · {{ selectedDisk }}</span
                 >
-                  <UPlotChart
-                    :data="displayDiskReadData"
-                    :data2="displayDiskWriteData"
-                    :timestamps="diskTimestamps"
-                    :color="MAIN_COLOR"
-                    :color2="SUB_COLOR"
-                    :maxValue="maxDiskChartSpeed"
-                    yLabel="B/s"
-                    label1="Read"
-                    label2="Write"
-                  />
-                </div>
-              </CardContent>
-            </Card>
+                <span class="status-main-text"
+                  >↓ {{ formatBytes(currentDiskRead) }}/s</span
+                >
+                <span class="status-sub-text"
+                  >↑ {{ formatBytes(currentDiskWrite) }}/s</span
+                >
+              </div>
+              <div class="h-[260px] w-full relative overflow-hidden">
+                <UPlotChart
+                  :data="displayDiskReadData"
+                  :data2="displayDiskWriteData"
+                  :timestamps="diskTimestamps"
+                  :color="MAIN_COLOR"
+                  :color2="SUB_COLOR"
+                  :maxValue="maxDiskChartSpeed"
+                  yLabel="B/s"
+                  label1="Read"
+                  label2="Write"
+                />
+              </div>
+            </div>
           </div>
 
           <!-- Network View -->
@@ -1170,7 +1145,6 @@ const maxNetSpeed = computed(() =>
                     tabState.network.windowMs = +(
                       $event.target as HTMLSelectElement
                     ).value;
-                    tabState.network.data = [];
                     fetchTabAvg('network');
                     startTabTimer('network');
                   "
@@ -1206,91 +1180,82 @@ const maxNetSpeed = computed(() =>
                 更新
               </span>
             </div>
-            <!-- Chart Card -->
-            <Card>
-              <CardHeader>
-                <div class="flex items-center gap-4">
-                  <CardTitle class="text-sm font-medium text-muted-foreground">
-                    Network Throughput
-                  </CardTitle>
-                  <div class="flex items-center gap-3 text-xs font-mono">
-                    <span class="status-main-text"
-                      >↓ {{ formatBytes(server.receive_speed ?? 0) }}/s</span
-                    >
-                    <span class="status-sub-text"
-                      >↑ {{ formatBytes(server.transmit_speed ?? 0) }}/s</span
-                    >
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div
-                  class="h-[260px] w-full flex items-end p-0 relative overflow-hidden"
+            <!-- Chart -->
+            <div>
+              <div
+                class="flex items-center gap-3 mb-3 text-xs font-mono flex-wrap"
+              >
+                <span class="text-sm font-medium text-muted-foreground mr-1"
+                  >Network Throughput</span
                 >
-                  <UPlotChart
-                    :data="netRxAvgValues"
-                    :data2="netTxAvgValues"
-                    :timestamps="netAvgTimestamps"
-                    :color="MAIN_COLOR"
-                    :color2="SUB_COLOR"
-                    :maxValue="maxNetSpeed"
-                    yLabel="B/s"
-                    label1="Download"
-                    label2="Upload"
-                  />
-                </div>
-                <!-- Legend -->
-                <div
-                  class="flex items-center gap-4 mt-2 text-xs font-mono text-muted-foreground"
+                <span class="status-main-text"
+                  >↓ {{ formatBytes(server.receive_speed ?? 0) }}/s</span
                 >
-                  <span class="flex items-center gap-1">
-                    <span
-                      class="inline-block w-3 h-0.5"
-                      :style="{ backgroundColor: MAIN_COLOR }"
-                    ></span>
-                    Download (↓)
-                  </span>
-                  <span class="flex items-center gap-1">
-                    <span
-                      class="inline-block w-3 h-0.5"
-                      :style="{ backgroundColor: SUB_COLOR }"
-                    ></span>
-                    Upload (↑)
-                  </span>
-                  <span v-if="server.tcp_connections != null" class="ml-auto">
-                    TCP {{ server.tcp_connections }} &nbsp; UDP
-                    {{ server.udp_connections }}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
+                <span class="status-sub-text"
+                  >↑ {{ formatBytes(server.transmit_speed ?? 0) }}/s</span
+                >
+                <span
+                  v-if="server.tcp_connections != null"
+                  class="ml-auto text-muted-foreground"
+                >
+                  TCP {{ server.tcp_connections }} &nbsp; UDP
+                  {{ server.udp_connections }}
+                </span>
+              </div>
+              <div class="h-[340px] w-full relative overflow-hidden">
+                <UPlotChart
+                  :data="netRxAvgValues"
+                  :data2="netTxAvgValues"
+                  :timestamps="netAvgTimestamps"
+                  :color="MAIN_COLOR"
+                  :color2="SUB_COLOR"
+                  :maxValue="maxNetSpeed"
+                  yLabel="B/s"
+                  label1="Download"
+                  label2="Upload"
+                  :loading="tabState.network.loading"
+                />
+              </div>
+              <!-- Legend -->
+              <div
+                class="flex items-center gap-4 mt-2 text-xs font-mono text-muted-foreground"
+              >
+                <span class="flex items-center gap-1">
+                  <span
+                    class="inline-block w-3 h-0.5"
+                    :style="{ backgroundColor: MAIN_COLOR }"
+                  ></span>
+                  Download (↓)
+                </span>
+                <span class="flex items-center gap-1">
+                  <span
+                    class="inline-block w-3 h-0.5"
+                    :style="{ backgroundColor: SUB_COLOR }"
+                  ></span>
+                  Upload (↑)
+                </span>
+              </div>
+            </div>
 
             <!-- Traffic Summary -->
-            <Card v-if="server.total_received != null">
-              <CardHeader>
-                <CardTitle class="text-sm font-medium text-muted-foreground">
-                  Traffic Summary
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div class="grid grid-cols-2 gap-4 text-sm font-mono">
-                  <div class="flex items-center gap-2">
-                    <span class="status-main-text">↓</span>
-                    <span class="text-muted-foreground">Total Received</span>
-                    <span class="ml-auto">{{
-                      formatBytes(server.total_received ?? 0)
-                    }}</span>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <span class="status-sub-text">↑</span>
-                    <span class="text-muted-foreground">Total Transmitted</span>
-                    <span class="ml-auto">{{
-                      formatBytes(server.total_transmitted ?? 0)
-                    }}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div
+              v-if="server.total_received != null"
+              class="flex items-center gap-6 text-xs font-mono text-muted-foreground py-1"
+            >
+              <span class="flex items-center gap-1.5">
+                <span class="status-main-text">↓</span> Total Received
+                <span class="text-foreground ml-1">{{
+                  formatBytes(server.total_received ?? 0)
+                }}</span>
+              </span>
+              <span class="text-muted-foreground/40">|</span>
+              <span class="flex items-center gap-1.5">
+                <span class="status-sub-text">↑</span> Total Transmitted
+                <span class="text-foreground ml-1">{{
+                  formatBytes(server.total_transmitted ?? 0)
+                }}</span>
+              </span>
+            </div>
 
             <!-- Network interface selector cards -->
             <div class="flex items-center gap-3">
@@ -1389,131 +1354,125 @@ const maxNetSpeed = computed(() =>
             </div>
 
             <!-- Per-NIC Chart -->
-            <Card v-if="netSnapshots.length > 0">
-              <CardHeader>
-                <div class="flex items-center gap-4">
-                  <CardTitle class="text-sm font-medium text-muted-foreground">
-                    {{
-                      selectedIface === "all"
-                        ? "Network Throughput"
-                        : selectedIface
-                    }}
-                  </CardTitle>
-                  <div class="flex items-center gap-3 text-xs font-mono">
-                    <span class="status-main-text"
-                      >↓ {{ formatBytes(currentNetRx) }}/s</span
-                    >
-                    <span class="status-sub-text"
-                      >↑ {{ formatBytes(currentNetTx) }}/s</span
-                    >
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div
-                  class="h-[260px] w-full flex items-end p-0 relative overflow-hidden"
+            <div v-if="netSnapshots.length > 0">
+              <div class="h-px bg-border mb-4"></div>
+              <div class="flex items-center gap-3 mb-3 text-xs font-mono">
+                <span class="text-sm font-medium text-muted-foreground mr-1">
+                  {{
+                    selectedIface === "all"
+                      ? "Network Throughput"
+                      : selectedIface
+                  }}
+                </span>
+                <span class="status-main-text"
+                  >↓ {{ formatBytes(currentNetRx) }}/s</span
                 >
-                  <UPlotChart
-                    :data="displayNetRxData"
-                    :data2="displayNetTxData"
-                    :timestamps="netTimestamps"
-                    :color="MAIN_COLOR"
-                    :color2="SUB_COLOR"
-                    :maxValue="maxNetChartSpeed"
-                    yLabel="B/s"
-                    label1="Download"
-                    label2="Upload"
-                  />
-                </div>
-                <!-- Legend -->
-                <div
-                  class="flex items-center gap-4 mt-2 text-xs font-mono text-muted-foreground"
+                <span class="status-sub-text"
+                  >↑ {{ formatBytes(currentNetTx) }}/s</span
                 >
-                  <span class="flex items-center gap-1">
-                    <span
-                      class="inline-block w-3 h-0.5"
-                      :style="{ backgroundColor: MAIN_COLOR }"
-                    ></span>
-                    Download (↓)
-                  </span>
-                  <span class="flex items-center gap-1">
-                    <span
-                      class="inline-block w-3 h-0.5"
-                      :style="{ backgroundColor: SUB_COLOR }"
-                    ></span>
-                    Upload (↑)
-                  </span>
+                <span
+                  v-if="dynamicDetail?.network?.tcp_connections != null"
+                  class="ml-auto text-muted-foreground"
+                >
+                  TCP {{ dynamicDetail.network.tcp_connections }} &nbsp; UDP
+                  {{ dynamicDetail.network.udp_connections }}
+                </span>
+              </div>
+              <div class="h-[260px] w-full relative overflow-hidden">
+                <UPlotChart
+                  :data="displayNetRxData"
+                  :data2="displayNetTxData"
+                  :timestamps="netTimestamps"
+                  :color="MAIN_COLOR"
+                  :color2="SUB_COLOR"
+                  :maxValue="maxNetChartSpeed"
+                  yLabel="B/s"
+                  label1="Download"
+                  label2="Upload"
+                />
+              </div>
+              <!-- Legend -->
+              <div
+                class="flex items-center gap-4 mt-2 text-xs font-mono text-muted-foreground"
+              >
+                <span class="flex items-center gap-1">
                   <span
-                    v-if="dynamicDetail?.network?.tcp_connections != null"
-                    class="ml-auto"
-                  >
-                    TCP {{ dynamicDetail.network.tcp_connections }} &nbsp; UDP
-                    {{ dynamicDetail.network.udp_connections }}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
+                    class="inline-block w-3 h-0.5"
+                    :style="{ backgroundColor: MAIN_COLOR }"
+                  ></span>
+                  Download (↓)
+                </span>
+                <span class="flex items-center gap-1">
+                  <span
+                    class="inline-block w-3 h-0.5"
+                    :style="{ backgroundColor: SUB_COLOR }"
+                  ></span>
+                  Upload (↑)
+                </span>
+              </div>
+            </div>
 
             <!-- Network Interfaces List -->
-            <Card v-if="dynamicDetail?.network?.interfaces?.length">
-              <CardHeader>
-                <CardTitle class="text-sm font-medium"
-                  >Network Interfaces</CardTitle
+            <div v-if="dynamicDetail?.network?.interfaces?.length">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="h-px flex-1 bg-border"></div>
+                <span
+                  class="text-xs text-muted-foreground uppercase tracking-wider"
+                  >Interfaces</span
                 >
-              </CardHeader>
-              <CardContent>
-                <div class="space-y-3">
-                  <div
-                    v-for="(iface, index) in sortedInterfaces"
-                    :key="index"
-                    @click="selectedIface = iface.interface_name"
-                    :class="[
-                      'flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all',
-                      selectedIface === iface.interface_name
-                        ? 'border-[var(--status-main-color)] bg-[var(--status-main-color)]/5'
-                        : 'bg-muted/30 hover:bg-muted/50',
-                    ]"
-                  >
-                    <div class="flex items-center gap-3">
-                      <div
-                        class="h-8 w-8 rounded bg-background flex items-center justify-center border"
-                      >
-                        <Fish
-                          v-if="iface.interface_name.startsWith('docker')"
-                          class="h-4 w-4 text-muted-foreground"
-                        />
-                        <Container
-                          v-else-if="iface.interface_name.startsWith('podman')"
-                          class="h-4 w-4 text-muted-foreground"
-                        />
-                        <Network v-else class="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <div class="font-medium text-sm">
-                          {{ iface.interface_name }}
-                        </div>
-                        <div
-                          class="text-[10px] text-muted-foreground font-mono space-x-2"
-                        >
-                          <span>↓ {{ formatBytes(iface.total_received) }}</span>
-                          <span
-                            >↑ {{ formatBytes(iface.total_transmitted) }}</span
-                          >
-                        </div>
-                      </div>
+                <div class="h-px flex-1 bg-border"></div>
+              </div>
+              <div class="space-y-px">
+                <div
+                  v-for="(iface, index) in sortedInterfaces"
+                  :key="index"
+                  @click="selectedIface = iface.interface_name"
+                  :class="[
+                    'flex items-center justify-between py-2.5 px-1 cursor-pointer transition-colors rounded',
+                    selectedIface === iface.interface_name
+                      ? 'text-[var(--status-main-color)]'
+                      : 'hover:bg-muted/30',
+                  ]"
+                >
+                  <div class="flex items-center gap-3">
+                    <div
+                      class="h-7 w-7 rounded flex items-center justify-center shrink-0"
+                    >
+                      <Fish
+                        v-if="iface.interface_name.startsWith('docker')"
+                        class="h-4 w-4 text-muted-foreground"
+                      />
+                      <Container
+                        v-else-if="iface.interface_name.startsWith('podman')"
+                        class="h-4 w-4 text-muted-foreground"
+                      />
+                      <Network v-else class="h-4 w-4 text-muted-foreground" />
                     </div>
-                    <div class="text-right text-xs font-mono space-y-1">
-                      <div :style="{ color: MAIN_COLOR }">
-                        ↓ {{ formatBytes(iface.receive_speed) }}/s
+                    <div>
+                      <div class="font-medium text-sm">
+                        {{ iface.interface_name }}
                       </div>
-                      <div :style="{ color: SUB_COLOR }">
-                        ↑ {{ formatBytes(iface.transmit_speed) }}/s
+                      <div
+                        class="text-[10px] text-muted-foreground font-mono space-x-2"
+                      >
+                        <span>↓ {{ formatBytes(iface.total_received) }}</span>
+                        <span
+                          >↑ {{ formatBytes(iface.total_transmitted) }}</span
+                        >
                       </div>
                     </div>
                   </div>
+                  <div class="text-right text-xs font-mono space-y-0.5">
+                    <div :style="{ color: MAIN_COLOR }">
+                      ↓ {{ formatBytes(iface.receive_speed) }}/s
+                    </div>
+                    <div :style="{ color: SUB_COLOR }">
+                      ↑ {{ formatBytes(iface.transmit_speed) }}/s
+                    </div>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         </Transition>
       </div>
