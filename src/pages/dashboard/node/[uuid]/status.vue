@@ -543,6 +543,53 @@ const maxNetSpeed = computed(() =>
         <!-- CPU View -->
         <Transition name="fade" mode="out-in">
           <div v-if="activeTab === 'cpu'" key="cpu" class="space-y-6">
+            <div class="flex items-center gap-3">
+              <span
+                class="text-xs text-muted-foreground inline-flex items-center gap-1"
+              >
+                最近
+                <select
+                  :value="tabState.cpu.windowMs"
+                  @change="
+                    tabState.cpu.windowMs = +(
+                      $event.target as HTMLSelectElement
+                    ).value;
+                    tabState.cpu.data = [];
+                    fetchTabAvg('cpu');
+                    startTabTimer('cpu');
+                  "
+                  class="bg-card border rounded px-1.5 py-0.5 text-xs text-foreground outline-none cursor-pointer hover:bg-muted transition-colors"
+                >
+                  <option v-for="w in WINDOWS" :key="w.value" :value="w.value">
+                    {{ w.label }}
+                  </option>
+                </select>
+              </span>
+              <span
+                class="text-xs text-muted-foreground inline-flex items-center gap-1"
+              >
+                每
+                <select
+                  :value="tabState.cpu.refreshInterval"
+                  @change="
+                    tabState.cpu.refreshInterval = +(
+                      $event.target as HTMLSelectElement
+                    ).value;
+                    startTabTimer('cpu');
+                  "
+                  class="bg-card border rounded px-1.5 py-0.5 text-xs text-foreground outline-none cursor-pointer hover:bg-muted transition-colors"
+                >
+                  <option
+                    v-for="r in REFRESH_INTERVALS"
+                    :key="r.value"
+                    :value="r.value"
+                  >
+                    {{ r.label }}
+                  </option>
+                </select>
+                更新
+              </span>
+            </div>
             <Card>
               <CardHeader>
                 <CardTitle class="text-sm font-medium text-muted-foreground"
@@ -650,6 +697,53 @@ const maxNetSpeed = computed(() =>
             key="memory"
             class="space-y-6"
           >
+            <div class="flex items-center gap-3">
+              <span
+                class="text-xs text-muted-foreground inline-flex items-center gap-1"
+              >
+                最近
+                <select
+                  :value="tabState.memory.windowMs"
+                  @change="
+                    tabState.memory.windowMs = +(
+                      $event.target as HTMLSelectElement
+                    ).value;
+                    tabState.memory.data = [];
+                    fetchTabAvg('memory');
+                    startTabTimer('memory');
+                  "
+                  class="bg-card border rounded px-1.5 py-0.5 text-xs text-foreground outline-none cursor-pointer hover:bg-muted transition-colors"
+                >
+                  <option v-for="w in WINDOWS" :key="w.value" :value="w.value">
+                    {{ w.label }}
+                  </option>
+                </select>
+              </span>
+              <span
+                class="text-xs text-muted-foreground inline-flex items-center gap-1"
+              >
+                每
+                <select
+                  :value="tabState.memory.refreshInterval"
+                  @change="
+                    tabState.memory.refreshInterval = +(
+                      $event.target as HTMLSelectElement
+                    ).value;
+                    startTabTimer('memory');
+                  "
+                  class="bg-card border rounded px-1.5 py-0.5 text-xs text-foreground outline-none cursor-pointer hover:bg-muted transition-colors"
+                >
+                  <option
+                    v-for="r in REFRESH_INTERVALS"
+                    :key="r.value"
+                    :value="r.value"
+                  >
+                    {{ r.label }}
+                  </option>
+                </select>
+                更新
+              </span>
+            </div>
             <Card>
               <CardHeader>
                 <div class="flex items-center gap-4">
@@ -830,6 +924,53 @@ const maxNetSpeed = computed(() =>
 
           <!-- Disk View -->
           <div v-else-if="activeTab === 'disk'" key="disk" class="space-y-4">
+            <div class="flex items-center gap-3">
+              <span
+                class="text-xs text-muted-foreground inline-flex items-center gap-1"
+              >
+                最近
+                <select
+                  :value="tabState.disk.windowMs"
+                  @change="
+                    tabState.disk.windowMs = +(
+                      $event.target as HTMLSelectElement
+                    ).value;
+                    tabState.disk.data = [];
+                    fetchTabAvg('disk');
+                    startTabTimer('disk');
+                  "
+                  class="bg-card border rounded px-1.5 py-0.5 text-xs text-foreground outline-none cursor-pointer hover:bg-muted transition-colors"
+                >
+                  <option v-for="w in WINDOWS" :key="w.value" :value="w.value">
+                    {{ w.label }}
+                  </option>
+                </select>
+              </span>
+              <span
+                class="text-xs text-muted-foreground inline-flex items-center gap-1"
+              >
+                每
+                <select
+                  :value="tabState.disk.refreshInterval"
+                  @change="
+                    tabState.disk.refreshInterval = +(
+                      $event.target as HTMLSelectElement
+                    ).value;
+                    startTabTimer('disk');
+                  "
+                  class="bg-card border rounded px-1.5 py-0.5 text-xs text-foreground outline-none cursor-pointer hover:bg-muted transition-colors"
+                >
+                  <option
+                    v-for="r in REFRESH_INTERVALS"
+                    :key="r.value"
+                    :value="r.value"
+                  >
+                    {{ r.label }}
+                  </option>
+                </select>
+                更新
+              </span>
+            </div>
             <Card>
               <CardHeader>
                 <div class="flex items-center gap-4">
@@ -1018,6 +1159,53 @@ const maxNetSpeed = computed(() =>
             key="network"
             class="space-y-6"
           >
+            <div class="flex items-center gap-3">
+              <span
+                class="text-xs text-muted-foreground inline-flex items-center gap-1"
+              >
+                最近
+                <select
+                  :value="tabState.network.windowMs"
+                  @change="
+                    tabState.network.windowMs = +(
+                      $event.target as HTMLSelectElement
+                    ).value;
+                    tabState.network.data = [];
+                    fetchTabAvg('network');
+                    startTabTimer('network');
+                  "
+                  class="bg-card border rounded px-1.5 py-0.5 text-xs text-foreground outline-none cursor-pointer hover:bg-muted transition-colors"
+                >
+                  <option v-for="w in WINDOWS" :key="w.value" :value="w.value">
+                    {{ w.label }}
+                  </option>
+                </select>
+              </span>
+              <span
+                class="text-xs text-muted-foreground inline-flex items-center gap-1"
+              >
+                每
+                <select
+                  :value="tabState.network.refreshInterval"
+                  @change="
+                    tabState.network.refreshInterval = +(
+                      $event.target as HTMLSelectElement
+                    ).value;
+                    startTabTimer('network');
+                  "
+                  class="bg-card border rounded px-1.5 py-0.5 text-xs text-foreground outline-none cursor-pointer hover:bg-muted transition-colors"
+                >
+                  <option
+                    v-for="r in REFRESH_INTERVALS"
+                    :key="r.value"
+                    :value="r.value"
+                  >
+                    {{ r.label }}
+                  </option>
+                </select>
+                更新
+              </span>
+            </div>
             <!-- Chart Card -->
             <Card>
               <CardHeader>
