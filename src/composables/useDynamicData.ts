@@ -286,7 +286,11 @@ const sendRequest = (method: string, params: any): Promise<any> => {
 
 const fetchSummaryAvg = async (
   serverUuid: string,
-  limit: number = 200,
+  options?: {
+    timestamp_from?: number;
+    timestamp_to?: number;
+    limit?: number;
+  },
   fields?: SummaryField[],
 ) => {
   if (!currentBackend.value) throw new Error("No backend selected");
@@ -301,11 +305,21 @@ const fetchSummaryAvg = async (
     "receive_speed",
   ];
 
+  const condition: Record<string, any>[] = [{ uuid: serverUuid }];
+
+  if (options?.timestamp_from != null && options?.timestamp_to != null) {
+    condition.push({
+      timestamp_from_to: [options.timestamp_from, options.timestamp_to],
+    });
+  }
+
+  condition.push({ limit: options?.limit ?? 200 });
+
   return sendRequest("agent_query_dynamic_summary", [
     currentBackend.value.token,
     {
       fields: queryFields,
-      condition: [{ uuid: serverUuid }, { limit }],
+      condition,
     },
   ]);
 };
