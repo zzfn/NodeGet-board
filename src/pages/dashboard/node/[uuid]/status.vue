@@ -124,7 +124,7 @@ const fetchCpuDetail = async () => {
   try {
     const result = await fetchDynamic(uuid.value, ["cpu"]);
     if (seq !== cpuFetchSeq) return;
-    cpuDetail.value = result.length > 0 ? result[0] : null;
+    cpuDetail.value = result.length > 0 ? (result[0] ?? null) : null;
   } catch (e) {
     if (seq !== cpuFetchSeq) return;
     console.error("[Status] Failed to fetch cpu detail:", e);
