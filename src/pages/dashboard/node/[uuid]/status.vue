@@ -20,6 +20,7 @@ import UPlotChart from "@/components/UPlotChart.vue";
 import type {
   DynamicSummaryResponseItem,
   DynamicDetailData,
+  SummaryField,
 } from "@/types/monitoring";
 
 definePage({
@@ -51,6 +52,8 @@ const detailLoading = ref(false);
 // Disk/Network snapshot accumulation (max 30)
 const diskSnapshots = ref<any[][]>([]);
 const netSnapshots = ref<any[][]>([]);
+const diskTimestamps = ref<number[]>([]);
+const netTimestamps = ref<number[]>([]);
 const selectedDisk = ref("");
 const selectedIface = ref("all");
 
@@ -92,16 +95,25 @@ const loadDetail = async () => {
   detailLoading.value = false;
 
   // Accumulate snapshots for realtime charts
+  const now = Date.now() / 1000;
   if (result?.disk) {
     diskSnapshots.value.push([...result.disk]);
-    if (diskSnapshots.value.length > 30) diskSnapshots.value.shift();
+    diskTimestamps.value.push(now);
+    if (diskSnapshots.value.length > 30) {
+      diskSnapshots.value.shift();
+      diskTimestamps.value.shift();
+    }
     if (!selectedDisk.value && result.disk.length > 0) {
       selectedDisk.value = result.disk[0]?.name ?? "";
     }
   }
   if (result?.network?.interfaces) {
     netSnapshots.value.push([...result.network.interfaces]);
-    if (netSnapshots.value.length > 30) netSnapshots.value.shift();
+    netTimestamps.value.push(now);
+    if (netSnapshots.value.length > 30) {
+      netSnapshots.value.shift();
+      netTimestamps.value.shift();
+    }
   }
 };
 
@@ -243,6 +255,98 @@ const tabs = [
 const MAIN_COLOR = "#3e8eff";
 const SUB_COLOR = "#e46e0a";
 
+const WINDOWS = [
+  { label: "7天", value: 7 * 24 * 60 * 60 * 1000 },
+  { label: "1天", value: 24 * 60 * 60 * 1000 },
+  { label: "12小时", value: 12 * 60 * 60 * 1000 },
+  { label: "6小时", value: 6 * 60 * 60 * 1000 },
+  { label: "1小时", value: 60 * 60 * 1000 },
+  { label: "30分钟", value: 30 * 60 * 1000 },
+  { label: "5分钟", value: 5 * 60 * 1000 },
+] as const;
+
+const REFRESH_INTERVALS = [
+  { label: "1秒", value: 1_000 },
+  { label: "2秒", value: 2_000 },
+  { label: "5秒", value: 5_000 },
+  { label: "10秒", value: 10_000 },
+  { label: "30秒", value: 30_000 },
+] as const;
+
+type TabId = "cpu" | "memory" | "disk" | "network";
+
+interface TabAvgState {
+  windowMs: number;
+  refreshInterval: number;
+  data: DynamicSummaryResponseItem[];
+  loading: boolean;
+  timer: ReturnType<typeof setInterval> | null;
+}
+
+function createTabState(): TabAvgState {
+  return {
+    windowMs: 6 * 60 * 60 * 1000,
+    refreshInterval: 10_000,
+    data: [],
+    loading: false,
+    timer: null,
+  };
+}
+
+const tabState = ref<Record<TabId, TabAvgState>>({
+  cpu: createTabState(),
+  memory: createTabState(),
+  disk: createTabState(),
+  network: createTabState(),
+});
+
+const TAB_FIELDS_AVG: Record<TabId, SummaryField[]> = {
+  cpu: ["cpu_usage"],
+  memory: ["used_memory", "total_memory"],
+  disk: ["read_speed", "write_speed"],
+  network: ["transmit_speed", "receive_speed"],
+};
+
+const fetchTabAvg = async (tab: TabId) => {
+  const state = tabState.value[tab];
+  if (!uuid.value) return;
+  state.loading = true;
+  const now = Date.now();
+  const from = now - state.windowMs;
+  try {
+    const result = await fetchSummaryAvg(
+      uuid.value,
+      { timestamp_from: from, timestamp_to: now },
+      TAB_FIELDS_AVG[tab],
+    );
+    if (Array.isArray(result)) {
+      state.data = result;
+    }
+  } catch (e) {
+    console.error(`[Status] Failed to fetch ${tab} avg data:`, e);
+  } finally {
+    state.loading = false;
+  }
+};
+
+const startTabTimer = (tab: TabId) => {
+  stopTabTimer(tab);
+  const state = tabState.value[tab];
+  state.timer = setInterval(() => fetchTabAvg(tab), state.refreshInterval);
+};
+
+const stopTabTimer = (tab: TabId) => {
+  const state = tabState.value[tab];
+  if (state.timer) {
+    clearInterval(state.timer);
+    state.timer = null;
+  }
+};
+
+const stopAllTabTimers = () => {
+  (Object.keys(tabState.value) as TabId[]).forEach(stopTabTimer);
+};
+
 // Live status indicator
 const lastUpdate = ref(0);
 const elapsed = ref(0);
@@ -260,6 +364,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (elapsedTimer) clearInterval(elapsedTimer);
+  stopAllTabTimers();
   stopDetailPolling();
 });
 
@@ -276,56 +381,39 @@ const liveColor = computed(() => {
   return secs <= 2 ? "#22c55e" : "#eab308";
 });
 
-// Avg history data
-const avgData = ref<DynamicSummaryResponseItem[]>([]);
-const avgLoading = ref(false);
-
 onMounted(() => {
   connectDynamic();
   connectStatic();
 });
 
-const loadAvgData = async () => {
-  avgLoading.value = true;
-  try {
-    const result = await fetchSummaryAvg(uuid.value, undefined, [
-      "cpu_usage",
-      "used_memory",
-      "total_memory",
-      "read_speed",
-      "write_speed",
-      "transmit_speed",
-      "receive_speed",
-    ]);
-    if (Array.isArray(result)) {
-      avgData.value = result;
-    }
-  } catch (e) {
-    console.error("[Status] Failed to fetch avg data:", e);
-  } finally {
-    avgLoading.value = false;
-  }
-};
-
-// On connect: fetch avg data + start detail polling
+// On connect: fetch active tab avg + start its timer + start detail polling
 watch(
   dynamicStatus,
   (status) => {
     if (status === "connected") {
-      loadAvgData();
+      fetchTabAvg(activeTab.value as TabId);
+      startTabTimer(activeTab.value as TabId);
       startDetailPolling();
     } else {
+      stopAllTabTimers();
       stopDetailPolling();
     }
   },
   { immediate: true },
 );
 
-// Tab switch: clear snapshots and reload
-watch(activeTab, () => {
+// Tab switch: stop old tab timer, start new tab timer, clear detail snapshots
+watch(activeTab, (newTab, oldTab) => {
+  if (oldTab) stopTabTimer(oldTab as TabId);
   diskSnapshots.value = [];
   netSnapshots.value = [];
-  if (dynamicStatus.value === "connected") loadDetail();
+  diskTimestamps.value = [];
+  netTimestamps.value = [];
+  if (dynamicStatus.value === "connected") {
+    fetchTabAvg(newTab as TabId);
+    startTabTimer(newTab as TabId);
+    loadDetail();
+  }
 });
 
 // Node switch: clear all detail state
@@ -333,51 +421,59 @@ watch(uuid, () => {
   dynamicDetail.value = null;
   diskSnapshots.value = [];
   netSnapshots.value = [];
+  diskTimestamps.value = [];
+  netTimestamps.value = [];
   selectedDisk.value = "";
   selectedIface.value = "all";
+  stopAllTabTimers();
+  (Object.keys(tabState.value) as TabId[]).forEach((tab) => {
+    tabState.value[tab].data = [];
+  });
 });
 
-// CPU chart data from avg
+// CPU chart data
 const cpuAvgTimestamps = computed(() =>
-  avgData.value.map((d) => d.timestamp / 1000),
+  tabState.value.cpu.data.map((d) => d.timestamp / 1000),
 );
-const cpuAvgValues = computed(() => avgData.value.map((d) => d.cpu_usage ?? 0));
+const cpuAvgValues = computed(() =>
+  tabState.value.cpu.data.map((d) => d.cpu_usage ?? 0),
+);
 
-// Memory chart data from avg
+// Memory chart data
 const ramAvgTimestamps = computed(() =>
-  avgData.value.map((d) => d.timestamp / 1000),
+  tabState.value.memory.data.map((d) => d.timestamp / 1000),
 );
 const ramAvgValues = computed(() =>
-  avgData.value.map((d) => {
+  tabState.value.memory.data.map((d) => {
     const used = d.used_memory ?? 0;
     const total = d.total_memory ?? 1;
     return (used / total) * 100;
   }),
 );
 
-// Disk chart data from avg
+// Disk chart data
 const diskAvgTimestamps = computed(() =>
-  avgData.value.map((d) => d.timestamp / 1000),
+  tabState.value.disk.data.map((d) => d.timestamp / 1000),
 );
 const diskReadAvgValues = computed(() =>
-  avgData.value.map((d) => d.read_speed ?? 0),
+  tabState.value.disk.data.map((d) => d.read_speed ?? 0),
 );
 const diskWriteAvgValues = computed(() =>
-  avgData.value.map((d) => d.write_speed ?? 0),
+  tabState.value.disk.data.map((d) => d.write_speed ?? 0),
 );
 const maxDiskSpeed = computed(() =>
   Math.max(...diskReadAvgValues.value, ...diskWriteAvgValues.value, 1),
 );
 
-// Network chart data from avg
+// Network chart data
 const netAvgTimestamps = computed(() =>
-  avgData.value.map((d) => d.timestamp / 1000),
+  tabState.value.network.data.map((d) => d.timestamp / 1000),
 );
 const netRxAvgValues = computed(() =>
-  avgData.value.map((d) => d.receive_speed ?? 0),
+  tabState.value.network.data.map((d) => d.receive_speed ?? 0),
 );
 const netTxAvgValues = computed(() =>
-  avgData.value.map((d) => d.transmit_speed ?? 0),
+  tabState.value.network.data.map((d) => d.transmit_speed ?? 0),
 );
 const maxNetSpeed = computed(() =>
   Math.max(...netRxAvgValues.value, ...netTxAvgValues.value, 1),
@@ -903,6 +999,7 @@ const maxNetSpeed = computed(() =>
                   <UPlotChart
                     :data="displayDiskReadData"
                     :data2="displayDiskWriteData"
+                    :timestamps="diskTimestamps"
                     :color="MAIN_COLOR"
                     :color2="SUB_COLOR"
                     :maxValue="maxDiskChartSpeed"
@@ -1131,6 +1228,7 @@ const maxNetSpeed = computed(() =>
                   <UPlotChart
                     :data="displayNetRxData"
                     :data2="displayNetTxData"
+                    :timestamps="netTimestamps"
                     :color="MAIN_COLOR"
                     :color2="SUB_COLOR"
                     :maxValue="maxNetChartSpeed"
