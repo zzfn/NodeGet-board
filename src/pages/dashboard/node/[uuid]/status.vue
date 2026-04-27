@@ -166,7 +166,7 @@ const fetchDetail = async (tab: DetailTab, showLoading = true) => {
     if (seq !== detailFetchSeq[tab]) return;
     console.error(`[Status] Failed to fetch ${tab} detail data:`, e);
   } finally {
-    if (seq === detailFetchSeq[tab] && showLoading) state.loading = false;
+    if (showLoading) state.loading = false;
   }
 };
 
