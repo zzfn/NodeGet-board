@@ -215,8 +215,9 @@ const historyAreaPath = computed(() => {
 });
 
 // Per-disk array (flat summary API doesn't expose it; fetch via dynamic detail)
+type NetworkInterfaceWithIp = DynamicNetworkInterface & { ip_address?: string };
 const diskList = ref<DynamicDisk[]>([]);
-const networkInterfaces = ref<DynamicNetworkInterface[]>([]);
+const networkInterfaces = ref<NetworkInterfaceWithIp[]>([]);
 let diskTimer: ReturnType<typeof setInterval> | null = null;
 let networkTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -1151,6 +1152,12 @@ onUnmounted(() => {
                       <div class="min-w-0">
                         <div class="font-semibold text-sm truncate">
                           {{ iface.interface_name }}
+                        </div>
+                        <div
+                          v-if="iface.ip_address"
+                          class="text-[10px] text-muted-foreground font-mono truncate"
+                        >
+                          {{ iface.ip_address }}
                         </div>
                       </div>
                     </div>
