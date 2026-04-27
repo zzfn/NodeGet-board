@@ -36,6 +36,7 @@ const chartRef = ref<HTMLDivElement | null>(null);
 let uplot: uPlot | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let userZoomRange: { min: number; max: number } | null = null;
+let chartIsTimeAxis: boolean | null = null;
 
 const useTimeAxis = () => props.timestamps.length > 0;
 
@@ -246,6 +247,7 @@ const initChart = () => {
     });
   }
 
+  chartIsTimeAxis = isTime;
   uplot = new uPlot(opts, buildAlignedData(), chartRef.value);
 };
 
@@ -260,7 +262,10 @@ const updateChart = () => {
 
 onMounted(() => {
   nextTick(() => {
-    initChart();
+    // Only initialize if data is already available; otherwise wait for first data in the watch
+    if (props.data.length > 0 || props.timestamps.length > 0) {
+      initChart();
+    }
     if (chartRef.value) {
       resizeObserver = new ResizeObserver(([entry]) => {
         if (!entry || !uplot) return;
@@ -284,21 +289,23 @@ onUnmounted(() => {
 
 watch(
   () => [props.data, props.data2, props.timestamps],
-  (newVal, oldVal) => {
-    const wasTime = ((oldVal?.[2] as number[] | undefined)?.length ?? 0) > 0;
-    const isTime = props.timestamps.length > 0;
-    if (isTime !== wasTime) {
-      // Time axis mode changed, need to reinitialize chart
-      if (uplot) {
-        uplot.destroy();
-        uplot = null;
-      }
+  () => {
+    if (!uplot) {
+      // Chart not yet initialized (no data on mount), initialize now
+      nextTick(() => initChart());
+      return;
+    }
+    const isTime = useTimeAxis();
+    if (isTime !== chartIsTimeAxis) {
+      // Time axis mode changed, reinitialize
+      uplot.destroy();
+      uplot = null;
+      chartIsTimeAxis = null;
       nextTick(() => initChart());
     } else {
       updateChart();
     }
   },
-  { deep: true },
 );
 
 watch(
