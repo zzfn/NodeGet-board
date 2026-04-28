@@ -427,7 +427,12 @@ const TAB_FIELDS_AVG: Record<TabId, SummaryField[]> = {
   cpu: ["cpu_usage"],
   memory: ["used_memory", "total_memory"],
   disk: ["read_speed", "write_speed"],
-  network: ["transmit_speed", "receive_speed"],
+  network: [
+    "transmit_speed",
+    "receive_speed",
+    "tcp_connections",
+    "udp_connections",
+  ],
 };
 
 const fetchTabAvg = async (tab: TabId, showLoading = true) => {
@@ -633,6 +638,16 @@ const netTxAvgValues = computed(() =>
 );
 const maxNetSpeed = computed(() =>
   Math.max(...netRxAvgValues.value, ...netTxAvgValues.value, 1),
+);
+
+const tcpConnAvgValues = computed(() =>
+  tabState.value.network.data.map((d) => d.tcp_connections ?? 0),
+);
+const udpConnAvgValues = computed(() =>
+  tabState.value.network.data.map((d) => d.udp_connections ?? 0),
+);
+const maxConnCount = computed(() =>
+  Math.max(...tcpConnAvgValues.value, ...udpConnAvgValues.value, 1),
 );
 </script>
 
@@ -1455,6 +1470,53 @@ const maxNetSpeed = computed(() =>
                     :style="{ backgroundColor: SUB_COLOR }"
                   ></span>
                   Upload (↑)
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <div
+                class="flex items-center gap-3 mb-3 text-xs font-mono flex-wrap"
+              >
+                <span class="text-sm font-medium text-muted-foreground mr-1"
+                  >Connections</span
+                >
+                <span class="status-main-text"
+                  >TCP {{ server.tcp_connections ?? 0 }}</span
+                >
+                <span class="status-sub-text"
+                  >UDP {{ server.udp_connections ?? 0 }}</span
+                >
+              </div>
+              <div class="h-[260px] w-full relative overflow-hidden">
+                <UPlotChart
+                  :data="tcpConnAvgValues"
+                  :data2="udpConnAvgValues"
+                  :timestamps="netAvgTimestamps"
+                  :color="MAIN_COLOR"
+                  :color2="SUB_COLOR"
+                  :maxValue="maxConnCount"
+                  label1="TCP"
+                  label2="UDP"
+                  :loading="tabState.network.loading"
+                />
+              </div>
+              <div
+                class="flex items-center gap-4 mt-2 text-xs font-mono text-muted-foreground"
+              >
+                <span class="flex items-center gap-1">
+                  <span
+                    class="inline-block w-3 h-0.5"
+                    :style="{ backgroundColor: MAIN_COLOR }"
+                  ></span>
+                  TCP
+                </span>
+                <span class="flex items-center gap-1">
+                  <span
+                    class="inline-block w-3 h-0.5"
+                    :style="{ backgroundColor: SUB_COLOR }"
+                  ></span>
+                  UDP
                 </span>
               </div>
             </div>
