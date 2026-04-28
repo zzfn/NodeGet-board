@@ -18,7 +18,11 @@ import {
   Fish,
 } from "lucide-vue-next";
 import UPlotChart from "@/components/UPlotChart.vue";
-import type { DynamicDetailData } from "@/types/monitoring";
+import type {
+  DynamicDetailData,
+  DynamicSummaryResponseItem,
+  SummaryField,
+} from "@/types/monitoring";
 
 definePage({
   meta: {
@@ -34,6 +38,7 @@ const {
   status: dynamicStatus,
   servers: dynamicServers,
   connect: connectDynamic,
+  fetchSummaryAvg,
   fetchDynamic,
 } = useDynamicData();
 
@@ -394,24 +399,10 @@ const detailEffectiveRefresh = (tab: DetailTab) => {
 
 type TabId = "cpu" | "memory" | "disk" | "network";
 
-type TabAvgRow = {
-  timestamp: number;
-  cpu?: { total_cpu_usage?: number };
-  load?: { load_one?: number; load_five?: number; load_fifteen?: number };
-  system?: { process_count?: number };
-  ram?: { used_memory?: number; total_memory?: number };
-  disk?: { read_speed?: number; write_speed?: number }[];
-  network?: {
-    interfaces?: { receive_speed?: number; transmit_speed?: number }[];
-    tcp_connections?: number;
-    udp_connections?: number;
-  };
-};
-
 interface TabAvgState {
   windowMs: number;
   refreshInterval: number;
-  data: TabAvgRow[];
+  data: DynamicSummaryResponseItem[];
   loading: boolean;
   timer: ReturnType<typeof setInterval> | null;
 }
@@ -452,11 +443,17 @@ watch(netSyncAxes, (v) => {
   if (!v) netZoom.value = null;
 });
 
-const TAB_FIELDS_AVG: Record<TabId, string[]> = {
-  cpu: ["cpu", "load", "system"],
-  memory: ["ram"],
-  disk: ["disk"],
-  network: ["network"],
+const TAB_FIELDS_AVG: Record<TabId, SummaryField[][]> = {
+  cpu: [
+    ["cpu_usage", "process_count"],
+    ["load_one", "load_five", "load_fifteen"],
+  ],
+  memory: [["used_memory", "total_memory"]],
+  disk: [["read_speed", "write_speed"]],
+  network: [
+    ["transmit_speed", "receive_speed"],
+    ["tcp_connections", "udp_connections"],
+  ],
 };
 
 const fetchTabAvg = async (tab: TabId, showLoading = true) => {
@@ -466,11 +463,25 @@ const fetchTabAvg = async (tab: TabId, showLoading = true) => {
   const now = Date.now();
   const from = now - state.windowMs;
   try {
-    const result = await fetchDynamic(uuid.value, TAB_FIELDS_AVG[tab], {
-      timestamp_from: from,
-      timestamp_to: now,
-    });
-    state.data = result as unknown as TabAvgRow[];
+    const groups = await Promise.all(
+      TAB_FIELDS_AVG[tab].map((fields) =>
+        fetchSummaryAvg(
+          uuid.value,
+          { timestamp_from: from, timestamp_to: now },
+          fields,
+        ),
+      ),
+    );
+    const merged = new Map<number, DynamicSummaryResponseItem>();
+    for (const g of groups) {
+      if (!Array.isArray(g)) continue;
+      for (const row of g as DynamicSummaryResponseItem[]) {
+        const cur = merged.get(row.timestamp);
+        if (cur) Object.assign(cur, row);
+        else merged.set(row.timestamp, { ...row });
+      }
+    }
+    state.data = [...merged.values()].sort((a, b) => a.timestamp - b.timestamp);
   } catch (e: any) {
     console.error(`[Status] Failed to fetch ${tab} avg data:`, e);
     toast.error("数据查询失败", {
@@ -617,17 +628,17 @@ const cpuAvgTimestamps = computed(() =>
   tabState.value.cpu.data.map((d) => d.timestamp / 1000),
 );
 const cpuAvgValues = computed(() =>
-  tabState.value.cpu.data.map((d) => d.cpu?.total_cpu_usage ?? 0),
+  tabState.value.cpu.data.map((d) => d.cpu_usage ?? 0),
 );
 
 const load1Values = computed(() =>
-  tabState.value.cpu.data.map((d) => d.load?.load_one ?? 0),
+  tabState.value.cpu.data.map((d) => d.load_one ?? 0),
 );
 const load5Values = computed(() =>
-  tabState.value.cpu.data.map((d) => d.load?.load_five ?? 0),
+  tabState.value.cpu.data.map((d) => d.load_five ?? 0),
 );
 const load15Values = computed(() =>
-  tabState.value.cpu.data.map((d) => d.load?.load_fifteen ?? 0),
+  tabState.value.cpu.data.map((d) => d.load_fifteen ?? 0),
 );
 const maxLoad = computed(() =>
   Math.max(
@@ -639,7 +650,7 @@ const maxLoad = computed(() =>
 );
 
 const procValues = computed(() =>
-  tabState.value.cpu.data.map((d) => d.system?.process_count ?? 0),
+  tabState.value.cpu.data.map((d) => d.process_count ?? 0),
 );
 const maxProc = computed(() => Math.max(...procValues.value, 1));
 
@@ -648,8 +659,8 @@ const ramAvgTimestamps = computed(() =>
 );
 const ramAvgValues = computed(() =>
   tabState.value.memory.data.map((d) => {
-    const used = d.ram?.used_memory ?? 0;
-    const total = d.ram?.total_memory ?? 1;
+    const used = d.used_memory ?? 0;
+    const total = d.total_memory ?? 1;
     return (used / total) * 100;
   }),
 );
@@ -658,14 +669,10 @@ const diskAvgTimestamps = computed(() =>
   tabState.value.disk.data.map((d) => d.timestamp / 1000),
 );
 const diskReadAvgValues = computed(() =>
-  tabState.value.disk.data.map(
-    (d) => d.disk?.reduce((s, x) => s + (x.read_speed ?? 0), 0) ?? 0,
-  ),
+  tabState.value.disk.data.map((d) => d.read_speed ?? 0),
 );
 const diskWriteAvgValues = computed(() =>
-  tabState.value.disk.data.map(
-    (d) => d.disk?.reduce((s, x) => s + (x.write_speed ?? 0), 0) ?? 0,
-  ),
+  tabState.value.disk.data.map((d) => d.write_speed ?? 0),
 );
 const maxDiskSpeed = computed(() =>
   Math.max(...diskReadAvgValues.value, ...diskWriteAvgValues.value, 1),
@@ -675,28 +682,20 @@ const netAvgTimestamps = computed(() =>
   tabState.value.network.data.map((d) => d.timestamp / 1000),
 );
 const netRxAvgValues = computed(() =>
-  tabState.value.network.data.map(
-    (d) =>
-      d.network?.interfaces?.reduce((s, x) => s + (x.receive_speed ?? 0), 0) ??
-      0,
-  ),
+  tabState.value.network.data.map((d) => d.receive_speed ?? 0),
 );
 const netTxAvgValues = computed(() =>
-  tabState.value.network.data.map(
-    (d) =>
-      d.network?.interfaces?.reduce((s, x) => s + (x.transmit_speed ?? 0), 0) ??
-      0,
-  ),
+  tabState.value.network.data.map((d) => d.transmit_speed ?? 0),
 );
 const maxNetSpeed = computed(() =>
   Math.max(...netRxAvgValues.value, ...netTxAvgValues.value, 1),
 );
 
 const tcpConnAvgValues = computed(() =>
-  tabState.value.network.data.map((d) => d.network?.tcp_connections ?? 0),
+  tabState.value.network.data.map((d) => d.tcp_connections ?? 0),
 );
 const udpConnAvgValues = computed(() =>
-  tabState.value.network.data.map((d) => d.network?.udp_connections ?? 0),
+  tabState.value.network.data.map((d) => d.udp_connections ?? 0),
 );
 const maxConnCount = computed(() =>
   Math.max(...tcpConnAvgValues.value, ...udpConnAvgValues.value, 1),
