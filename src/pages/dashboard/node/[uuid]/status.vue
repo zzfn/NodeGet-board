@@ -1474,6 +1474,26 @@ const maxConnCount = computed(() =>
               </div>
             </div>
 
+            <!-- Traffic Summary -->
+            <div
+              v-if="server.total_received != null"
+              class="flex items-center gap-6 text-xs font-mono text-muted-foreground py-1"
+            >
+              <span class="flex items-center gap-1.5">
+                <span class="status-main-text">↓</span> Total Received
+                <span class="text-foreground ml-1">{{
+                  formatBytes(server.total_received ?? 0)
+                }}</span>
+              </span>
+              <span class="text-muted-foreground/40">|</span>
+              <span class="flex items-center gap-1.5">
+                <span class="status-sub-text">↑</span> Total Transmitted
+                <span class="text-foreground ml-1">{{
+                  formatBytes(server.total_transmitted ?? 0)
+                }}</span>
+              </span>
+            </div>
+
             <div>
               <div
                 class="flex items-center gap-3 mb-3 text-xs font-mono flex-wrap"
@@ -1519,26 +1539,6 @@ const maxConnCount = computed(() =>
                   UDP
                 </span>
               </div>
-            </div>
-
-            <!-- Traffic Summary -->
-            <div
-              v-if="server.total_received != null"
-              class="flex items-center gap-6 text-xs font-mono text-muted-foreground py-1"
-            >
-              <span class="flex items-center gap-1.5">
-                <span class="status-main-text">↓</span> Total Received
-                <span class="text-foreground ml-1">{{
-                  formatBytes(server.total_received ?? 0)
-                }}</span>
-              </span>
-              <span class="text-muted-foreground/40">|</span>
-              <span class="flex items-center gap-1.5">
-                <span class="status-sub-text">↑</span> Total Transmitted
-                <span class="text-foreground ml-1">{{
-                  formatBytes(server.total_transmitted ?? 0)
-                }}</span>
-              </span>
             </div>
 
             <!-- Detail divider -->
