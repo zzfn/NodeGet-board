@@ -14,6 +14,10 @@ import {
   showDiskUsage,
   showDiskPercent,
   showDiskDisplay,
+  isOnline,
+  distroLogo,
+  virtLabel,
+  flagUrl,
 } from "@/utils/show";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -105,14 +109,16 @@ const goToServerDetail = (uuid: string) => {
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead class="w-8" />
             <TableHead>Server</TableHead>
+            <TableHead class="w-12 text-center">Region</TableHead>
             <TableHead>OS</TableHead>
             <TableHead>Uptime</TableHead>
             <TableHead>Load</TableHead>
             <TableHead class="w-[15%]">CPU</TableHead>
             <TableHead class="w-[15%]">RAM</TableHead>
             <TableHead class="w-[15%]">Disk</TableHead>
-            <TableHead>Network</TableHead>
+            <TableHead class="w-[150px]">Network</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -120,12 +126,33 @@ const goToServerDetail = (uuid: string) => {
             v-for="server in servers"
             :key="server.uuid"
             class="cursor-pointer hover:bg-muted/50 transition-colors"
+            :class="{ 'opacity-60': !isOnline(server) }"
             @click="goToServerDetail(server.uuid)"
           >
+            <!-- Online dot -->
+            <TableCell>
+              <span
+                :title="isOnline(server) ? 'Online' : 'Offline'"
+                class="inline-block w-2 h-2 rounded-full shrink-0"
+                :class="
+                  isOnline(server)
+                    ? 'bg-emerald-500 ring-2 ring-emerald-500/25'
+                    : 'bg-rose-500 ring-2 ring-rose-500/25'
+                "
+              />
+            </TableCell>
+
             <!-- Server Info -->
             <TableCell>
               <div class="flex items-center gap-3">
-                <div class="p-2 bg-primary/10 rounded-lg">
+                <img
+                  v-if="distroLogo(server)"
+                  :src="distroLogo(server)"
+                  alt=""
+                  class="w-5 h-5 shrink-0 object-contain"
+                  loading="lazy"
+                />
+                <div v-else class="p-2 bg-primary/10 rounded-lg">
                   <Server class="h-4 w-4 text-primary" />
                 </div>
                 <div class="flex flex-col">
@@ -150,15 +177,37 @@ const goToServerDetail = (uuid: string) => {
               </div>
             </TableCell>
 
-            <!-- OS -->
+            <!-- Region (flag) -->
+            <TableCell class="text-center">
+              <img
+                v-if="flagUrl(server.region)"
+                :src="flagUrl(server.region)"
+                :alt="server.region"
+                :title="server.region"
+                loading="lazy"
+                class="inline-block w-5 h-3.5 rounded-[1px] object-cover shadow-sm"
+              />
+              <span v-else class="text-muted-foreground text-sm">—</span>
+            </TableCell>
+
+            <!-- OS + virtualization -->
             <TableCell>
-              <Badge
-                variant="outline"
-                class="font-normal text-xs"
-                :title="showOS(server)"
-              >
-                {{ showOS(server) }}
-              </Badge>
+              <div class="flex items-center gap-1.5">
+                <Badge
+                  variant="outline"
+                  class="font-normal text-xs"
+                  :title="showOS(server)"
+                >
+                  {{ showOS(server) }}
+                </Badge>
+                <Badge
+                  v-if="virtLabel(server)"
+                  variant="secondary"
+                  class="text-[10px] uppercase tracking-wide"
+                >
+                  {{ virtLabel(server) }}
+                </Badge>
+              </div>
             </TableCell>
 
             <!-- Uptime -->
@@ -258,7 +307,7 @@ const goToServerDetail = (uuid: string) => {
             </TableCell>
 
             <!-- Network -->
-            <TableCell>
+            <TableCell class="w-[150px]">
               <div
                 class="flex flex-col gap-1 text-xs font-mono"
                 v-if="
@@ -272,7 +321,9 @@ const goToServerDetail = (uuid: string) => {
                     <ArrowDownIcon class="h-3 w-3" />
                     <span>Rx</span>
                   </div>
-                  <span>{{ showNetworkSpeed(server, "rx") }}</span>
+                  <span class="tabular-nums text-right whitespace-nowrap">{{
+                    showNetworkSpeed(server, "rx")
+                  }}</span>
                 </div>
                 <div
                   class="flex items-center justify-between gap-2 text-muted-foreground"
@@ -281,7 +332,9 @@ const goToServerDetail = (uuid: string) => {
                     <ArrowUpIcon class="h-3 w-3" />
                     <span>Tx</span>
                   </div>
-                  <span>{{ showNetworkSpeed(server, "tx") }}</span>
+                  <span class="tabular-nums text-right whitespace-nowrap">{{
+                    showNetworkSpeed(server, "tx")
+                  }}</span>
                 </div>
               </div>
               <div v-else class="text-xs text-muted-foreground">N/A</div>
