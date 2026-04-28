@@ -210,6 +210,7 @@ function initFunctions() {
         return {
           uuid,
           // summary flat fields
+          timestamp: d.timestamp as number | undefined,
           cpu_usage: d.cpu_usage as number | undefined,
           gpu_usage: d.gpu_usage as number | undefined,
           used_swap: d.used_swap as number | undefined,
