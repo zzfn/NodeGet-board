@@ -70,6 +70,7 @@ export interface OverviewServer {
   region?: string;
   latitude?: number | null;
   longitude?: number | null;
+  tags: string[];
 }
 
 // --- 模块级单例状态，所有组件共享 ---
@@ -89,6 +90,7 @@ let metaMap = new Map<
     region: string;
     latitude: number | null;
     longitude: number | null;
+    tags: string[];
   }
 >();
 let staticMap = new Map<string, AgentRow>();
@@ -126,6 +128,7 @@ function initFunctions() {
         { namespace: uuid, key: "metadata_region" },
         { namespace: uuid, key: "metadata_latitude" },
         { namespace: uuid, key: "metadata_longitude" },
+        { namespace: uuid, key: "metadata_tags" },
       ]);
       const results = await kv.getMultiValue(namespaceKeys);
       metaMap = new Map();
@@ -134,6 +137,8 @@ function initFunctions() {
         const parsed = Number(value);
         return Number.isFinite(parsed) ? parsed : null;
       };
+      const parseTags = (value: unknown): string[] =>
+        Array.isArray(value) ? value.map((v) => String(v)).filter(Boolean) : [];
       for (const uuid of uuids) {
         const nameEntry = results.find(
           (r) => r.namespace === uuid && r.key === "metadata_name",
@@ -150,12 +155,16 @@ function initFunctions() {
         const longitudeEntry = results.find(
           (r) => r.namespace === uuid && r.key === "metadata_longitude",
         );
+        const tagsEntry = results.find(
+          (r) => r.namespace === uuid && r.key === "metadata_tags",
+        );
         metaMap.set(uuid, {
           customName: nameEntry ? String(nameEntry.value ?? "") : "",
           hidden: hiddenEntry ? Boolean(hiddenEntry.value) : false,
           region: regionEntry ? String(regionEntry.value ?? "") : "",
           latitude: parseNullableNumber(latitudeEntry?.value),
           longitude: parseNullableNumber(longitudeEntry?.value),
+          tags: parseTags(tagsEntry?.value),
         });
       }
     } catch {
@@ -205,6 +214,7 @@ function initFunctions() {
           region: "",
           latitude: null,
           longitude: null,
+          tags: [],
         };
 
         return {
@@ -243,6 +253,7 @@ function initFunctions() {
           region: meta.region,
           latitude: meta.latitude,
           longitude: meta.longitude,
+          tags: meta.tags,
         };
       });
 
@@ -296,6 +307,7 @@ function initFunctions() {
           { namespace: uuid, key: "metadata_region" },
           { namespace: uuid, key: "metadata_latitude" },
           { namespace: uuid, key: "metadata_longitude" },
+          { namespace: uuid, key: "metadata_tags" },
         ]);
         const kvResults = await kv.getMultiValue(namespaceKeys);
         const parseNullableNumber = (value: unknown): number | null => {
@@ -304,6 +316,10 @@ function initFunctions() {
           const parsed = Number(value);
           return Number.isFinite(parsed) ? parsed : null;
         };
+        const parseTags = (value: unknown): string[] =>
+          Array.isArray(value)
+            ? value.map((v) => String(v)).filter(Boolean)
+            : [];
         for (const uuid of newUuids) {
           const nameEntry = kvResults.find(
             (r) => r.namespace === uuid && r.key === "metadata_name",
@@ -320,12 +336,16 @@ function initFunctions() {
           const longitudeEntry = kvResults.find(
             (r) => r.namespace === uuid && r.key === "metadata_longitude",
           );
+          const tagsEntry = kvResults.find(
+            (r) => r.namespace === uuid && r.key === "metadata_tags",
+          );
           metaMap.set(uuid, {
             customName: nameEntry ? String(nameEntry.value ?? "") : "",
             hidden: hiddenEntry ? Boolean(hiddenEntry.value) : false,
             region: regionEntry ? String(regionEntry.value ?? "") : "",
             latitude: parseNullableNumber(latitudeEntry?.value),
             longitude: parseNullableNumber(longitudeEntry?.value),
+            tags: parseTags(tagsEntry?.value),
           });
         }
       } catch {
@@ -336,6 +356,7 @@ function initFunctions() {
             region: "",
             latitude: null,
             longitude: null,
+            tags: [],
           });
         }
       }

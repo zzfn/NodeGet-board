@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useOverviewData } from "@/composables/useOverviewData";
 import { colors } from "@/composables/color";
@@ -23,6 +23,13 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -58,6 +65,23 @@ const router = useRouter();
 
 const { servers, loading, error, start, stop } = useOverviewData();
 
+const selectedTag = ref("all");
+
+const allTags = computed(() => {
+  const set = new Set<string>();
+  for (const s of servers.value) {
+    for (const t of s.tags ?? []) set.add(t);
+  }
+  return Array.from(set).sort();
+});
+
+const filteredServers = computed(() => {
+  if (selectedTag.value === "all") return servers.value;
+  return servers.value.filter((s) =>
+    (s.tags ?? []).includes(selectedTag.value),
+  );
+});
+
 onMounted(() => {
   start();
 });
@@ -76,12 +100,27 @@ const goToServerDetail = (uuid: string) => {
 
 <template>
   <div class="h-full flex flex-col space-y-6">
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between gap-4">
       <div>
         <h2 class="text-2xl font-bold tracking-tight">Servers</h2>
         <p class="text-muted-foreground">
           Manage and monitor your servers in a list layout.
         </p>
+      </div>
+      <div v-if="allTags.length > 0" class="w-40 shrink-0">
+        <Select v-model="selectedTag">
+          <SelectTrigger class="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{{
+              $t("dashboard.batchExec.selectTag")
+            }}</SelectItem>
+            <SelectItem v-for="t in allTags" :key="t" :value="t">{{
+              t
+            }}</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
     </div>
 
@@ -105,7 +144,14 @@ const goToServerDetail = (uuid: string) => {
       No servers found.
     </div>
 
-    <div class="border rounded-md bg-card" v-if="servers.length > 0">
+    <div
+      v-if="servers.length > 0 && filteredServers.length === 0"
+      class="text-center py-10 text-muted-foreground"
+    >
+      No servers match the selected tag.
+    </div>
+
+    <div class="border rounded-md bg-card" v-if="filteredServers.length > 0">
       <Table>
         <TableHeader>
           <TableRow>
@@ -113,6 +159,7 @@ const goToServerDetail = (uuid: string) => {
             <TableHead>Server</TableHead>
             <TableHead class="w-12 text-center">Region</TableHead>
             <TableHead>OS</TableHead>
+            <TableHead class="w-[80px]">Virt</TableHead>
             <TableHead>Uptime</TableHead>
             <TableHead>Load</TableHead>
             <TableHead class="w-[15%]">CPU</TableHead>
@@ -123,7 +170,7 @@ const goToServerDetail = (uuid: string) => {
         </TableHeader>
         <TableBody>
           <TableRow
-            v-for="server in servers"
+            v-for="server in filteredServers"
             :key="server.uuid"
             class="cursor-pointer hover:bg-muted/50 transition-colors"
             :class="{ 'opacity-60': !isOnline(server) }"
@@ -131,15 +178,17 @@ const goToServerDetail = (uuid: string) => {
           >
             <!-- Online dot -->
             <TableCell>
-              <span
-                :title="isOnline(server) ? 'Online' : 'Offline'"
-                class="inline-block w-2 h-2 rounded-full shrink-0"
-                :class="
-                  isOnline(server)
-                    ? 'bg-emerald-500 ring-2 ring-emerald-500/25'
-                    : 'bg-rose-500 ring-2 ring-rose-500/25'
-                "
-              />
+              <div class="flex items-center justify-center">
+                <span
+                  :title="isOnline(server) ? 'Online' : 'Offline'"
+                  class="inline-block w-2 h-2 rounded-full shrink-0"
+                  :class="
+                    isOnline(server)
+                      ? 'bg-emerald-500 ring-2 ring-emerald-500/25'
+                      : 'bg-rose-500 ring-2 ring-rose-500/25'
+                  "
+                />
+              </div>
             </TableCell>
 
             <!-- Server Info -->
@@ -190,24 +239,27 @@ const goToServerDetail = (uuid: string) => {
               <span v-else class="text-muted-foreground text-sm">—</span>
             </TableCell>
 
-            <!-- OS + virtualization -->
+            <!-- OS -->
             <TableCell>
-              <div class="flex items-center gap-1.5">
-                <Badge
-                  variant="outline"
-                  class="font-normal text-xs"
-                  :title="showOS(server)"
-                >
-                  {{ showOS(server) }}
-                </Badge>
-                <Badge
-                  v-if="virtLabel(server)"
-                  variant="secondary"
-                  class="text-[10px] uppercase tracking-wide"
-                >
-                  {{ virtLabel(server) }}
-                </Badge>
-              </div>
+              <Badge
+                variant="outline"
+                class="font-normal text-xs"
+                :title="showOS(server)"
+              >
+                {{ showOS(server) }}
+              </Badge>
+            </TableCell>
+
+            <!-- Virtualization -->
+            <TableCell>
+              <Badge
+                v-if="virtLabel(server)"
+                variant="secondary"
+                class="text-[10px] uppercase tracking-wide"
+              >
+                {{ virtLabel(server) }}
+              </Badge>
+              <span v-else class="text-muted-foreground text-sm">—</span>
             </TableCell>
 
             <!-- Uptime -->
