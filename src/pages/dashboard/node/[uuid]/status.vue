@@ -87,7 +87,8 @@ const startDetailTimer = (tab: string) => {
     cpuDetailTimer = setInterval(() => fetchCpuDetail(), 1_000);
     return;
   }
-  const detailTab = tab as DetailTab;
+  if (tab !== "disk" && tab !== "network") return;
+  const detailTab = tab;
   stopDetailTimer(detailTab);
   const state = detailState.value[detailTab];
   state.timer = setInterval(
@@ -104,7 +105,8 @@ const stopDetailTimer = (tab: string) => {
     }
     return;
   }
-  const state = detailState.value[tab as DetailTab];
+  if (tab !== "disk" && tab !== "network") return;
+  const state = detailState.value[tab];
   if (state.timer) {
     clearInterval(state.timer);
     state.timer = null;
