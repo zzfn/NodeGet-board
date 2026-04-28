@@ -194,6 +194,9 @@ function initFunctions() {
     if (fetchDynamicInFlight) return;
     fetchDynamicInFlight = true;
 
+    const startedVisible =
+      typeof document === "undefined" || document.visibilityState === "visible";
+
     try {
       if (!pollConn) pollConn = new WsConnection(currentBackend.value.url);
       const results = await pollConn.call<AgentRow[]>(
@@ -207,8 +210,9 @@ function initFunctions() {
       }
 
       if (
-        typeof document === "undefined" ||
-        document.visibilityState === "visible"
+        startedVisible &&
+        (typeof document === "undefined" ||
+          document.visibilityState === "visible")
       ) {
         inactive.value = false;
       }
