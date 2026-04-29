@@ -72,6 +72,7 @@ export interface OverviewServer {
   latitude?: number | null;
   longitude?: number | null;
   tags: string[];
+  order: number;
 }
 
 const servers = ref<OverviewServer[]>([]);
@@ -94,6 +95,7 @@ let metaMap = new Map<
     latitude: number | null;
     longitude: number | null;
     tags: string[];
+    order: number;
   }
 >();
 let staticMap = new Map<string, AgentRow>();
@@ -132,6 +134,7 @@ function initFunctions() {
         { namespace: uuid, key: "metadata_latitude" },
         { namespace: uuid, key: "metadata_longitude" },
         { namespace: uuid, key: "metadata_tags" },
+        { namespace: uuid, key: "metadata_order" },
       ]);
       const results = await kv.getMultiValue(namespaceKeys);
       metaMap = new Map();
@@ -161,6 +164,9 @@ function initFunctions() {
         const tagsEntry = results.find(
           (r) => r.namespace === uuid && r.key === "metadata_tags",
         );
+        const orderEntry = results.find(
+          (r) => r.namespace === uuid && r.key === "metadata_order",
+        );
         metaMap.set(uuid, {
           customName: nameEntry ? String(nameEntry.value ?? "") : "",
           hidden: hiddenEntry ? Boolean(hiddenEntry.value) : false,
@@ -168,6 +174,7 @@ function initFunctions() {
           latitude: parseNullableNumber(latitudeEntry?.value),
           longitude: parseNullableNumber(longitudeEntry?.value),
           tags: parseTags(tagsEntry?.value),
+          order: Number(orderEntry?.value ?? 0),
         });
       }
     } catch {
@@ -229,6 +236,7 @@ function initFunctions() {
           latitude: null,
           longitude: null,
           tags: [],
+          order: 0,
         };
 
         return {
@@ -268,6 +276,7 @@ function initFunctions() {
           latitude: meta.latitude,
           longitude: meta.longitude,
           tags: meta.tags,
+          order: meta.order,
         };
       });
 
@@ -322,6 +331,7 @@ function initFunctions() {
           { namespace: uuid, key: "metadata_latitude" },
           { namespace: uuid, key: "metadata_longitude" },
           { namespace: uuid, key: "metadata_tags" },
+          { namespace: uuid, key: "metadata_order" },
         ]);
         const kvResults = await kv.getMultiValue(namespaceKeys);
         const parseNullableNumber = (value: unknown): number | null => {
@@ -353,6 +363,9 @@ function initFunctions() {
           const tagsEntry = kvResults.find(
             (r) => r.namespace === uuid && r.key === "metadata_tags",
           );
+          const orderEntry = kvResults.find(
+            (r) => r.namespace === uuid && r.key === "metadata_order",
+          );
           metaMap.set(uuid, {
             customName: nameEntry ? String(nameEntry.value ?? "") : "",
             hidden: hiddenEntry ? Boolean(hiddenEntry.value) : false,
@@ -360,6 +373,7 @@ function initFunctions() {
             latitude: parseNullableNumber(latitudeEntry?.value),
             longitude: parseNullableNumber(longitudeEntry?.value),
             tags: parseTags(tagsEntry?.value),
+            order: Number(orderEntry?.value ?? 0),
           });
         }
       } catch {
@@ -371,6 +385,7 @@ function initFunctions() {
             latitude: null,
             longitude: null,
             tags: [],
+            order: 0,
           });
         }
       }

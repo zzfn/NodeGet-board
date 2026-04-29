@@ -76,10 +76,11 @@ const allTags = computed(() => {
 });
 
 const filteredServers = computed(() => {
-  if (selectedTag.value === "all") return servers.value;
-  return servers.value.filter((s) =>
-    (s.tags ?? []).includes(selectedTag.value),
-  );
+  const list =
+    selectedTag.value === "all"
+      ? servers.value
+      : servers.value.filter((s) => (s.tags ?? []).includes(selectedTag.value));
+  return [...list].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 });
 
 onMounted(() => {
