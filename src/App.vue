@@ -59,6 +59,9 @@ watch(
   () => {
     ensureBackend();
   },
+  {
+    immediate:true
+  }
 );
 
 watch(
