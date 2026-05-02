@@ -238,7 +238,7 @@ watch(
             <Loader2 v-if="isLoading" class="h-4 w-4 mr-2 animate-spin" />
             {{
               isLoading
-                ? t("dashboard.common.loading")
+                ? t("dashboard.servers.addServerLoading")
                 : t("dashboard.servers.addServer")
             }}
           </RainbowButton>
