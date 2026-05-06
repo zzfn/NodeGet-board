@@ -259,10 +259,10 @@ async function confirmVersion(version: string) {
     for (let j = 0; j < maxWait; j += waitInterval) {
       try {
         await fetchAgentVersion(agent, waitInterval);
-        console.debug({
-          currentVersion: extractVersion(agent.version || ""),
-          targetVersion: version,
-        });
+        // console.debug({
+        //   currentVersion: extractVersion(agent.version || ""),
+        //   targetVersion: version,
+        // });
         if (extractVersion(agent.version || "") === version) {
           upgradeStatus.value.delete(uuid);
           finished = true;
