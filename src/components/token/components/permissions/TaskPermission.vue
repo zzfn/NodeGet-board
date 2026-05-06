@@ -17,6 +17,7 @@ const TASK_TYPES = [
   "edit_config",
   "version",
   "http_request",
+  "self_update",
 ] as const;
 
 const props = defineProps<{ modelValue: PermissionEntry[] }>();
