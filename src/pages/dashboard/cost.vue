@@ -23,20 +23,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -752,7 +738,9 @@ onMounted(initialize);
                       </span>
                     </template>
                   </div>
-                  <div class="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                  <div
+                    class="h-1.5 w-full rounded-full bg-muted overflow-hidden"
+                  >
                     <div
                       class="h-full rounded-full transition-all"
                       :class="
