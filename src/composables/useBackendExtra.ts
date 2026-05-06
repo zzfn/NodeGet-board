@@ -96,7 +96,7 @@ async function getServerIpInfo(backend: Ref<Backend>) {
   return poolingWorkerLogs(id).then((r) => r.result as IpInfo);
 }
 
-function getSingleBackendProperty(
+export function getSingleBackendProperty(
   property: string,
   backend: Backend,
   promise: Promise<string | null>,
@@ -198,6 +198,11 @@ const currentBackendInfo = computed(() => {
   return serverInfo.value[currentBackend.value.url] as ServerInfo;
 });
 
+async function updateServer(backend: Backend, version: string) {
+  const conn = getWsConnection(backend.url);
+  conn.call("nodeget-server_self_update", [backend.token, version]);
+}
+
 export function useBackendExtra() {
   return {
     refreshAll,
@@ -205,6 +210,8 @@ export function useBackendExtra() {
     serverInfo,
     serverInfoLoading,
     currentBackendInfo,
+    fetchServerInfo,
     saveAgentConfigWsUrl,
+    updateServer,
   };
 }
