@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import {
@@ -13,10 +13,13 @@ import {
   Plus,
   GripVertical,
   Menu,
+  CloudDownload,
 } from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Spinner } from "@/components/ui/spinner";
 import { toast } from "vue-sonner";
 import {
   Table,
@@ -33,11 +36,24 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
 import { useBackendStore } from "@/composables/useBackendStore";
 import { useBackendExtra } from "@/composables/useBackendExtra";
 import { getWsConnection } from "@/composables/useWsConnection";
 import AddAgentDialog from "@/components/agents/AddAgentDialog.vue";
 import { useAgentInfo } from "@/composables/useAgentInfo";
+import VersionDialog from "@/components/node-manage/VersionDialog.vue";
+
+import { compareVersions } from "compare-versions";
+import { useTask } from "@/composables/useTask";
+import { delay } from "@/lib/delay";
 
 const { t } = useI18n();
 const router = useRouter();
@@ -47,12 +63,20 @@ const currentAgentInfo = useAgentInfo(undefined, {
   withVersion: true,
 });
 
-const { agents, loading, fetchAgents } = currentAgentInfo;
+const { createSelfUpdateTask } = useTask();
+
+const { agents, loading, fetchAgents, fetchAgentVersion } = currentAgentInfo;
 
 const searchQuery = ref("");
 const selectedUuids = ref<Set<string>>(new Set());
 const addAgentOpen = ref(false);
 const sortable = ref(false);
+
+const changeVersionOpen = ref(false);
+const availableVersions = ref<string[]>([]);
+const pendingUpdateUUIDs = ref<string[]>([]);
+
+// function
 
 const filteredAgents = computed(() => {
   if (sortable.value) return agents.value;
@@ -149,6 +173,10 @@ const toggleSelect = (uuid: string, checked: boolean) => {
 const hasSelection = computed(() => selectedUuids.value.size > 0);
 
 const handleBatchAction = (_action: string) => {
+  if (_action === "upgrade") {
+    openChooseVersion(Array.from(selectedUuids.value));
+    return;
+  }
   toast.info(t("dashboard.agents.devInProgress"));
 };
 
@@ -157,6 +185,125 @@ const handleSettings = (uuid: string) => {
 };
 
 defineExpose({ fetchAgents });
+
+function openChooseVersion(uuids: string[]) {
+  pendingUpdateUUIDs.value = uuids;
+  changeVersionOpen.value = true;
+}
+
+const latestVersion = computed(() => {
+  if (availableVersions.value.length === 0) {
+    return "";
+  }
+  const sorted = availableVersions.value
+    .map((v) => v.replace(/^v/g, ""))
+    .sort(compareVersions);
+
+  return sorted[sorted.length - 1] as string;
+});
+
+function extractVersion(version: string) {
+  return version.split("-")[0] || "";
+}
+
+const upgradeStatus = ref<Map<string, "waiting" | "upgrading" | "confirming">>(
+  new Map(),
+);
+async function confirmVersion(version: string) {
+  version = version.replace(/^v/g, "");
+
+  changeVersionOpen.value = false;
+
+  if (typeof version !== "string") {
+    return;
+  }
+  const uuids = pendingUpdateUUIDs.value.filter((uuid) => {
+    let oldVersion = agents.value.find((v) => v.uuid === uuid)?.version;
+    if (!oldVersion) {
+      return false;
+    }
+    oldVersion = extractVersion(oldVersion);
+    if (compareVersions(oldVersion, "0.1.3") < 0) {
+      return false;
+    }
+    return compareVersions(version, oldVersion) !== 0;
+  });
+
+  if (uuids.length === 0) {
+    toast.error("未发现可升级的在线节点");
+    return;
+  }
+
+  upgradeStatus.value = new Map();
+
+  for (let i = 0, len = uuids.length; i < len; i++) {
+    const uuid = uuids[i] as string;
+    upgradeStatus.value.set(uuid, "waiting");
+  }
+
+  for (let i = 0, len = uuids.length; i < len; i++) {
+    const uuid = uuids[i] as string;
+    upgradeStatus.value.set(uuid, "upgrading");
+    await createSelfUpdateTask(uuid, "v" + version, false);
+    await delay(800);
+    console.debug("confirming");
+    upgradeStatus.value.set(uuid, "confirming");
+
+    const waitInterval = 1000,
+      maxWait = 12000;
+    let finished = false;
+    const agent = agents.value.find((v) => v.uuid === uuid);
+    if (!agent) {
+      continue;
+    }
+    for (let j = 0; j < maxWait; j += waitInterval) {
+      try {
+        await fetchAgentVersion(agent, waitInterval);
+        console.debug({
+          currentVersion: extractVersion(agent.version || ""),
+          targetVersion: version,
+        });
+        if (extractVersion(agent.version || "") === version) {
+          upgradeStatus.value.delete(uuid);
+          finished = true;
+          break;
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        await delay(waitInterval);
+      }
+    }
+    upgradeStatus.value.delete(uuid);
+    if (!finished) {
+      toast.success(
+        `agent ${agent.metadata?.customName || agent.uuid} 升级失败, 请尝试手动升级`,
+      );
+    }
+  }
+
+  toast.success("agent升级完成");
+}
+
+function fetchVersion() {
+  return fetch("https://api.github.com/repos/NodeSeekDev/NodeGet/releases")
+    .then((r) => r.json())
+    .then((r) => (r as { tag_name: string }[]).map((v) => v.tag_name))
+    .then((r) => {
+      availableVersions.value = r;
+    })
+    .catch((e) => {
+      console.error(e);
+      toast.error(`获取GitHub releases失败，检查 api.github.com 是否可访问`);
+    });
+}
+
+function refresh() {
+  fetchAgents();
+  fetchVersion();
+}
+
+refresh();
 </script>
 
 <template>
@@ -172,13 +319,14 @@ defineExpose({ fetchAgents });
           class="pl-8"
         />
       </div>
-      <div v-if="hasSelection" class="flex items-center gap-2">
+      <div class="flex items-center gap-2">
         <Button
           size="sm"
           variant="outline"
+          :disabled="loading || !hasSelection"
           @click="handleBatchAction('upgrade')"
         >
-          <ArrowUpFromLine class="h-4 w-4 mr-1.5" />
+          <CloudDownload class="h-4 w-4 mr-1.5" />
           {{ t("dashboard.agents.batchUpgrade") }}
         </Button>
         <!-- temp disabled -->
@@ -315,14 +463,83 @@ defineExpose({ fetchAgents });
               }}</span>
               <span v-else class="text-muted-foreground">--</span>
             </TableCell>
-            <TableCell class="text-muted-foreground">{{
-              agent.version || "--"
-            }}</TableCell>
+            <TableCell
+              class="text-muted-foreground"
+              v-if="!upgradeStatus.has(agent.uuid)"
+            >
+              <span :title="agent.version || ''">
+                {{ agent.version?.slice(0, 20) || "--" }}
+              </span>
+              <template v-if="agent.version">
+                <TooltipProvider
+                  v-if="
+                    compareVersions(extractVersion(agent.version), '0.1.3') < 0
+                  "
+                >
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <Badge
+                        variant="outline"
+                        class="bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300 ml-2"
+                        >脚本更新</Badge
+                      >
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        版本太老，不支持api更新，只能通过脚本来更新到新版本
+                        <br />
+                        <code>
+                          bash <(curl -sL https://install.nodeget.com)
+                          update-agent
+                        </code>
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <template v-else-if="availableVersions.length">
+                  <Badge
+                    variant="outline"
+                    v-if="
+                      compareVersions(
+                        extractVersion(agent.version),
+                        latestVersion,
+                      ) < 0
+                    "
+                    class="bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300 ml-2"
+                    >可更新</Badge
+                  >
+                  <Badge
+                    variant="outline"
+                    v-else
+                    class="bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300 ml-2"
+                    >最新版本</Badge
+                  >
+                </template>
+              </template>
+            </TableCell>
+            <TableCell v-else>
+              Agent升级
+              <Badge variant="outline" class="ml-1">
+                <Spinner data-icon="inline-start" />
+                {{ upgradeStatus.get(agent.uuid) }}
+              </Badge>
+            </TableCell>
             <TableCell class="text-right">
               <Button
                 size="icon"
                 variant="ghost"
                 class="h-8 w-8"
+                title="升级"
+                @click="openChooseVersion([agent.uuid])"
+              >
+                <CloudDownload class="h-4 w-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                class="h-8 w-8"
+                title="设置"
                 @click="handleSettings(agent.uuid)"
               >
                 <Settings class="h-4 w-4" />
@@ -335,7 +552,13 @@ defineExpose({ fetchAgents });
     <AddAgentDialog
       v-if="addAgentOpen"
       v-model:open="addAgentOpen"
-      @added="fetchAgents()"
+      @added="refresh()"
     />
+    <VersionDialog
+      v-if="changeVersionOpen"
+      :availableVersions="availableVersions"
+      v-model:open="changeVersionOpen"
+      @select-version="confirmVersion"
+    ></VersionDialog>
   </div>
 </template>

@@ -175,12 +175,12 @@ export function useAgentInfo(
     }
   };
 
-  const fetchAgentVersion = async (agent: AgentInfo) => {
+  const fetchAgentVersion = async (agent: AgentInfo, timeout = 8000) => {
     try {
       const res = (await task.createVersionTask(
         agent.uuid,
         true,
-        8000,
+        timeout,
       )) as CreateTaskBlockingResponse;
       const version = (res.task_event_result as VersionResult | null)?.version;
       if (version) {
