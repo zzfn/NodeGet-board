@@ -17,7 +17,9 @@ export async function detectDashboardUpdate() {
         lastHash = version.hash;
       }
       if (lastHash !== version.hash) {
-        toast.info("控制面板有新版本可用，可以刷新网页立即体验🚀");
+        toast.info("控制面板有新版本可用，可以刷新网页立即体验🚀", {
+          duration: Infinity,
+        });
         lastHash = version.hash;
       }
     }
