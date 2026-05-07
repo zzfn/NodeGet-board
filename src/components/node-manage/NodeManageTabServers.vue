@@ -9,6 +9,7 @@ import {
   RefreshCw,
   CloudDownload,
   Loader2,
+  Info,
 } from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +44,7 @@ import { delay } from "@/lib/delay";
 import VersionDialog from "@/components/node-manage/VersionDialog.vue";
 import { compareVersions } from "compare-versions";
 import { getWsConnection } from "@/composables/useWsConnection";
+import codeCopy from "@/components/node-manage/codeCopy.vue";
 
 const { t } = useI18n();
 const route = useRoute();
@@ -58,7 +60,12 @@ const {
   fetchServerInfo,
 } = useBackendExtra();
 const { afterServerCreate } = useLifecycle();
-const { createSelfUpdateTask } = useTask();
+
+const installScript = ref(
+  `
+bash <(curl -sL https://install.nodeget.com) update-server
+`.trim(),
+);
 
 const addOpen = ref(false);
 const changeVersionOpen = ref(false);
@@ -295,18 +302,19 @@ fetchVersion();
                         <Badge
                           variant="outline"
                           class="bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300 ml-2"
-                          >脚本更新</Badge
                         >
+                          脚本更新
+                          <Info data-icon="inline-start" />
+                        </Badge>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>
-                          版本太老，不支持API升级，只能通过脚本来更新到新版本
-                          <br />
-                          <code>
-                            bash <(curl -sL https://install.nodeget.com)
-                            update-server
-                          </code>
-                        </p>
+                        <div class="w-150">
+                          <h2 class="my-2 text-base">
+                            版本太老，不支持 API
+                            更新，只能通过在终端运行脚本来更新到新版本
+                          </h2>
+                          <codeCopy :code="installScript"></codeCopy>
+                        </div>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>

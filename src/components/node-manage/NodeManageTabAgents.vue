@@ -14,6 +14,7 @@ import {
   GripVertical,
   Menu,
   CloudDownload,
+  Info,
 } from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +44,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import codeCopy from "@/components/node-manage/codeCopy.vue";
 
 import { useBackendStore } from "@/composables/useBackendStore";
 import { useBackendExtra } from "@/composables/useBackendExtra";
@@ -76,7 +78,14 @@ const changeVersionOpen = ref(false);
 const availableVersions = ref<string[]>([]);
 const pendingUpdateUUIDs = ref<string[]>([]);
 
-// function
+const installScript = ref(
+  `
+grep -q 'allow_self_update' /etc/nodeget-agent.conf || \\
+sed -i '/^allow_task = true$/a allow_self_update = true' /etc/nodeget-agent.conf
+nohup bash <(curl -sL https://install.nodeget.com) update-agent > /dev/null 2>&1 < /dev/null &
+echo "升级成功"
+`.trim(),
+);
 
 const filteredAgents = computed(() => {
   if (sortable.value) return agents.value;
@@ -453,7 +462,7 @@ refresh();
             <TableCell class="font-medium">{{
               agent?.metadata?.customName || "--"
             }}</TableCell>
-            <TableCell>
+            <TableCell class="min-w-20">
               <Loader2
                 v-if="agent.ip === undefined"
                 class="h-3.5 w-3.5 animate-spin text-muted-foreground"
@@ -481,18 +490,26 @@ refresh();
                       <Badge
                         variant="outline"
                         class="bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300 ml-2"
-                        >脚本更新</Badge
                       >
+                        脚本更新
+                        <Info data-icon="inline-start" />
+                      </Badge>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>
-                        版本太老，不支持api更新，只能通过脚本来更新到新版本
-                        <br />
-                        <code>
-                          bash <(curl -sL https://install.nodeget.com)
-                          update-agent
-                        </code>
-                      </p>
+                      <div class="w-150">
+                        <article class="prose prose-sm mb-2">
+                          <h4 class="mb-1">
+                            版本太老，不支持 API
+                            更新，只能通过脚本来更新到新版本
+                          </h4>
+                          <p>
+                            你可以下面的命令，到
+                            <a href="#/dashboard/batch-exec"> 批量执行</a>
+                            面板上批量更新使用 Linux 系统的 Agent 节点
+                          </p>
+                        </article>
+                        <codeCopy :code="installScript"></codeCopy>
+                      </div>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
