@@ -10,7 +10,7 @@ export async function detectDashboardUpdate() {
 
   try {
     const version: { hash: string; timestamp: number } = await fetch(
-      "/.vite/version.json",
+      "/.vite/version.json?ts=" + Date.now(),
     ).then((r) => r.json());
     if (version.hash) {
       if (!lastHash) {
