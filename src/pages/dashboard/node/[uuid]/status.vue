@@ -2,7 +2,7 @@
 import { onMounted, onUnmounted, computed, ref, watch } from "vue";
 import { toast } from "vue-sonner";
 import { useDynamicData } from "@/composables/useDynamicData";
-import { useStaticData } from "@/composables/useStaticData";
+import { useStaticMonitoring } from "@/composables/monitoring/useStaticMonitoring";
 import { useKv } from "@/composables/useKv";
 import { formatBytes, formatLoad } from "@/utils/format";
 import { showCpuPercent, showRamPercent, showRamText } from "@/utils/show";
@@ -42,7 +42,8 @@ const {
   fetchDynamic,
 } = useDynamicData();
 
-const { servers: staticServers, connect: connectStatic } = useStaticData();
+const { servers: staticServers, refresh: connectStatic } =
+  useStaticMonitoring();
 
 const activeTab = ref("cpu");
 

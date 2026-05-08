@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from "vue";
 import { useDynamicData } from "@/composables/useDynamicData";
-import { useStaticData } from "@/composables/useStaticData";
+import { useStaticMonitoring } from "@/composables/monitoring/useStaticMonitoring";
 
 definePage({
   redirect: (to) =>
@@ -13,7 +13,7 @@ definePage({
 });
 
 const { connect: connectDynamic } = useDynamicData();
-const { connect: connectStatic } = useStaticData();
+const { refresh: connectStatic } = useStaticMonitoring();
 
 onMounted(() => {
   connectDynamic();

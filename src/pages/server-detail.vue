@@ -2,7 +2,7 @@
 import { onMounted, onUnmounted, computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useDynamicData } from "@/composables/useDynamicData";
-import { useStaticData } from "@/composables/useStaticData";
+import { useStaticMonitoring } from "@/composables/monitoring/useStaticMonitoring";
 import { colors } from "@/composables/color";
 import {
   formatLoad,
@@ -71,7 +71,8 @@ const {
   fetchSummaryAvg,
 } = useDynamicData();
 
-const { servers: staticServers, connect: connectStatic } = useStaticData();
+const { servers: staticServers, refresh: connectStatic } =
+  useStaticMonitoring();
 
 const activeTab = ref("cpu");
 
