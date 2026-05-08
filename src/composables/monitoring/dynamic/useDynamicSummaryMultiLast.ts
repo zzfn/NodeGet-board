@@ -41,7 +41,9 @@ export function useDynamicSummaryMultiLast(
         return;
       }
 
-      status.value = "connecting";
+      if (status.value === "disconnected") {
+        status.value = "connecting";
+      }
       error.value = "";
       const result = await getWsConnection(backend.value.url).call<
         FullDynamicSummaryResponseItem[]
