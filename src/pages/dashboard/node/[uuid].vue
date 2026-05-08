@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { onMounted } from "vue";
-import { useDynamicData } from "@/composables/useDynamicData";
-import { useStaticData } from "@/composables/useStaticData";
+// import { onMounted } from "vue";
+// import { useAgentStatus } from "@/composables/useAgentStatus";
+// import { useStaticMonitoring } from "@/composables/monitoring/useStaticMonitoring";
 
 definePage({
   redirect: (to) =>
@@ -12,13 +12,13 @@ definePage({
   },
 });
 
-const { connect: connectDynamic } = useDynamicData();
-const { connect: connectStatic } = useStaticData();
+// const { connect: connectDynamic } = useAgentStatus();
+// const { refresh: connectStatic } = useStaticMonitoring();
 
-onMounted(() => {
-  connectDynamic();
-  connectStatic();
-});
+// onMounted(() => {
+//   connectDynamic();
+//   connectStatic();
+// });
 </script>
 
 <template>
