@@ -1,6 +1,6 @@
 import { useBackendStore } from "@/composables/useBackendStore";
 import { getWsConnection } from "@/composables/useWsConnection";
-import { AGENT_PERMISSIONS } from "@/components/token/tokenPermissionTemplates";
+import { AGENT_TEMPLATE_PERMISSIONS } from "@/components/token/tokenTemplates.ts";
 import { generatePassword } from "@/lib/psssword";
 
 const { currentBackend } = useBackendStore();
@@ -30,7 +30,7 @@ export async function preGenerateToken(
                 agent_uuid: nodeUuid,
               },
             ],
-            permissions: AGENT_PERMISSIONS,
+            permissions: AGENT_TEMPLATE_PERMISSIONS,
           },
         ],
       },

@@ -12,22 +12,36 @@ const props = withDefaults(
     submittingLabel: string;
     loading?: boolean;
     disabled?: boolean;
+    showBackButton?: boolean;
+    backLabel?: string;
   }>(),
   {
     loading: false,
     disabled: false,
+    showBackButton: false,
+    backLabel: "",
   },
 );
 
 const emits = defineEmits<{
   (e: "update:token", token: Token): void;
   (e: "submit"): void;
+  (e: "back"): void;
 }>();
 </script>
 
 <template>
   <div class="grid gap-6 xl:grid-cols-2">
     <div class="space-y-4">
+      <Button
+        v-if="props.showBackButton"
+        type="button"
+        variant="outline"
+        class="w-full sm:w-auto"
+        @click="emits('back')"
+      >
+        {{ props.backLabel }}
+      </Button>
       <BaseInfoFrom
         :token="props.token"
         @update:token="(value) => emits('update:token', value)"

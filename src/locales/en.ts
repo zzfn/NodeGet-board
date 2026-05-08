@@ -220,6 +220,25 @@ export default {
         title: "Create Token",
         description: "Create a new API token.",
         returnButtonDescription: "Return to token list",
+        mode: {
+          title: "Choose how to create this token",
+          description:
+            "Start from a preset template or open the editor with a blank token.",
+          backToSelect: "Back to create options",
+        },
+        custom: {
+          title: "Custom Token",
+          description:
+            "Manually configure scopes and permissions from scratch.",
+          hint: "Open the shared editor with a blank token configuration.",
+          action: "Create Custom Token",
+        },
+        templates: {
+          title: "Token Templates",
+          description:
+            "Start from a preset configuration, then fine-tune it in the shared editor.",
+          useTemplate: "Use Template",
+        },
         createTokenCard: {
           title: "Create Token",
           createButton: "Create Token",
@@ -304,13 +323,11 @@ export default {
           startTime: "Start Time",
           endTime: "End Time",
           permissionsTitle: "Permission {index}",
-          templateLabel: "Template: {template}",
           permissionsCount: "Permissions: {count}",
           scope: "Scope",
           rawJsonTitle: "Raw JSON",
           notSet: "Not set",
           unknownScope: "Unknown scope",
-          customTemplate: "Custom",
           globalScope: "Global",
           agentScope: "Agent: {value}",
           kvScope: "Kv: {value}",
@@ -355,21 +372,6 @@ export default {
             "The current permission configuration cannot be restored after deletion.",
           deleteCancel: "Cancel",
           deleteConfirm: "Delete",
-          template: {
-            title: "Permission Template",
-            agent: {
-              title: "Agent",
-              description: "Preset templates tailored for Agent use cases.",
-            },
-            visitor: {
-              title: "Visitor",
-              description: "Preset templates designed for visitors.",
-            },
-            custom: {
-              title: "Custom",
-              description: "Manually configure scopes and permissions.",
-            },
-          },
           scope: {
             title: "Scope",
             global: "Global",
@@ -451,6 +453,18 @@ export default {
               deleteTarget: "Delete Target",
             },
           },
+        },
+      },
+      templates: {
+        agent: {
+          title: "Agent Default",
+          description:
+            "Preset write-oriented permissions for common agent operations.",
+        },
+        visitor: {
+          title: "Visitor Readonly",
+          description:
+            "Preset read-oriented permissions for basic monitoring visibility.",
         },
       },
     },
