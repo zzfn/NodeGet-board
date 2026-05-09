@@ -111,7 +111,6 @@ onMounted(init);
           >
             <SelectTrigger class="w-[160px] flex gap-1 items-center">
               <template v-if="currentAgent.info?.metadata?.region">
-                <Separator orientation="vertical" />
                 <img
                   v-if="flagUrl(currentAgent.info?.metadata?.region)"
                   :src="flagUrl(currentAgent.info?.metadata?.region)"
@@ -123,12 +122,12 @@ onMounted(init);
               </template>
               <CircleQuestionMark
                 v-else
-                class="inline-block w-5 h-3.5 rounded-[1px] object-cover mr-2.5 ml-2.5"
+                class="inline-block w-5 h-3.5 rounded-[1px] object-cover mx-1"
               />
               <SelectValue placeholder="切换被控节点" />
             </SelectTrigger>
             <SelectContent>
-              <SelectGroup>
+              <SelectGroup class="px-1.5">
                 <SelectLabel>被控节点</SelectLabel>
                 <SelectItem
                   :value="ag.uuid"
@@ -137,7 +136,6 @@ onMounted(init);
                 >
                   <!-- <Router class="h-4 w-4 mr-1" /> -->
                   <template v-if="ag?.metadata?.region">
-                    <Separator orientation="vertical" />
                     <img
                       v-if="flagUrl(ag?.metadata?.region)"
                       :src="flagUrl(ag?.metadata?.region)"
@@ -149,7 +147,7 @@ onMounted(init);
                   </template>
                   <CircleQuestionMark
                     v-else
-                    class="inline-block w-8 h-3.5 rounded-[1px] object-cover mr-2.5 ml-2.5"
+                    class="inline-block w-8 h-3.5 rounded-[1px] object-cover mx-1"
                   />
                   {{ ag.metadata?.customName }}
                 </SelectItem>
