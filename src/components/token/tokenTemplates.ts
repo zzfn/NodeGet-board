@@ -4,6 +4,7 @@ import {
   DEFAULT_SCOPE,
 } from "./scopeCodec.ts";
 import type { PermissionEntry, Token, TokenLimitEntry } from "./type.ts";
+import { generatePassword } from "../../lib/password.ts";
 
 export type TokenTemplate = {
   id: string;
@@ -69,8 +70,17 @@ export const TOKEN_TEMPLATES: TokenTemplate[] = [
 export const getTokenTemplateById = (id: string) =>
   TOKEN_TEMPLATES.find((template) => template.id === id);
 
+export const createTemplateTokenCredentials = (
+  templateId: string,
+  createRandomString: (length?: number) => string = generatePassword,
+) => ({
+  username: `${templateId}-template-${createRandomString(16)}`,
+  password: createRandomString(16),
+});
+
 export const createTokenFromTemplate = (
   templateOrId: TokenTemplate | string,
+  createRandomString: (length?: number) => string = generatePassword,
 ): Token => {
   const template =
     typeof templateOrId === "string"
@@ -82,9 +92,14 @@ export const createTokenFromTemplate = (
   }
 
   const baseToken = createDefaultToken();
+  const credentials = createTemplateTokenCredentials(
+    template.id,
+    createRandomString,
+  );
 
   return {
     ...baseToken,
+    ...credentials,
     token_limit: cloneTokenLimitEntries(template.token_limit),
   };
 };
