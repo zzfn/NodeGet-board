@@ -986,6 +986,7 @@ export default {
     token: "Token",
     tokenImport: "Import Token",
     kv: "KV",
+    staticBucket: "Static Buckets",
     jsRuntime: "JS Worker",
     jsRuntimeDetail: "Worker Detail",
     appPanel: "App Panel",
