@@ -68,6 +68,7 @@ declare module 'vue-router/auto-routes' {
       | '/dashboard/settings'
       | '/dashboard/settings/general'
       | '/dashboard/settings/site'
+      | '/dashboard/static-bucket'
       | '/dashboard/token'
       | '/dashboard/tokenCeate'
       | '/dashboard/tokenDetail'
@@ -316,6 +317,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/dashboard/static-bucket': RouteRecordInfo<
+      '/dashboard/static-bucket',
+      '/dashboard/static-bucket',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/dashboard/token': RouteRecordInfo<
       '/dashboard/token',
       '/dashboard/token',
@@ -427,6 +435,7 @@ declare module 'vue-router/auto-routes' {
         | '/dashboard/settings'
         | '/dashboard/settings/general'
         | '/dashboard/settings/site'
+        | '/dashboard/static-bucket'
         | '/dashboard/token'
         | '/dashboard/tokenCeate'
         | '/dashboard/tokenDetail'
@@ -645,6 +654,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/dashboard/settings/site.vue': {
       routes:
         | '/dashboard/settings/site'
+      views:
+        | never
+    }
+    'src/pages/dashboard/static-bucket.vue': {
+      routes:
+        | '/dashboard/static-bucket'
       views:
         | never
     }
