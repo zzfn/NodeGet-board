@@ -57,7 +57,7 @@ async function ensureServerInited(backend: Backend) {
   throw "server init timeout";
 }
 
-async function afterServerCreate(backend: Backend) {
+async function afterServerCreate(backend: Backend, force: boolean = false) {
   const { getWorker, addWorker, runWorker } = useJsRuntime(ref(backend));
 
   try {
@@ -85,7 +85,7 @@ async function afterServerCreate(backend: Backend) {
     }
     await delay(100);
     await runWorker(baseWorkerName, "call", {
-      lifecycle: "server-create",
+      lifecycle: force ? "server-reset" : "server-create",
     });
     await ensureServerInited(backend);
     toast.success("Server initialization successful.");
