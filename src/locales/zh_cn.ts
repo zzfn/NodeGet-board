@@ -226,22 +226,6 @@ export default {
         title: "创建 Token",
         description: "创建一个新Token。",
         returnButtonDescription: "返回Token列表",
-        mode: {
-          title: "选择创建方式",
-          description: "先选择自定义或预设模板，再进入统一编辑器。",
-          backToSelect: "返回创建方式选择",
-        },
-        custom: {
-          title: "自定义 Token",
-          description: "从空白权限开始，手动配置作用域和权限。",
-          hint: "使用空白 Token 配置进入统一编辑器。",
-          action: "创建自定义 Token",
-        },
-        templates: {
-          title: "Token 模板",
-          description: "从预设权限开始，进入编辑器后仍可继续调整。",
-          useTemplate: "使用模板",
-        },
         createTokenCard: {
           title: "创建Token",
           createButton: "创建Token",
@@ -321,11 +305,13 @@ export default {
           startTime: "生效时间",
           endTime: "失效时间",
           permissionsTitle: "权限 {index}",
+          templateLabel: "模板: {template}",
           permissionsCount: "权限数: {count}",
           scope: "作用域",
           rawJsonTitle: "原始 JSON",
           notSet: "未设置",
           unknownScope: "未知作用域",
+          customTemplate: "自定义",
           globalScope: "全局",
           agentScope: "Agent: {value}",
           kvScope: "Kv: {value}",
@@ -369,6 +355,21 @@ export default {
           deleteDescription: "删除后当前权限配置将无法恢复。",
           deleteCancel: "取消",
           deleteConfirm: "删除",
+          template: {
+            title: "权限模板",
+            agent: {
+              title: "Agent",
+              description: "面向 Agent 使用场景的预设模版。",
+            },
+            visitor: {
+              title: "Visitor",
+              description: "面向访客使用的预设模版。",
+            },
+            custom: {
+              title: "自定义",
+              description: "手动配置作用域和权限内容。",
+            },
+          },
           scope: {
             title: "作用域",
             global: "全局",
@@ -450,16 +451,6 @@ export default {
               deleteTarget: "删除目标",
             },
           },
-        },
-      },
-      templates: {
-        agent: {
-          title: "Agent 默认模板",
-          description: "适合常见 Agent 写权限场景的预设配置。",
-        },
-        visitor: {
-          title: "Visitor 只读模板",
-          description: "适合基础监控查看场景的只读预设配置。",
         },
       },
     },
@@ -595,7 +586,7 @@ export default {
       title: "主控管理",
       desc: "管理并切换 NodeGet 主控后端。",
       addServer: "添加主控",
-      addServerLoading: "添加主控并初始化，请不要理开",
+      addServerLoading: "添加主控并初始化，请不要离开",
       colName: "名称",
       colId: "ID",
       colEndpoint: "API 地址",
