@@ -13,7 +13,7 @@ definePage({
   meta: {
     title: "router.jsRuntime",
     icon: Braces,
-    order: 11,
+    order: 10,
     group: "router.group.advanced",
   },
 });
