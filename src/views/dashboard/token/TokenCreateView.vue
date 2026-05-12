@@ -8,6 +8,7 @@ import { ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { createDefaultToken } from "@/components/token/scopeCodec";
 import {
+  createCustomToken,
   createTokenFromTemplate,
   type TokenTemplate,
 } from "@/components/token/tokenTemplates.ts";
@@ -28,7 +29,7 @@ const handleBack = () => {
 };
 
 const handleStartCustomCreate = () => {
-  tokenFormData.value = createDefaultToken();
+  tokenFormData.value = createCustomToken();
   createStep.value = "edit";
 };
 

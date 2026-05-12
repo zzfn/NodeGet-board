@@ -103,3 +103,10 @@ export const createTokenFromTemplate = (
     token_limit: cloneTokenLimitEntries(template.token_limit),
   };
 };
+
+export const createCustomToken = (
+  createRandomString: (length?: number) => string = generatePassword,
+): Token => ({
+  ...createDefaultToken(),
+  ...createTemplateTokenCredentials("custom", createRandomString),
+});
