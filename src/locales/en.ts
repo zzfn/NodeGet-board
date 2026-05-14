@@ -173,8 +173,10 @@ export default {
       api: {
         createSuccess: "Token created successfully",
         createFailed: "Failed to create token",
+        createFailedWithMessage: "Failed to create token: {message}",
         updateSuccess: "Token updated successfully",
         updateFailed: "Failed to update token",
+        updateFailedWithMessage: "Failed to update token: {message}",
         listFailed: "Failed to fetch token list",
         deleteSuccess: "Deleted successfully",
         deleteFailed: "Deletion failed",
@@ -359,6 +361,8 @@ export default {
       },
       previeJSON: {
         title: "Format JSON Preview",
+        invalidJson: "Invalid JSON: {message}",
+        invalidField: "Ignored invalid field: {field}",
       },
       permissionsConfig: {
         title: "Token Permissions Config",
