@@ -57,7 +57,7 @@ const emit = defineEmits<{
       </Button>
       <Button size="sm" @click="emit('create')">
         <Plus class="h-4 w-4 mr-1" />
-        创建空白目录
+        创建 Bucket
       </Button>
     </div>
 
@@ -73,7 +73,7 @@ const emit = defineEmits<{
     <Table v-else>
       <TableHeader>
         <TableRow>
-          <TableHead>名称</TableHead>
+          <TableHead>Bucket 名称</TableHead>
           <TableHead class="w-36">root 路由</TableHead>
           <TableHead class="w-32 text-right">操作</TableHead>
         </TableRow>

@@ -701,6 +701,8 @@ export default {
       edit: "编辑任务",
       name: "名称",
       type: "Task 类型",
+      selectAll: "全选",
+      deselectAll: "取消全选",
       expression: "Cron 表达式",
       expressionHint: "会自动整理空格，紧凑写法如 2***** 会转换为 2 * * * * *",
       expressionFormatHint:
