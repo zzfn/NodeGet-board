@@ -182,8 +182,10 @@ export default {
       api: {
         createSuccess: "创建Token成功",
         createFailed: "创建Token失败",
+        createFailedWithMessage: "创建Token失败：{message}",
         updateSuccess: "更新Token成功",
         updateFailed: "更新Token失败",
+        updateFailedWithMessage: "更新Token失败：{message}",
         listFailed: "获取Token列表失败",
         deleteSuccess: "删除成功",
         deleteFailed: "删除失败",
@@ -343,6 +345,8 @@ export default {
       },
       previeJSON: {
         title: "格式化预览JSON",
+        invalidJson: "JSON 格式错误：{message}",
+        invalidField: "以下字段未能回显：{field}",
       },
       permissionsConfig: {
         title: "Token权限配置",
