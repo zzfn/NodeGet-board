@@ -720,6 +720,8 @@ export default {
       edit: "Edit Job",
       name: "Name",
       type: "Task Type",
+      selectAll: "Select All",
+      deselectAll: "Deselect All",
       expression: "Cron Expression",
       expressionHint:
         "Spaces are normalized automatically. Compact input like 2***** becomes 2 * * * * *.",
