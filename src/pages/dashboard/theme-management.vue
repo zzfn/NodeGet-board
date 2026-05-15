@@ -334,18 +334,18 @@ const downloadBucketZip = bucketFile.downloadBucketZip;
     <p v-if="staticBucket.error.value" class="text-sm text-destructive">
       {{ staticBucket.error.value }}
     </p>
-  </div>
 
-  <ThemeTokenPresetDialog v-model:open="tokenPresetOpen" />
-  <ThemeUploadLocalDialog
-    v-model:open="uploadLocalOpen"
-    :target-bucket="uploadLocalTarget"
-    @done="onUploadDone"
-  />
-  <ThemeRemoteImportDialog
-    v-model:open="remoteImportOpen"
-    :initial-url="remoteImportInitialUrl"
-    :target-bucket="remoteImportTarget"
-    @done="onUploadDone"
-  />
+    <ThemeTokenPresetDialog v-model:open="tokenPresetOpen" />
+    <ThemeUploadLocalDialog
+      v-model:open="uploadLocalOpen"
+      :target-bucket="uploadLocalTarget"
+      @done="onUploadDone"
+    />
+    <ThemeRemoteImportDialog
+      v-model:open="remoteImportOpen"
+      :initial-url="remoteImportInitialUrl"
+      :target-bucket="remoteImportTarget"
+      @done="onUploadDone"
+    />
+  </div>
 </template>
