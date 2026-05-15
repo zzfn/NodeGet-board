@@ -245,7 +245,7 @@ provide("dragging", isDraggingAny);
               :key="node.path"
               :node="node"
               :selected="selectedPath"
-              :deleting-path="deletingPath"
+              :deleting-path="deletingPath ?? null"
               @select="selectFile"
               @delete="(p: string) => emit('deleteFile', p)"
               @download="(p: string) => emit('downloadFile', p)"
