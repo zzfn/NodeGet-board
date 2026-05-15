@@ -144,7 +144,7 @@ const onZipChange = async (e: Event) => {
   const file = (e.target as HTMLInputElement).files?.[0];
   (e.target as HTMLInputElement).value = "";
   if (!file) return;
-  await processFiles(() => parseZipFile(file.arrayBuffer()));
+  await processFiles(() => file.arrayBuffer().then(parseZipFile));
 };
 
 const handleUpload = async () => {
