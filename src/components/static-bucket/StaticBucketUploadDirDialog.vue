@@ -11,8 +11,10 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { unzip } from "fflate";
-import { bufToBase64 } from "@/utils/base64";
+import {
+  parseZipFile,
+  parseFolderFiles,
+} from "@/composables/useFileUploadParsing";
 
 const props = defineProps<{
   open: boolean;
@@ -60,15 +62,7 @@ const onFolderChange = async (e: Event) => {
   try {
     const folderName = files[0]?.webkitRelativePath.split("/")[0] ?? "";
     if (folderName && !bucketName.value) bucketName.value = folderName;
-    const result: Array<{ path: string; base64: string }> = [];
-    for (const file of files) {
-      const pathParts = file.webkitRelativePath.split("/").slice(1);
-      const path = pathParts.join("/");
-      if (!path) continue;
-      const buf = await file.arrayBuffer();
-      result.push({ path, base64: bufToBase64(buf) });
-    }
-    fileList.value = result;
+    fileList.value = await parseFolderFiles(files);
   } catch (e: unknown) {
     processError.value = e instanceof Error ? e.message : String(e);
   } finally {
@@ -85,36 +79,7 @@ const onZipChange = async (e: Event) => {
   processing.value = true;
   processError.value = null;
   try {
-    const buf = await file.arrayBuffer();
-    const result = await new Promise<Array<{ path: string; base64: string }>>(
-      (resolve, reject) => {
-        unzip(new Uint8Array(buf), (err, data) => {
-          if (err) return reject(err);
-          const entries = Object.entries(data);
-          const topDirs = new Set(entries.map(([p]) => p.split("/")[0]));
-          const firstDir = topDirs.size === 1 ? ([...topDirs][0] ?? "") : "";
-          const hasTopDir =
-            firstDir !== "" &&
-            entries.every(
-              ([p]) => p === firstDir + "/" || p.startsWith(firstDir + "/"),
-            );
-          const files: Array<{ path: string; base64: string }> = [];
-          for (const [path, content] of entries) {
-            if (path.endsWith("/")) continue;
-            const finalPath = hasTopDir
-              ? path.slice(firstDir.length + 1)
-              : path;
-            if (!finalPath) continue;
-            files.push({
-              path: finalPath,
-              base64: bufToBase64(content),
-            });
-          }
-          resolve(files);
-        });
-      },
-    );
-    fileList.value = result;
+    fileList.value = await parseZipFile(await file.arrayBuffer());
   } catch (e: unknown) {
     processError.value = e instanceof Error ? e.message : String(e);
   } finally {

@@ -1,14 +1,5 @@
 <script setup lang="ts">
-import {
-  ref,
-  computed,
-  watch,
-  defineComponent,
-  h,
-  Transition,
-  TransitionGroup,
-  type VNode,
-} from "vue";
+import { ref, computed, watch, provide, TransitionGroup } from "vue";
 import { Codemirror } from "vue-codemirror";
 import { json } from "@codemirror/lang-json";
 import { StreamLanguage } from "@codemirror/language";
@@ -20,29 +11,16 @@ import { oneDark } from "@codemirror/theme-one-dark";
 import { useThemeStore } from "@/stores/theme";
 import {
   Upload,
-  Download,
   Save,
-  Trash2,
-  ChevronRight,
-  File as FileIcon,
-  Folder,
   Loader2,
   AlertCircle,
   ArrowLeft,
   Archive,
 } from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
-import { PopConfirm } from "@/components/ui/pop-confirm";
 import type { BucketFile } from "@/composables/useStaticBucketFile";
-
-type TreeNode = {
-  name: string;
-  path: string;
-  isDir: boolean;
-  children?: TreeNode[];
-  size?: number;
-  mtime?: number;
-};
+import StaticBucketTreeNode from "./StaticBucketTreeNode.vue";
+import type { TreeNode } from "./StaticBucketTreeNode.vue";
 
 const props = defineProps<{
   bucketName: string;
@@ -202,187 +180,7 @@ defineExpose({
 });
 
 const isDraggingAny = ref(false);
-
-const FileTreeNode = defineComponent({
-  name: "FileTreeNode",
-  props: {
-    node: { type: Object as () => TreeNode, required: true },
-    selected: { type: String as () => string | null, default: null },
-    deletingPath: { type: String as () => string | null, default: null },
-  },
-  emits: ["select", "delete", "download", "rename"],
-  setup(props, { emit }) {
-    const expanded = ref(true);
-    const isDragOver = ref(false);
-    const isDragging = ref(false);
-
-    watch(isDraggingAny, (val) => {
-      if (!val) isDragOver.value = false;
-    });
-
-    return (): VNode => {
-      const node = props.node;
-
-      if (node.isDir) {
-        return h(
-          "div",
-          {
-            class: `rounded transition-all ${isDragOver.value ? "bg-primary/10 ring-1 ring-inset ring-primary/40" : ""}`,
-            onDragover: (e: DragEvent) => {
-              e.preventDefault();
-              e.stopPropagation();
-              isDragOver.value = true;
-            },
-            onDragleave: (e: DragEvent) => {
-              if (
-                !(e.currentTarget as HTMLElement).contains(
-                  e.relatedTarget as Node,
-                )
-              ) {
-                isDragOver.value = false;
-              }
-            },
-            onDrop: (e: DragEvent) => {
-              e.preventDefault();
-              e.stopPropagation();
-              isDragOver.value = false;
-              const fromPath = e.dataTransfer?.getData("text/plain");
-              if (!fromPath) return;
-              const fileName = fromPath.split("/").pop()!;
-              const toPath = `${node.path}/${fileName}`;
-              if (fromPath === toPath) return;
-              emit("rename", fromPath, toPath);
-            },
-          },
-          [
-            h(
-              "button",
-              {
-                class: `flex items-center gap-1 w-full text-left text-xs px-1 py-1 rounded transition-all group ${
-                  isDragOver.value ? "" : "hover:bg-muted"
-                }`,
-                onClick: () => (expanded.value = !expanded.value),
-              },
-              [
-                h(ChevronRight, {
-                  class: `h-3 w-3 transition-all flex-shrink-0 ${isDragOver.value ? "text-primary" : "text-muted-foreground"} ${expanded.value ? "rotate-90" : ""}`,
-                }),
-                h(Folder, {
-                  class: `h-3 w-3 flex-shrink-0 transition-colors ${isDragOver.value ? "text-primary fill-primary/20" : "text-muted-foreground"}`,
-                }),
-                h(
-                  "span",
-                  {
-                    class: `truncate transition-colors ${isDragOver.value ? "text-primary font-medium" : ""}`,
-                  },
-                  node.name,
-                ),
-              ],
-            ),
-            h(
-              Transition,
-              { name: "folder-expand" },
-              {
-                default: () =>
-                  expanded.value && node.children?.length
-                    ? h(
-                        "div",
-                        { class: "pl-4 space-y-0.5" },
-                        node.children.map((child) =>
-                          h(FileTreeNode, {
-                            key: child.path,
-                            node: child,
-                            selected: props.selected,
-                            deletingPath: props.deletingPath,
-                            onSelect: (p: string) => emit("select", p),
-                            onDelete: (p: string) => emit("delete", p),
-                            onDownload: (p: string) => emit("download", p),
-                            onRename: (from: string, to: string) =>
-                              emit("rename", from, to),
-                          }),
-                        ),
-                      )
-                    : null,
-              },
-            ),
-          ],
-        );
-      }
-
-      const isDeleting = props.deletingPath === node.path;
-      return h(
-        "div",
-        {
-          class: `flex items-center gap-1 w-full text-xs px-1 py-1 rounded transition-all group cursor-grab ${
-            props.selected === node.path ? "bg-muted" : "hover:bg-muted"
-          } ${isDragging.value ? "opacity-40 scale-[0.98]" : ""}`,
-          draggable: true,
-          onDragstart: (e: DragEvent) => {
-            e.dataTransfer?.setData("text/plain", node.path);
-            e.dataTransfer!.effectAllowed = "move";
-            e.stopPropagation();
-            isDragging.value = true;
-            isDraggingAny.value = true;
-            document.body.style.cursor = "grabbing";
-          },
-          onDragend: () => {
-            isDragging.value = false;
-            isDraggingAny.value = false;
-            document.body.style.cursor = "";
-          },
-          onDragover: (e: DragEvent) => {
-            e.preventDefault();
-          },
-          onClick: () => emit("select", node.path),
-        },
-        [
-          h("div", { class: "w-3 flex-shrink-0" }),
-          h(FileIcon, { class: "h-3 w-3 text-muted-foreground flex-shrink-0" }),
-          h("span", { class: "truncate flex-1" }, node.name),
-          h(
-            "button",
-            {
-              class:
-                "opacity-0 group-hover:opacity-100 h-5 w-5 flex items-center justify-center rounded hover:bg-background transition-opacity flex-shrink-0",
-              title: "下载",
-              onClick: (e: MouseEvent) => {
-                e.stopPropagation();
-                emit("download", node.path);
-              },
-            },
-            [h(Download, { class: "h-3 w-3" })],
-          ),
-          isDeleting
-            ? h(Loader2, {
-                class: "h-3 w-3 animate-spin text-destructive flex-shrink-0",
-              })
-            : h(
-                PopConfirm,
-                {
-                  description: `确认删除文件「${node.name}」？`,
-                  confirmText: "删除",
-                  onConfirm: () => emit("delete", node.path),
-                  onClick: (e: MouseEvent) => e.stopPropagation(),
-                },
-                {
-                  default: () =>
-                    h(
-                      "button",
-                      {
-                        class:
-                          "opacity-0 group-hover:opacity-100 h-5 w-5 flex items-center justify-center rounded hover:bg-background text-destructive transition-opacity flex-shrink-0",
-                        title: "删除",
-                        onClick: (e: MouseEvent) => e.stopPropagation(),
-                      },
-                      [h(Trash2, { class: "h-3 w-3" })],
-                    ),
-                },
-              ),
-        ],
-      );
-    };
-  },
-});
+provide("dragging", isDraggingAny);
 </script>
 
 <template>
@@ -442,8 +240,7 @@ const FileTreeNode = defineComponent({
             tag="div"
             class="flex flex-col gap-0.5 relative"
           >
-            <component
-              :is="FileTreeNode"
+            <StaticBucketTreeNode
               v-for="node in fileTree"
               :key="node.path"
               :node="node"
@@ -529,24 +326,6 @@ const FileTreeNode = defineComponent({
 :deep(.cm-editor) {
   height: 100%;
   font-size: 12px;
-}
-
-/* 文件夹展开/收起 */
-.folder-expand-enter-active {
-  transition:
-    opacity 0.18s ease,
-    transform 0.18s ease;
-}
-.folder-expand-leave-active {
-  transition:
-    opacity 0.12s ease,
-    transform 0.12s ease;
-}
-.folder-expand-enter-from,
-.folder-expand-leave-to {
-  opacity: 0;
-  transform: translateY(-6px) scaleY(0.92);
-  transform-origin: top center;
 }
 
 /* 根节点列表项出现/消失/移动 */
