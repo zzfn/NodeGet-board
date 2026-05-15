@@ -988,6 +988,7 @@ export default {
     jsRuntime: "JS Worker",
     jsRuntimeDetail: "Worker 详情",
     appPanel: "扩展管理",
+    themeManagement: "主题管理",
     appEntrance: "应用入口",
     files: "文件管理",
     docker: "docker管理",

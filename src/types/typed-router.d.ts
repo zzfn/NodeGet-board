@@ -42,6 +42,7 @@ declare module 'vue-router/auto-routes' {
       | '/dashboard/app-panel/list'
       | '/dashboard/app/[extensionRoute]'
       | '/dashboard/batch-exec'
+      | '/dashboard/bucket/[name]'
       | '/dashboard/cost'
       | '/dashboard/cron'
       | '/dashboard/cron-history/[cronName]'
@@ -69,6 +70,8 @@ declare module 'vue-router/auto-routes' {
       | '/dashboard/settings/general'
       | '/dashboard/settings/site'
       | '/dashboard/static-bucket'
+      | '/dashboard/theme-management'
+      | '/dashboard/theme/[name]'
       | '/dashboard/token'
       | '/dashboard/tokenCeate'
       | '/dashboard/tokenDetail'
@@ -124,6 +127,13 @@ declare module 'vue-router/auto-routes' {
       '/dashboard/batch-exec',
       Record<never, never>,
       Record<never, never>,
+      | never
+    >,
+    '/dashboard/bucket/[name]': RouteRecordInfo<
+      '/dashboard/bucket/[name]',
+      '/dashboard/bucket/:name',
+      { name: ParamValue<true> },
+      { name: ParamValue<false> },
       | never
     >,
     '/dashboard/cost': RouteRecordInfo<
@@ -324,6 +334,20 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/dashboard/theme/[name]': RouteRecordInfo<
+      '/dashboard/theme/[name]',
+      '/dashboard/theme/:name',
+      { name: ParamValue<true> },
+      { name: ParamValue<false> },
+      | never
+    >,
+    '/dashboard/theme-management': RouteRecordInfo<
+      '/dashboard/theme-management',
+      '/dashboard/theme-management',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/dashboard/token': RouteRecordInfo<
       '/dashboard/token',
       '/dashboard/token',
@@ -409,6 +433,7 @@ declare module 'vue-router/auto-routes' {
         | '/dashboard/app-panel/list'
         | '/dashboard/app/[extensionRoute]'
         | '/dashboard/batch-exec'
+        | '/dashboard/bucket/[name]'
         | '/dashboard/cost'
         | '/dashboard/cron'
         | '/dashboard/cron-history/[cronName]'
@@ -436,6 +461,8 @@ declare module 'vue-router/auto-routes' {
         | '/dashboard/settings/general'
         | '/dashboard/settings/site'
         | '/dashboard/static-bucket'
+        | '/dashboard/theme-management'
+        | '/dashboard/theme/[name]'
         | '/dashboard/token'
         | '/dashboard/tokenCeate'
         | '/dashboard/tokenDetail'
@@ -486,6 +513,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/dashboard/batch-exec.vue': {
       routes:
         | '/dashboard/batch-exec'
+      views:
+        | never
+    }
+    'src/pages/dashboard/bucket/[name].vue': {
+      routes:
+        | '/dashboard/bucket/[name]'
       views:
         | never
     }
@@ -660,6 +693,18 @@ declare module 'vue-router/auto-routes' {
     'src/pages/dashboard/static-bucket.vue': {
       routes:
         | '/dashboard/static-bucket'
+      views:
+        | never
+    }
+    'src/pages/dashboard/theme/[name].vue': {
+      routes:
+        | '/dashboard/theme/[name]'
+      views:
+        | never
+    }
+    'src/pages/dashboard/theme-management.vue': {
+      routes:
+        | '/dashboard/theme-management'
       views:
         | never
     }

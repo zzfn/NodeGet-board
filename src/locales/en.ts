@@ -1008,6 +1008,7 @@ export default {
     jsRuntime: "JS Worker",
     jsRuntimeDetail: "Worker Detail",
     appPanel: "App Panel",
+    themeManagement: "Theme Management",
     appEntrance: "App Entrance",
     files: "Files",
     docker: "Docker",

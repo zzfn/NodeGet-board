@@ -85,6 +85,20 @@ export function useStaticBucket(backend = useBackendStore().currentBackend) {
     buckets.value = buckets.value.filter((b) => b.name !== name);
   };
 
+  const enableTheme = async (name: string): Promise<void> => {
+    const bucket = buckets.value.find((b) => b.name === name);
+    if (!bucket) return;
+    await updateBucket({ ...bucket, is_http_root: true });
+    bucket.is_http_root = true;
+  };
+
+  const disableTheme = async (name: string): Promise<void> => {
+    const bucket = buckets.value.find((b) => b.name === name);
+    if (!bucket) return;
+    await updateBucket({ ...bucket, is_http_root: false });
+    bucket.is_http_root = false;
+  };
+
   return {
     buckets,
     loading,
@@ -94,5 +108,7 @@ export function useStaticBucket(backend = useBackendStore().currentBackend) {
     createBucket,
     updateBucket,
     deleteBucket,
+    enableTheme,
+    disableTheme,
   };
 }
