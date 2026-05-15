@@ -7,6 +7,7 @@ import { useKv } from "@/composables/useKv";
 import { type BackendCron } from "@/composables/useCron";
 import { useBackendStore } from "@/composables/useBackendStore";
 import { makeRpcFunction } from "@/composables/useWsConnection";
+import { getAgentInfoFromPool } from "@/composables/useAgentInfo";
 import { delay } from "@/lib/delay";
 import { useNodeMetadata, makeDefaultMetadata } from "./useNodeMetadata";
 
@@ -201,6 +202,22 @@ async function afterAgentDelete(agentUUID: string, stage: string) {
           }
         }
         break;
+      case "data":
+        // clean up monitor data and task data
+        {
+          const params = {
+            token: currentBackend.value?.token,
+            conditions: [{ uuid: agentUUID }],
+          };
+
+          const timeout = 10 * 1000;
+          await rpc("task_delete", params, timeout);
+          await rpc("agent_delete_dynamic_summary", params, timeout);
+          await rpc("agent_delete_dynamic", params, timeout);
+          await rpc("agent_delete_static", params, timeout);
+        }
+        break;
+
       case "kv":
         // clean up monitor data and task data
         {
@@ -210,22 +227,10 @@ async function afterAgentDelete(agentUUID: string, stage: string) {
           if (existedNS) {
             await kvClient.deleteNamespace(agentUUID);
           }
+          await getAgentInfoFromPool(currentBackend).fetchAgents();
         }
         break;
-      case "data":
-        // clean up monitor data and task data
-        {
-          const params = {
-            token: currentBackend.value?.token,
-            conditions: [{ uuid: agentUUID }],
-          };
 
-          await rpc("task_delete", params);
-          await rpc("agent_delete_dynamic_summary", params);
-          await rpc("agent_delete_dynamic", params);
-          await rpc("agent_delete_static", params);
-        }
-        break;
       default:
         break;
     }
