@@ -11,6 +11,7 @@ import {
   Loader2,
   RefreshCw,
   FolderOpen,
+  ArrowUpRight,
 } from "lucide-vue-next";
 import { toast } from "vue-sonner";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,7 @@ definePage({
   meta: {
     title: "router.themeManagement",
     icon: Palette,
-    order: 10,
+    order: 8,
     group: "router.group.appExtensions",
   },
 });
@@ -171,6 +172,18 @@ const onUploadDone = async () => {
 };
 
 const downloadBucketZip = bucketFile.downloadBucketZip;
+
+function getPrevieLink(bucket: StaticBucket): string {
+  if (!backendStore.currentBackend.value?.url) {
+    return "#";
+  }
+  const url = new URL(backendStore.currentBackend.value.url);
+  const http = url.protocol === "ws:" ? "http:" : "https:";
+  if (bucket.is_http_root) {
+    return `${http}//${url.host}/`;
+  }
+  return `${http}//${url.host}/nodeget/static/${bucket.name}/index.html`;
+}
 </script>
 
 <template>
@@ -205,7 +218,7 @@ const downloadBucketZip = bucketFile.downloadBucketZip;
 
     <div class="border rounded-lg overflow-hidden">
       <div
-        class="grid grid-cols-[2fr_1fr_5rem_1fr_11rem] gap-4 px-4 py-2.5 bg-muted/50 text-xs font-medium text-muted-foreground border-b"
+        class="grid grid-cols-[2fr_1fr_5rem_1fr_13rem] gap-4 px-4 py-2.5 bg-muted/50 text-xs font-medium text-muted-foreground border-b"
       >
         <span>名称</span>
         <span>作者</span>
@@ -236,7 +249,7 @@ const downloadBucketZip = bucketFile.downloadBucketZip;
         <div
           v-for="bucket in themeBuckets"
           :key="bucket.name"
-          class="grid grid-cols-[2fr_1fr_5rem_1fr_11rem] gap-4 px-4 py-3 items-center border-b last:border-0 hover:bg-muted/20 transition-colors"
+          class="grid grid-cols-[2fr_1fr_5rem_1fr_13rem] gap-4 px-4 py-3 items-center border-b last:border-0 hover:bg-muted/20 transition-colors"
         >
           <div class="min-w-0">
             <button
@@ -274,6 +287,17 @@ const downloadBucketZip = bucketFile.downloadBucketZip;
           </span>
 
           <div class="flex items-center gap-0.5">
+            <a target="_blank" :href="getPrevieLink(bucket)">
+              <Button
+                variant="ghost"
+                size="icon"
+                class="h-8 w-8"
+                title="预览"
+                :disabled="metaLoading"
+              >
+                <ArrowUpRight class="h-4 w-4" />
+              </Button>
+            </a>
             <Button
               variant="ghost"
               size="icon"

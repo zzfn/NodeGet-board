@@ -63,7 +63,7 @@ definePage({
   meta: {
     title: "router.token",
     icon: Key,
-    order: 8,
+    order: 10,
     group: "router.group.advanced",
   },
 });

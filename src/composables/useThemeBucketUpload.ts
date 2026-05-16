@@ -80,7 +80,7 @@ export function useThemeBucketUpload() {
               : [...toAdd];
             manifestEntry.base64 = bufToBase64(
               new TextEncoder().encode(
-                JSON.stringify([...list, ...toAddItems]),
+                JSON.stringify(Array.from(new Set([...list, ...toAddItems]))),
               ),
             );
           }

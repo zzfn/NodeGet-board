@@ -8,6 +8,8 @@ import {
   Loader2,
   FolderOpen,
   FolderSync,
+  Eye,
+  ArrowUpRight,
 } from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -21,6 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { StaticBucket } from "@/composables/useStaticBucket";
+import { useBackendStore } from "@/composables/useBackendStore";
 
 const props = defineProps<{
   buckets: StaticBucket[];
@@ -37,7 +40,22 @@ const emit = defineEmits<{
   delete: [name: string];
   refresh: [];
   toggleHttpRoot: [bucket: StaticBucket];
+  toggleCORS: [bucket: StaticBucket];
 }>();
+
+const { currentBackend } = useBackendStore();
+
+function getPrevieLink(bucket: StaticBucket): string {
+  if (!currentBackend.value?.url) {
+    return "#";
+  }
+  const url = new URL(currentBackend.value.url);
+  const http = url.protocol === "ws:" ? "http:" : "https:";
+  if (bucket.is_http_root) {
+    return `${http}//${url.host}/`;
+  }
+  return `${http}//${url.host}/nodeget/static/${bucket.name}/index.html`;
+}
 </script>
 
 <template>
@@ -74,6 +92,8 @@ const emit = defineEmits<{
       <TableHeader>
         <TableRow>
           <TableHead>Bucket 名称</TableHead>
+          <TableHead>挂载路径</TableHead>
+          <TableHead class="w-36">CORS</TableHead>
           <TableHead class="w-36">root 路由</TableHead>
           <TableHead class="w-32 text-right">操作</TableHead>
         </TableRow>
@@ -92,6 +112,20 @@ const emit = defineEmits<{
             </button>
           </TableCell>
           <TableCell>
+            <span>{{ bucket.path }}</span>
+          </TableCell>
+          <TableCell>
+            <div class="flex items-center gap-2">
+              <Switch
+                :model-value="bucket.cors"
+                @update:model-value="emit('toggleCORS', bucket)"
+              />
+              <span v-if="bucket.cors" class="text-xs text-muted-foreground"
+                >启用</span
+              >
+            </div>
+          </TableCell>
+          <TableCell>
             <div class="flex items-center gap-2">
               <Switch
                 :model-value="bucket.is_http_root"
@@ -106,6 +140,37 @@ const emit = defineEmits<{
           </TableCell>
           <TableCell class="text-right">
             <div class="flex justify-end gap-1">
+              <a target="_blank" :href="getPrevieLink(bucket)">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  class="h-7 w-7 p-0"
+                  title="预览"
+                >
+                  <ArrowUpRight class="h-3.5 w-3.5" />
+                </Button>
+              </a>
+
+              <!-- 重新上传 -->
+              <Button
+                variant="ghost"
+                size="sm"
+                class="h-7 w-7 p-0"
+                title="重新上传"
+                @click="emit('reupload', bucket.name)"
+              >
+                <FolderSync class="h-3.5 w-3.5" />
+              </Button>
+              <!-- 下载压缩包 -->
+              <Button
+                variant="ghost"
+                size="sm"
+                class="h-7 w-7 p-0"
+                title="下载为压缩包"
+                @click="emit('downloadZip', bucket.name)"
+              >
+                <Download class="h-3.5 w-3.5" />
+              </Button>
               <!-- 删除 -->
               <PopConfirm
                 v-if="deletingName !== bucket.name"
@@ -129,26 +194,6 @@ const emit = defineEmits<{
                 class="h-7 w-7 p-0 text-destructive"
               >
                 <Loader2 class="h-3.5 w-3.5 animate-spin" />
-              </Button>
-              <!-- 重新上传 -->
-              <Button
-                variant="ghost"
-                size="sm"
-                class="h-7 w-7 p-0"
-                title="重新上传"
-                @click="emit('reupload', bucket.name)"
-              >
-                <FolderSync class="h-3.5 w-3.5" />
-              </Button>
-              <!-- 下载压缩包 -->
-              <Button
-                variant="ghost"
-                size="sm"
-                class="h-7 w-7 p-0"
-                title="下载为压缩包"
-                @click="emit('downloadZip', bucket.name)"
-              >
-                <Download class="h-3.5 w-3.5" />
               </Button>
             </div>
           </TableCell>

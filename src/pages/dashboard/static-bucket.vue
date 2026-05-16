@@ -17,7 +17,7 @@ definePage({
   meta: {
     title: "router.staticBucket",
     icon: FolderOpen,
-    order: 10,
+    order: 13,
     group: "router.group.advanced",
   },
 });
@@ -73,6 +73,14 @@ const handleToggleHttpRoot = async (bucket: StaticBucket) => {
     } else {
       await staticBucket.enableTheme(bucket.name);
     }
+  } catch (e: unknown) {
+    toast.error(e instanceof Error ? e.message : "更新失败");
+  }
+};
+
+const handleToggleCORS = async (bucket: StaticBucket) => {
+  try {
+    await staticBucket.setCORS(bucket.name, !bucket.cors);
   } catch (e: unknown) {
     toast.error(e instanceof Error ? e.message : "更新失败");
   }
@@ -170,6 +178,7 @@ const handleCreateAndUpload = async (
       @download-zip="downloadBucketZip"
       @delete="handleBucketDelete"
       @toggle-http-root="handleToggleHttpRoot"
+      @toggleCORS="handleToggleCORS"
       @refresh="staticBucket.fetchList()"
     />
 
