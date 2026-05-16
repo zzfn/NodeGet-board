@@ -182,8 +182,10 @@ export default {
       api: {
         createSuccess: "创建Token成功",
         createFailed: "创建Token失败",
+        createFailedWithMessage: "创建Token失败：{message}",
         updateSuccess: "更新Token成功",
         updateFailed: "更新Token失败",
+        updateFailedWithMessage: "更新Token失败：{message}",
         listFailed: "获取Token列表失败",
         deleteSuccess: "删除成功",
         deleteFailed: "删除失败",
@@ -343,6 +345,8 @@ export default {
       },
       previeJSON: {
         title: "格式化预览JSON",
+        invalidJson: "JSON 格式错误：{message}",
+        invalidField: "以下字段未能回显：{field}",
       },
       permissionsConfig: {
         title: "Token权限配置",
@@ -697,6 +701,8 @@ export default {
       edit: "编辑任务",
       name: "名称",
       type: "Task 类型",
+      selectAll: "全选",
+      deselectAll: "取消全选",
       expression: "Cron 表达式",
       expressionHint: "会自动整理空格，紧凑写法如 2***** 会转换为 2 * * * * *",
       expressionFormatHint:
@@ -980,9 +986,11 @@ export default {
     token: "Token",
     tokenImport: "导入 Token",
     kv: "KV 管理",
+    staticBucket: "静态资源",
     jsRuntime: "JS Worker",
     jsRuntimeDetail: "Worker 详情",
     appPanel: "扩展管理",
+    themeManagement: "主题管理",
     appEntrance: "应用入口",
     files: "文件管理",
     docker: "docker管理",
