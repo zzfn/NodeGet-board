@@ -164,6 +164,12 @@ const handleImport = async () => {
           new TextEncoder().encode(JSON.stringify(meta, null, 2)),
         ),
       },
+      {
+        path: "nodeget-theme-files.json",
+        base64: bufToBase64(
+          new TextEncoder().encode(JSON.stringify(rawFileList, null, 2)),
+        ),
+      },
     ];
     let downloadFailed = 0;
     for (const filePath of filesToDownload) {

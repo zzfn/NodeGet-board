@@ -99,6 +99,13 @@ export function useStaticBucket(backend = useBackendStore().currentBackend) {
     bucket.is_http_root = false;
   };
 
+  const setCORS = async (name: string, cors: boolean): Promise<void> => {
+    const bucket = buckets.value.find((b) => b.name === name);
+    if (!bucket) return;
+    await updateBucket({ ...bucket, cors });
+    bucket.cors = cors;
+  };
+
   return {
     buckets,
     loading,
@@ -109,6 +116,7 @@ export function useStaticBucket(backend = useBackendStore().currentBackend) {
     updateBucket,
     deleteBucket,
     enableTheme,
+    setCORS,
     disableTheme,
   };
 }

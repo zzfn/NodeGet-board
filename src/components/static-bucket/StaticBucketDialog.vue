@@ -82,7 +82,7 @@ const handleSave = () => {
           <Input
             id="sb-path"
             v-model="form.path"
-            placeholder="sites/my-site"
+            placeholder="my-site"
             class="font-mono"
           />
           <p class="text-xs text-muted-foreground">
